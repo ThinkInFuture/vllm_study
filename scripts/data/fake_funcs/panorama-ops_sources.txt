@@ -1,0 +1,4679 @@
+### _build_actual_seq_lengths @ ops\gdn_attn_builder.py (HTML标记15行/实际4行)
+```python
+def _build_actual_seq_lengths(
+    query_start_loc: torch.Tensor,
+    num_sequences: int,
+    out: torch.Tensor | None = None,
+```
+
+### _build_non_spec_chunked_prefill_metadata @ ops\gdn_attn_builder.py (HTML标记49行/实际4行)
+```python
+def _build_non_spec_chunked_prefill_metadata(
+    builder,
+    cu_seqlens_cpu: torch.Tensor,
+    device: torch.device,
+```
+
+### _init_reorder_batch_threshold @ ops\gdn_attn_builder.py (HTML标记22行/实际5行)
+```python
+    def _init_reorder_batch_threshold(
+        self,
+        reorder_batch_threshold: int | None = 1,
+        supports_spec_as_decode: bool = False,
+        supports_dcp_with_varlen: bool = False,
+```
+
+### _copy_sequence_indices_to_device @ ops\gdn_attn_builder.py (HTML标记23行/实际4行)
+```python
+    def _copy_sequence_indices_to_device(
+        self,
+        spec_sequence_masks_cpu: torch.Tensor,
+        num_spec_decodes: int,
+```
+
+### _attach_non_spec_prefill_metadata @ ops\gdn_attn_builder.py (HTML标记36行/实际5行)
+```python
+    def _attach_non_spec_prefill_metadata(
+        self,
+        attn_metadata: GDNAttentionMetadata,
+        chunk_metadata: GDNChunkedPrefillMetadata | None,
+        non_spec_cache_indices: torch.Tensor | None,
+```
+
+### _attach_spec_decode_metadata @ ops\gdn_attn_builder.py (HTML标记35行/实际3行)
+```python
+    def _attach_spec_decode_metadata(
+        self,
+        attn_metadata: GDNAttentionMetadata,
+```
+
+### _attach_non_spec_decode_metadata @ ops\gdn_attn_builder.py (HTML标记34行/实际4行)
+```python
+    def _attach_non_spec_decode_metadata(
+        self,
+        attn_metadata: GDNAttentionMetadata,
+        non_spec_cache_indices: torch.Tensor | None,
+```
+
+### _build_prefill_has_initial_state_and_causal_conv1d_meta @ ops\gdn_attn_builder.py (HTML标记36行/实际10行)
+```python
+    def _build_prefill_has_initial_state_and_causal_conv1d_meta(
+        self,
+        *,
+        common_attn_metadata: CommonAttentionMetadata,
+        context_lens_tensor: torch.Tensor,
+        num_prefills: int,
+        spec_sequence_masks_cpu: torch.Tensor | None,
+        non_spec_sequence_indices: torch.Tensor | None,
+        non_spec_query_start_loc_cpu: torch.Tensor | None,
+        query_start_loc: torch.Tensor,
+```
+
+### process_weights_and_pack @ ops\kimi_kda.py
+```python
+        def process_weights_and_pack(*args, **kwargs):
+            result = original_process_weights(*args, **kwargs)
+            self._pack_conv_weights()
+            return result
+```
+
+### _run_causal_conv1d @ ops\kimi_kda.py (HTML标记29行/实际10行)
+```python
+    def _run_causal_conv1d(
+        mixed_qkv: torch.Tensor,
+        conv_weights_t: torch.Tensor,
+        conv_state: torch.Tensor,
+        query_start_loc: torch.Tensor,
+        cache_indices: torch.Tensor,
+        initial_state_mode: torch.Tensor | None,
+        *,
+        run_mode: int,
+        num_accepted_tokens: torch.Tensor | None = None,
+```
+
+### _pack_conv_weights @ ops\kimi_kda.py
+```python
+    def _pack_conv_weights(self) -> None:
+        if self.conv1d.weight.is_meta:
+            return
+        packed_param = self.get_parameter(_PACKED_CONV_WEIGHT_NAME)
+        packed_weight = (
+            self.conv1d.weight.view(self.conv1d.weight.size(0), self.conv1d.weight.size(2))
+            .transpose(0, 1)
+            .to(device=packed_param.device, dtype=packed_param.dtype)
+            .contiguous()
+        )
+        replace_parameter(
+            self,
+            _PACKED_CONV_WEIGHT_NAME,
+            packed_weight,
+            prefer_copy=True,
+        )
+```
+
+### _run_recurrent @ ops\kimi_kda.py (HTML标记33行/实际12行)
+```python
+    def _run_recurrent(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        raw_gate: torch.Tensor,
+        beta: torch.Tensor,
+        recurrent_state: torch.Tensor,
+        cu_seqlens: torch.Tensor,
+        state_indices: torch.Tensor,
+        *,
+        num_accepted_tokens: torch.Tensor | None = None,
+```
+
+### _run_prefill @ ops\kimi_kda.py (HTML标记53行/实际11行)
+```python
+    def _run_prefill(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        raw_gate: torch.Tensor,
+        beta: torch.Tensor,
+        recurrent_state: torch.Tensor,
+        state_indices: torch.Tensor,
+        has_initial_state: torch.Tensor,
+        prebuilt_metadata,
+```
+
+### _bias_weight_loader @ ops\layernorm.py
+```python
+    def _bias_weight_loader(self, param: torch.nn.Parameter, loaded_weight: torch.Tensor) -> None:
+        if param.numel() == 1 and loaded_weight.numel() == 1:
+            # Sometimes scalar values aren't considered tensors with shapes
+            # so if both param and loaded_weight are a scalar,
+            # "broadcast" instead of copy
+            param.data.fill_(loaded_weight.item())
+        else:
+            assert param.size() == loaded_weight.size(), (
+                f"Attempted to load weight ({loaded_weight.size()}) into parameter ({param.size()})"
+            )
+
+            param.data.copy_(loaded_weight)
+        self.bias_loaded = True
+```
+
+### reset_parameters @ ops\layernorm.py
+```python
+    def reset_parameters(self):
+        torch.nn.init.ones_(self.weight)
+```
+
+### weight_loader @ ops\linear.py
+```python
+    def weight_loader(self, param: Parameter, loaded_weight: torch.Tensor):
+        supports_dynamic_mx_quant_fusion = get_current_hardware_profile().supports(
+            HardwareCapability.DYNAMIC_MX_QUANT_FUSION
+        )
+        reshape_bf16_wo_a = (
+            "wo_a" in self.prefix
+            and supports_dynamic_mx_quant_fusion
+            and self.quant_config is None
+            and loaded_weight.dtype == torch.bfloat16
+        )
+        if "wo_a" in self.prefix and (not supports_dynamic_mx_quant_fusion or reshape_bf16_wo_a):
+            if self.weight.ndim == 2:
+                super().weight_loader(param, loaded_weight)
+                self.weight.data = (
+                    self.weight.data.view(self.n_local_groups, self.o_lora_rank, -1).transpose(2, 1).contiguous()
+                )
+            else:
+                # In RL update flows, wo_a can be loaded again after being
+                # transformed into [n_local_groups, hidden_size, o_lora_rank].
+                shard_size = self.n_local_groups * self.o_lora_rank
+                start_idx = self.tp_rank * shard_size
+                if loaded_weight.shape[0] != shard_size:
+                    loaded_weight = loaded_weight.narrow(0, start_idx, shard_size)
+                loaded_weight = (
+                    loaded_weight.view(
+                        self.n_local_groups,
+                        self.o_lora_rank,
+                        -1,
+                    )
+                    .transpose(2, 1)
+                    .contiguous()
+                )
+
+                if loaded_weight.shape != self.weight.shape:
+                    raise ValueError(
+                        f"Unexpected wo_a weight shape {tuple(loaded_weight.shape)}, "
+                        f"expected {tuple(self.weight.shape)}"
+                    )
+                self.weight.data.copy_(loaded_weight)
+        else:
+            super().weight_loader(param, loaded_weight)
+```
+
+### comm_group @ ops\linear_op.py (HTML标记3行/实际2行)
+```python
+    def comm_group(self):
+        return get_tp_group()
+```
+
+### tp_rank @ ops\linear_op.py
+```python
+    def tp_rank(self):
+        return self.comm_group.rank_in_group
+```
+
+### tp_size @ ops\linear_op.py
+```python
+    def tp_size(self):
+        return self.comm_group.world_size
+```
+
+### update_attrs @ ops\linear_op.py (HTML标记4行/实际7行)
+```python
+    def update_attrs(self):
+        if hasattr(self.layer, "bias"):
+            self.bias = self.layer.bias
+        self.skip_bias_add = self.layer.skip_bias_add
+        self.return_bias = self.layer.return_bias
+        self.quant_method = self.layer.quant_method
+        self.prefix = self.layer.prefix
+```
+
+### apply_impl @ ops\linear_op.py (HTML标记11行/实际2行)
+```python
+    def apply_impl(self, input_):
+        raise NotImplementedError
+```
+
+### get_input_parallel @ ops\linear_op.py
+```python
+    def get_input_parallel(self, input_: torch.Tensor) -> torch.Tensor:
+        if self.input_is_parallel:
+            return input_
+
+        split_input = split_tensor_along_last_dim(input_, num_partitions=self.tp_size)
+        return split_input[self.tp_rank].contiguous()
+```
+
+### _is_shared_expert_layer @ ops\linear_op.py
+```python
+def _is_shared_expert_layer(prefix: str) -> bool:
+    return "shared_experts" in prefix or "shared_expert" in prefix or "share_expert" in prefix
+```
+
+### _get_column_parallel_op @ ops\linear_op.py (HTML标记10行/实际2行)
+```python
+def _get_column_parallel_op(
+    prefix, layer
+```
+
+### _get_row_parallel_op @ ops\linear_op.py
+```python
+def _get_row_parallel_op(prefix, layer) -> MLPRowParallelOp | OProjRowParallelOp | DSV4OProjRowParallelOp | None:
+    if "wo_b" in prefix and oproj_tp_enable():
+        return DSV4OProjRowParallelOp(layer)
+    if "down_proj" in prefix and mlp_tp_enable() and not is_moe_layer(prefix):
+        return MLPRowParallelOp(layer)
+    if "o_proj" in prefix and oproj_tp_enable():
+        return OProjRowParallelOp(layer)
+    return None
+```
+
+### get_parallel_op @ ops\linear_op.py
+```python
+def get_parallel_op(disable_tp, prefix, layer, direct):
+    if _is_shared_expert_layer(prefix):
+        # Shared-expert weight layout is decoupled from sequence parallelism:
+        # only the shared-expert DP switch replicates weights. Models still
+        # pass disable_tp=is_sequence_parallel for shared experts, so SP alone
+        # must not force replication here.
+        if shared_expert_dp_enabled():
+            return None, 0, 1
+    elif disable_tp:
+        return None, 0, 1
+    custom_op: (
+        MLPColumnParallelOp
+        | DSV4OProjColumnParallelOp
+        | MLPRowParallelOp
+        | OProjRowParallelOp
+        | DSV4OProjRowParallelOp
+        | ShardedCPColumnParallelOp
+        | None
+    ) = None
+    if direct == "row":
+        custom_op = _get_row_parallel_op(prefix, layer)
+
+    if direct == "column":
+        custom_op = _get_column_parallel_op(prefix, layer)
+
+    if custom_op is not None:
+        logger.debug(
+            "get_parallel_op: prefix=%s, direct=%s -> %s (tp_rank=%d, tp_size=%d)",
+            prefix,
+            direct,
+            type(custom_op).__name__,
+            custom_op.tp_rank,
+            custom_op.tp_size,
+        )
+        return custom_op, custom_op.tp_rank, custom_op.tp_size
+
+    return None, get_tp_group().rank_in_group, get_tp_group().world_size
+```
+
+### is_moe_layer @ ops\linear_op.py
+```python
+def is_moe_layer(prefix: str) -> bool:
+    @lru_cache(maxsize=1)
+    def get_moe_params():
+        from vllm.config import get_current_vllm_config
+
+        vllm_config = get_current_vllm_config()
+        config = vllm_config.model_config.hf_text_config
+        n_routed_experts = getattr(config, "n_routed_experts", 0)
+        first_k_dense_replace = getattr(config, "first_k_dense_replace", float("inf"))
+        moe_layer_freq = getattr(config, "moe_layer_freq", 1)
+        return n_routed_experts, first_k_dense_replace, moe_layer_freq
+
+    match = re.search(r"layers\.(\d+)\.", prefix)
+    if match is None:
+        return False
+    layer_idx = int(match.group(1))
+
+    n_routed_experts, first_k_dense_replace, moe_layer_freq = get_moe_params()
+
+    return n_routed_experts is not None and layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0
+```
+
+### get_moe_params @ ops\linear_op.py
+```python
+    def get_moe_params():
+        from vllm.config import get_current_vllm_config
+
+        vllm_config = get_current_vllm_config()
+        config = vllm_config.model_config.hf_text_config
+        n_routed_experts = getattr(config, "n_routed_experts", 0)
+        first_k_dense_replace = getattr(config, "first_k_dense_replace", float("inf"))
+        moe_layer_freq = getattr(config, "moe_layer_freq", 1)
+        return n_routed_experts, first_k_dense_replace, moe_layer_freq
+```
+
+### wrapped_process_weights @ ops\mla.py
+```python
+        def wrapped_process_weights(act_dtype: torch.dtype):
+            from vllm_ascend.attention.sfa_v1 import AscendSFAImpl
+
+            if not isinstance(self.mla_attn.impl, AscendSFAImpl):
+                original_process_weights(act_dtype)
+            self.mla_attn.impl.process_weights_after_loading(act_dtype)
+```
+
+### mla_forward @ ops\mla.py (HTML标记14行/实际4行)
+```python
+def mla_forward(
+    hidden_states: torch.Tensor,
+    output: torch.Tensor,
+    layer_name: str,
+```
+
+### mla_forward_fake @ ops\mla.py (HTML标记6行/实际4行)
+```python
+def mla_forward_fake(
+    hidden_states: torch.Tensor,
+    output: torch.Tensor,
+    layer_name: str,
+```
+
+### _maybe_pad_qkv @ ops\mm_encoder_attention.py (HTML标记14行/实际5行)
+```python
+    def _maybe_pad_qkv(
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+```
+
+### _maybe_compute_cu_seqlens @ ops\mm_encoder_attention.py (HTML标记18行/实际7行)
+```python
+    def _maybe_compute_cu_seqlens(
+        self,
+        bsz: int,
+        q_len: int,
+        cu_seqlens: torch.Tensor | None,
+        *,
+        is_capturing: bool = False,
+```
+
+### _maybe_unpad_output @ ops\mm_encoder_attention.py (HTML标记7行/实际3行)
+```python
+    def _maybe_unpad_output(
+        context_layer: torch.Tensor,
+        origin_head_dim: int | None,
+```
+
+### _restore_batch_layout @ ops\mm_encoder_attention.py (HTML标记10行/实际6行)
+```python
+    def _restore_batch_layout(
+        context_layer: torch.Tensor,
+        *,
+        bsz: int,
+        q_len: int,
+        is_reshaped: bool,
+```
+
+### _run_vit_fia @ ops\mm_encoder_attention.py (HTML标记42行/实际11行)
+```python
+    def _run_vit_fia(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        actual_seq_lengths_q: list[int],
+        actual_seq_lengths_kv: list[int],
+        *,
+        out: torch.Tensor | None = None,
+        softmax_lse: torch.Tensor | None = None,
+        workspace: torch.Tensor | None = None,
+```
+
+### _forward_eager_fia @ ops\mm_encoder_attention.py (HTML标记26行/实际10行)
+```python
+    def _forward_eager_fia(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        *,
+        cu_seqlens: torch.Tensor | None = None,
+        is_reshaped: bool,
+        bsz: int,
+        q_len: int,
+```
+
+### _forward_capture_fia @ ops\mm_encoder_attention.py (HTML标记92行/实际10行)
+```python
+    def _forward_capture_fia(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        *,
+        cu_seqlens: torch.Tensor | None = None,
+        is_reshaped: bool,
+        bsz: int,
+        q_len: int,
+```
+
+### _create_optimized_custom_model @ ops\qwen2_decoder.py
+```python
+    def _create_optimized_custom_model(self, config):
+        class CustomQwen2ModelInner(AscendQwen2Model):
+            def forward(
+                self,
+                input_ids=None,
+                attention_mask=None,
+                position_ids=None,
+                past_key_values=None,
+                inputs_embeds=None,
+                use_cache=None,
+                cache_position=None,
+                token_type_ids=None,
+                **kwargs: Unpack[TransformersKwargs],
+            ):
+                # token_type_ids
+                self._current_token_type_ids = token_type_ids
+                causal_mask_mapping = {
+                    "full_attention": self._create_npu_optimized_mask(
+                        attention_mask=attention_mask,
+                        input_tensor=inputs_embeds,
+                        token_type_ids=token_type_ids,
+                    )
+                }
+                outputs = super().forward(
+                    input_ids=input_ids,
+                    attention_mask=causal_mask_mapping,
+                    position_ids=position_ids,
+                    past_key_values=past_key_values,
+                    inputs_embeds=inputs_embeds,
+                    use_cache=use_cache,
+                    cache_position=cache_position,
+                )
+
+                return outputs
+
+            def _create_npu_optimized_mask(
+                self,
+                attention_mask,
+                input_tensor,
+                token_type_ids,
+            ):
+                """
+                4D Mask generation optimized for NPU
+                vector parallel implementation, replacing the original loop implementation
+                """
+                dtype, device = input_tensor.dtype, input_tensor.device
+                min_dtype = torch.finfo(dtype).min
+                batch_size, sequence_length = input_tensor.shape[0], input_tensor.shape[1]
+
+                if token_type_ids is None:
+                    return self._create_standard_causal_mask(batch_size, sequence_length, dtype, device, attention_mask)
+                # ==========================================
+                # NPU optimization: vectorized parallel mask generation (replacing loops)
+                # ==========================================
+                # 1. create image token position mask [batch, seq_len]
+                is_image = (token_type_ids == 0).unsqueeze(-1).to(dtype=dtype, device=device)  # [batch, seq_len, 1]
+                is_text = (token_type_ids == 1).unsqueeze(-1).to(dtype=dtype, device=device)  # [batch, seq_len, 1]
+                # 2. Bidirectional attention (fully connected) between image tokens.
+                # image_attention: [batch, seq_len, seq_len]
+                image_attention = torch.bmm(is_image, is_image.transpose(1, 2))
+```
+
+### optimized_apply_rotary_pos_emb @ ops\qwen2_decoder.py
+```python
+def optimized_apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
+    cos = cos.unsqueeze(unsqueeze_dim)
+    sin = sin.unsqueeze(unsqueeze_dim)
+    q_embed = torch_npu.npu_rotary_mul(q, cos, sin)
+    k_embed = torch_npu.npu_rotary_mul(k, cos, sin)
+    return q_embed, k_embed
+```
+
+### _maybe_all_gather_and_maybe_unpad_fake @ ops\register_custom_ops.py
+```python
+def _maybe_all_gather_and_maybe_unpad_fake(x: torch.Tensor) -> torch.Tensor:
+    forward_context = get_forward_context()
+    ep_group = get_ep_group()
+    local_sizes = _get_ep_local_sizes(forward_context.dp_metadata, ep_group)
+    if local_sizes is not None:
+        return torch.empty((sum(local_sizes), *x.shape[1:]), device=x.device, dtype=x.dtype)
+
+    return torch.empty((x.shape[0] * ep_group.world_size, *x.shape[1:]), device=x.device, dtype=x.dtype)
+```
+
+### _maybe_pad_and_reduce_fake @ ops\register_custom_ops.py
+```python
+def _maybe_pad_and_reduce_fake(x: torch.Tensor) -> torch.Tensor:
+    forward_context = get_forward_context()
+    ep_group = get_ep_group()
+    local_sizes = _get_ep_local_sizes(forward_context.dp_metadata, ep_group)
+    if local_sizes is not None:
+        return torch.empty(
+            (local_sizes[ep_group.rank_in_group], *x.shape[1:]),
+            device=x.device,
+            dtype=x.dtype,
+        )
+
+    return torch.empty((x.shape[0] // ep_group.world_size, *x.shape[1:]), device=x.device, dtype=x.dtype)
+```
+
+### _quantize_impl @ ops\register_custom_ops.py (HTML标记4行/实际2行)
+```python
+def _quantize_impl(
+    in_tensor: torch.Tensor, input_scale: torch.Tensor, input_scale_reciprocal: torch.Tensor, input_offset: torch.Tensor
+```
+
+### _quantize_impl_fake @ ops\register_custom_ops.py (HTML标记4行/实际2行)
+```python
+def _quantize_impl_fake(
+    in_tensor: torch.Tensor, input_scale: torch.Tensor, input_scale_reciprocal: torch.Tensor, input_offset: torch.Tensor
+```
+
+### _rope_forward_oot_impl_fake @ ops\register_custom_ops.py (HTML标记10行/实际8行)
+```python
+def _rope_forward_oot_impl_fake(
+    positions: torch.Tensor,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    head_dim: int,
+    rotary_dim: int,
+    is_neox_style: bool = True,
+```
+
+### _muls_add_impl_fake @ ops\register_custom_ops.py (HTML标记6行/实际4行)
+```python
+def _muls_add_impl_fake(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    scale: float,
+```
+
+### __getitem__ @ ops\rope_dsv4.py
+```python
+    def __getitem__(self, index):
+        if not isinstance(index, str):
+            new_map: dict = {}
+            for config_k, groups_map in self._data.items():
+                new_map[config_k] = {}
+                for group_name, item in groups_map.items():
+                    c_val = item[0][index]
+                    s_val = item[1][index]
+                    new_map[config_k][group_name] = (c_val, s_val)
+
+            return RopeDataProxy(new_map, is_cos=(self.idx == 0))
+
+        else:
+            layername = index
+            info = _ROPE_STATE.layer_info.get(layername)
+            if info is None:
+                raise KeyError(f"Layer {layername} not registered.")
+
+            config_key, required_groups = info
+
+            config_data = self._data.get(config_key, {})
+
+            layer_result = {}
+            for grp in required_groups:
+                if grp in config_data:
+                    layer_result[grp] = config_data[grp][self.idx]
+                else:
+                    pass
+            if len(layer_result) == 1:
+                return list(layer_result.values())[0]
+
+            return layer_result
+```
+
+### precompute_freqs_cis @ ops\rope_dsv4.py
+```python
+    def precompute_freqs_cis(dim, seqlen, original_seq_len, base, factor, beta_fast, beta_slow):
+        def yarn_find_correction_dim(
+            num_rotations: int,
+            dim: int,
+            base: float = 10000,
+            max_position_embeddings: int = 2048,
+        ) -> float:
+            return (dim * math.log(max_position_embeddings / (num_rotations * 2 * math.pi))) / (2 * math.log(base))
+
+        # Find dim range bounds based on rotations
+        def yarn_find_correction_range(
+            low_rot: int,
+            high_rot: int,
+            dim: int,
+            base: float = 10000,
+            max_position_embeddings: int = 2048,
+            truncate: bool = True,
+        ) -> tuple[float | int, float | int]:
+            low = yarn_find_correction_dim(low_rot, dim, base, max_position_embeddings)
+            high = yarn_find_correction_dim(high_rot, dim, base, max_position_embeddings)
+            if truncate:
+                low = math.floor(low)
+                high = math.ceil(high)
+            return max(low, 0), min(high, dim - 1)  # Clamp values just in case
+
+        def yarn_linear_ramp_mask(low: float, high: float, dim: int, dtype: torch.dtype) -> torch.Tensor:
+            if low == high:
+                high += 0.001  # Prevent singularity
+
+            linear_func = (torch.arange(dim, dtype=dtype) - low) / (high - low)
+            ramp_func = torch.clamp(linear_func, 0, 1)
+            return ramp_func
+
+        pos_freqs = base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim)
+        inv_freq_extrapolation = 1.0 / pos_freqs
+        inv_freq_interpolation = 1.0 / (factor * pos_freqs)
+
+        low, high = yarn_find_correction_range(
+            beta_fast,
+            beta_slow,
+            dim,
+            base,
+            original_seq_len,
+        )
+        inv_freq_mask = (1 - yarn_linear_ramp_mask(low, high, dim // 2, dtype=torch.float32)) * 1
+        inv_freq = inv_freq_interpolation * (1 - inv_freq_mask) + inv_freq_extrapolation * inv_freq_mask
+        return inv_freq
+```
+
+### yarn_find_correction_dim @ ops\rope_dsv4.py (HTML标记7行/实际5行)
+```python
+        def yarn_find_correction_dim(
+            num_rotations: int,
+            dim: int,
+            base: float = 10000,
+            max_position_embeddings: int = 2048,
+```
+
+### yarn_find_correction_range @ ops\rope_dsv4.py (HTML标记14行/实际7行)
+```python
+        def yarn_find_correction_range(
+            low_rot: int,
+            high_rot: int,
+            dim: int,
+            base: float = 10000,
+            max_position_embeddings: int = 2048,
+            truncate: bool = True,
+```
+
+### yarn_linear_ramp_mask @ ops\rope_dsv4.py
+```python
+        def yarn_linear_ramp_mask(low: float, high: float, dim: int, dtype: torch.dtype) -> torch.Tensor:
+            if low == high:
+                high += 0.001  # Prevent singularity
+
+            linear_func = (torch.arange(dim, dtype=dtype) - low) / (high - low)
+            ramp_func = torch.clamp(linear_func, 0, 1)
+            return ramp_func
+```
+
+### extra_repr @ ops\rope_dsv4.py
+```python
+    def extra_repr(self) -> str:
+        return f"layername={self.layername}, rotary_dim={self.rotary_dim}"
+```
+
+### _record_cos_sin_cache @ ops\rotary_embedding.py
+```python
+def _record_cos_sin_cache(cos_sin_cache):
+    global _cos_sin_cache
+    if _cos_sin_cache is not None:
+        return
+    _cos_sin_cache = cos_sin_cache
+```
+
+### _record_cos_and_sin_cache @ ops\rotary_embedding.py
+```python
+def _record_cos_and_sin_cache(cos_cache, sin_cache):
+    global _cos_cache
+    global _sin_cache
+    _cos_cache = cos_cache
+    _sin_cache = sin_cache
+```
+
+### _record_cos_and_sin_cache_interleaved @ ops\rotary_embedding.py
+```python
+def _record_cos_and_sin_cache_interleaved(cos_sin_cache):
+    global _cos_cache
+    global _sin_cache
+    if _cos_cache is not None or _sin_cache is not None:
+        return
+    hidden_dim = cos_sin_cache.shape[-1] // 2
+    cos_cache, sin_cache = cos_sin_cache.view(-1, 2, hidden_dim).repeat(1, 1, 2).chunk(2, dim=1)
+    _cos_cache = cos_cache.squeeze(1)
+    _sin_cache = sin_cache.squeeze(1)
+```
+
+### get_cos_and_sin_slice @ ops\rotary_embedding.py
+```python
+def get_cos_and_sin_slice():
+    return _cos_slice, _sin_slice
+```
+
+### rope_forward_oot @ ops\rotary_embedding.py (HTML标记39行/实际9行)
+```python
+def rope_forward_oot(
+    positions: torch.Tensor,
+    query: torch.Tensor,
+    key: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    head_size: int,
+    rotary_dim: int,
+    is_neox_style: bool,
+    offsets: torch.Tensor | None = None,
+```
+
+### _yarn_get_mscale @ ops\rotary_embedding.py
+```python
+    def _yarn_get_mscale(self, scale: float = 1, mscale: float = 1) -> float:
+        if scale <= 1:
+            return 1.0
+        return 0.1 * mscale * math.log(scale) + 1.0
+```
+
+### _yarn_linear_ramp_mask @ ops\rotary_embedding.py
+```python
+    def _yarn_linear_ramp_mask(self, min_value, max_value, dim):
+        # Note: The if conditional branch is not used here
+        # to solve MTP compilation error.
+        max_value += (min_value == max_value).float() * 0.001
+        linear_func = (torch.arange(dim, dtype=torch.float32) - min_value) / (max_value - min_value)
+        ramp_func = torch.clamp(linear_func, 0, 1)
+        return ramp_func
+```
+
+### _yarn_find_correction_dim @ ops\rotary_embedding.py
+```python
+    def _yarn_find_correction_dim(self, num_rotations, dim, base=10000, max_position_embeddings=2048):
+        # Note: use torch instead of math to solve MTP compilation error.
+        return (dim * torch.log(torch.tensor(max_position_embeddings) / (num_rotations * 2 * torch.pi))) / (
+            2 * torch.log(torch.tensor(base))
+        )
+```
+
+### _yarn_find_correction_range @ ops\rotary_embedding.py
+```python
+    def _yarn_find_correction_range(self, low_rot, high_rot, dim, base=10000, max_position_embeddings=2048):
+        # Note: use torch instead of math to solve MTP compilation error.
+        low = torch.floor(self._yarn_find_correction_dim(low_rot, dim, base, max_position_embeddings))
+        high = torch.ceil(self._yarn_find_correction_dim(high_rot, dim, base, max_position_embeddings))
+        # Note: use torch instead of max/min to solve MTP compilation error.
+        return torch.clamp(low, min=0), torch.clamp(high, max=dim - 1)
+```
+
+### _set_cos_sin_cache @ ops\rotary_embedding.py
+```python
+    def _set_cos_sin_cache(self, max_seq_len, device, dtype):
+        dim = self.rotary_dim
+
+        freq_extra = 1.0 / (self.base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=device) / dim))
+        freq_inter = 1.0 / (
+            self.scaling_factor * self.base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=device) / dim)
+        )
+
+        low, high = self._yarn_find_correction_range(
+            self.beta_fast,
+            self.beta_slow,
+            dim,
+            self.base,
+            self.max_position_embeddings,
+        )
+        inv_freq_mask = 1.0 - self._yarn_linear_ramp_mask(low, high, dim // 2).to(device=device, dtype=torch.float32)
+        inv_freq = freq_inter * (1 - inv_freq_mask) + freq_extra * inv_freq_mask
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+
+        t = torch.arange(max_seq_len, device=device, dtype=torch.float32)
+
+        freqs = torch.outer(t, inv_freq)
+        cos_cached = torch.cat([freqs, freqs], dim=-1).cos() * self.mscale
+        sin_cached = torch.cat([freqs, freqs], dim=-1).sin() * self.mscale
+        cos_cached = cos_cached.to(dtype)
+        sin_cached = sin_cached.to(dtype)
+        cache = torch.cat([freqs.cos() * self.mscale, freqs.sin() * self.mscale], dim=-1).to(dtype)
+        self.register_buffer("cos_sin_cache", cache, persistent=False)
+        self.register_buffer("cos_cached", cos_cached, persistent=False)
+        self.register_buffer("sin_cached", sin_cached, persistent=False)
+        _record_cos_sin_cache(cache)
+        _record_cos_and_sin_cache(cos_cached, sin_cached)
+```
+
+### forward_triton @ ops\rotary_embedding.py (HTML标记40行/实际6行)
+```python
+    def forward_triton(
+        self,
+        positions: torch.Tensor,
+        query: torch.Tensor,
+        key: torch.Tensor | None = None,
+        offsets: torch.Tensor | None = None,
+```
+
+### _mask_input_for_vocab_range @ ops\vocab_parallel_embedding.py (HTML标记26行/实际8行)
+```python
+    def _mask_input_for_vocab_range(
+        self,
+        input_: torch.Tensor,
+        org_vocab_start_index: int,
+        org_vocab_end_index: int,
+        num_org_vocab_padding: int,
+        added_vocab_start_index: int,
+        added_vocab_end_index: int,
+```
+
+### _forward_embed_tp @ ops\vocab_parallel_embedding.py
+```python
+    def _forward_embed_tp(self, input_):
+        num_tokens = input_.shape[0]
+
+        # potential_max_tokens is computed once in the model runner __init__, so
+        # reading it here is a cheap global lookup. Validate before allocating so
+        # an oversized batch fails fast.
+        capacity = get_potential_max_tokens()
+        if num_tokens > capacity:
+            raise ValueError(
+                f"embedding_tp static capacity {capacity} < num_tokens "
+                f"{num_tokens}; increase max_cudagraph_capture_size or "
+                f"max_num_batched_tokens."
+            )
+
+        # Lazy init on first call (profiling run, which precedes ACL graph
+        # capture). Static buffers keep a stable device address across all
+        # later capture/replay cycles — graph replay requires the same
+        # address that was recorded at capture (comm_group.all_gather and
+        # reduce_scatter internally torch.empty() per call, which would
+        # desync the HCCL operator recorded at capture).
+        # Mirrors the OTP v13 fix in dsa_v1.py:_forward_o_proj.
+        if not hasattr(self, "_embed_ag_in_buf"):
+            device = input_.device
+            # all_gather buffers carry token IDs (int64).
+            self._embed_ag_in_buf = torch.zeros((capacity,), dtype=input_.dtype, device=device)
+            self._embed_ag_out_buf = torch.empty((self.tp_size * capacity,), dtype=input_.dtype, device=device)
+            # reduce_scatter buffers carry bf16 embeddings.
+            self._embed_rs_in_buf = torch.empty(
+                (self.tp_size * capacity, self.embedding_dim), dtype=self.params_dtype, device=device
+            )
+            self._embed_rs_out_buf = torch.empty((capacity, self.embedding_dim), dtype=self.params_dtype, device=device)
+
+        # Pad input into the address-stable all_gather input buffer.
+        self._embed_ag_in_buf.zero_()
+        self._embed_ag_in_buf[:num_tokens].copy_(input_)
+        dist.all_gather_into_tensor(self._embed_ag_out_buf, self._embed_ag_in_buf, group=self.comm_group.device_group)
+        complete_input = self._embed_ag_out_buf
+
+        # Masking unchanged; padding rows map to OOB and get masked to 0
+        # via masked_fill_ below (token_id=0 stays in-range after shift).
+        masked_input, input_mask = self._mask_input_for_vocab_range(
+            complete_input,
+            self.shard_indices.org_vocab_start_index,
+            self.shard_indices.org_vocab_end_index,
+            self.shard_indices.num_org_vocab_padding,
+            self.shard_indices.added_vocab_start_index,
+            self.shard_indices.added_vocab_end_index,
+        )
+        # Embedding lookup is a local op (F.embedding); its fresh allocation
+        # does not affect ACL graph replay. Copy into the static rs_in
+        # buffer so reduce_scatter reads from a stable address.
+        output_parallel = self.quant_method.embedding(self, masked_input.long())
+        self._embed_rs_in_buf.copy_(output_parallel)
+        self._embed_rs_in_buf.masked_fill_(input_mask.unsqueeze(-1), 0)
+        dist.reduce_scatter_tensor(self._embed_rs_out_buf, self._embed_rs_in_buf, group=self.comm_group.device_group)
+
+        # Strip padding rows; preserve the original return shape.
+        return self._embed_rs_out_buf[:num_tokens].view(num_tokens, -1)
+```
+
+### _forward_origin @ ops\vocab_parallel_embedding.py
+```python
+    def _forward_origin(self, input_):
+        if self.tp_size > 1:
+            # Build the mask.
+            masked_input, input_mask = self._mask_input_for_vocab_range(
+                input_,
+                self.shard_indices.org_vocab_start_index,
+                self.shard_indices.org_vocab_end_index,
+                self.shard_indices.num_org_vocab_padding,
+                self.shard_indices.added_vocab_start_index,
+                self.shard_indices.added_vocab_end_index,
+            )
+        else:
+            masked_input = input_
+        # Get the embeddings.
+        output_parallel = self.quant_method.embedding(self, masked_input.long())
+        # Mask the output embedding.
+        if self.tp_size > 1:
+            output_parallel.masked_fill_(input_mask.unsqueeze(-1), 0)
+        # Reduce across all the model parallel GPUs.
+        tp_group = get_tp_group()
+        if tp_group.world_size == 1:
+            return output_parallel
+        # vLLM 0.26 model forwards expect the first decoder layer to receive
+        # the complete token sequence. Sequence parallelism starts only after
+        # that layer's attention output, so reducing-scattering the embedding
+        # here would feed each TP rank only a token shard. The dedicated
+        # embedding-TP path above owns its complete gather/scatter protocol;
+        # the regular TP embedding path must keep upstream all-reduce semantics.
+        return torch.ops.vllm.all_reduce(output_parallel, tp_group.unique_name)
+```
+
+### _apply_head @ ops\vocab_parallel_embedding.py (HTML标记7行/实际5行)
+```python
+    def _apply_head(
+        self,
+        lm_head: AscendParallelLMHead,
+        hidden_states: torch.Tensor,
+        embedding_bias: torch.Tensor | None,
+```
+
+### _get_logits @ ops\vocab_parallel_embedding.py (HTML标记10行/实际5行)
+```python
+    def _get_logits(
+        self,
+        hidden_states: torch.Tensor,
+        lm_head: AscendParallelLMHead,
+        embedding_bias: torch.Tensor | None = None,
+```
+
+### _get_logits_lmheadtp @ ops\vocab_parallel_embedding.py (HTML标记20行/实际5行)
+```python
+    def _get_logits_lmheadtp(
+        self,
+        hidden_states: torch.Tensor,
+        lm_head: AscendParallelLMHead,
+        embedding_bias: torch.Tensor | None,
+```
+
+### _get_logits_normal @ ops\vocab_parallel_embedding.py (HTML标记19行/实际5行)
+```python
+    def _get_logits_normal(
+        self,
+        hidden_states: torch.Tensor,
+        lm_head: AscendParallelLMHead,
+        embedding_bias: torch.Tensor | None,
+```
+
+### _map_to_physical_and_record_fake @ ops\fused_moe\eplb.py (HTML标记8行/实际6行)
+```python
+def _map_to_physical_and_record_fake(
+    topk_ids: torch.Tensor,
+    expert_replica_routing_table: torch.Tensor,
+    expert_load_view: torch.Tensor,
+    record_enabled: torch.Tensor,
+    num_unpadded_tokens: torch.Tensor,
+```
+
+### _build_or_get_topk @ ops\fused_moe\force_eplb.py (HTML标记35行/实际8行)
+```python
+def _build_or_get_topk(
+    moe_comm_method,
+    *,
+    num_tokens: int,
+    top_k: int,
+    num_logical_experts: int,
+    dtype: torch.dtype,
+    device: torch.device,
+```
+
+### _build_round_robin_topk @ ops\fused_moe\force_eplb.py (HTML标记35行/实际9行)
+```python
+def _build_round_robin_topk(
+    *,
+    num_tokens: int,
+    top_k: int,
+    num_logical_experts: int,
+    ep_size: int,
+    ep_rank: int,
+    device: torch.device,
+    dtype: torch.dtype,
+```
+
+### is_internal_router @ ops\fused_moe\fused_moe.py
+```python
+    def is_internal_router(self) -> bool:
+        if vllm_version_is("0.27.1"):
+            gate = self.gate
+            return gate is not None and hasattr(gate, "weight_fp32")
+        else:
+            # main (cdc4824a21): vllm#51838 removed the gate branch in
+            # DeepseekV2MoE.forward, always passing router_logits=hidden_states.
+            # The runner must recompute router_logits via the gate.
+            return self.gate is not None
+```
+
+### _fused_output_is_reduced @ ops\fused_moe\fused_moe.py
+```python
+    def _fused_output_is_reduced(self) -> bool:
+        # For MC2/ALLTOALL/FUSED_MC2 comm types, finalize() already includes
+        # TP all-reduce for the routed output, and AscendSharedExperts.forward
+        # handles it for the shared output. Signal this to the upstream
+        # MoERunner.forward() so _maybe_reduce_final_output does not apply a
+        # second TP all-reduce (which would double-count the contributions).
+        moe_comm_type = _EXTRA_CTX.moe_comm_type
+        return moe_comm_type in {
+            MoECommType.ALLTOALL,
+            MoECommType.MC2,
+            MoECommType.FUSED_MC2,
+        } or (moe_comm_type == MoECommType.ALLGATHER and self.moe_config.is_sequence_parallel)
+```
+
+### _get_shared_expert_parallel_mode @ ops\fused_moe\fused_moe.py
+```python
+    def _get_shared_expert_parallel_mode(self) -> SharedExpertParallelMode:
+        shared_experts = getattr(self, "ascend_shared_experts", None)
+        if shared_experts is None or not hasattr(shared_experts, "parallel_mode"):
+            return SharedExpertParallelMode.TENSOR_PARALLEL
+        return shared_experts.parallel_mode()
+```
+
+### _reduce_shared_output_if_needed @ ops\fused_moe\fused_moe.py (HTML标记12行/实际4行)
+```python
+    def _reduce_shared_output_if_needed(
+        self,
+        shared_output: torch.Tensor | None,
+        fused_output_is_reduced: bool,
+```
+
+### ep_rank @ ops\fused_moe\fused_moe.py
+```python
+    def ep_rank(self) -> int:
+        return self.moe_config.ep_rank
+```
+
+### _maybe_reduce_shared_expert_output @ ops\fused_moe\fused_moe.py (HTML标记11行/实际4行)
+```python
+    def _maybe_reduce_shared_expert_output(  # type: ignore[misc]
+        self,
+        shared_output: torch.Tensor | None,
+        fused_output_is_reduced: bool | None = None,
+```
+
+### _maybe_reduce_routed_output_before_transform @ ops\fused_moe\fused_moe.py (HTML标记17行/实际4行)
+```python
+    def _maybe_reduce_routed_output_before_transform(
+        self,
+        fused_output: torch.Tensor,
+        fused_output_is_reduced: bool,
+```
+
+### _maybe_reduce_final_output @ ops\fused_moe\fused_moe.py (HTML标记16行/实际5行)
+```python
+    def _maybe_reduce_final_output(  # type: ignore[misc]
+        self,
+        states: torch.Tensor,
+        trunc_size: int | None,
+        output_is_reduced: bool | None = None,
+```
+
+### set_lora_context @ ops\fused_moe\fused_moe.py
+```python
+    def set_lora_context(self, lora_context):
+        self.routed_experts._ascend_moe_lora_context = lora_context
+        if self.ascend_shared_experts is not None:
+            self.ascend_shared_experts.set_lora_context(lora_context)
+```
+
+### _forward_impl @ ops\fused_moe\fused_moe.py (HTML标记64行/实际6行)
+```python
+        def _forward_impl(
+            self,
+            hidden_states: torch.Tensor,
+            router_logits: torch.Tensor,
+            shared_experts_input: torch.Tensor | None,
+            input_ids: torch.Tensor | None = None,
+```
+
+### get_moe_comm_method @ ops\fused_moe\moe_comm_method.py
+```python
+def get_moe_comm_method(moe_comm_type: MoECommType | None) -> MoECommMethod | None:
+    return _MoECommMethods.get(moe_comm_type)
+```
+
+### setup_moe_comm_method @ ops\fused_moe\moe_comm_method.py
+```python
+def setup_moe_comm_method(moe_config):
+    if moe_config.ep_size > 1:
+        _MoECommMethods[MoECommType.ALLTOALL] = AlltoAllCommImpl(moe_config)
+        _MoECommMethods[MoECommType.ALLGATHER] = AllGatherCommImpl(moe_config)
+        _MoECommMethods[MoECommType.MC2] = MC2CommImpl(moe_config)
+        _MoECommMethods[MoECommType.FUSED_MC2] = FusedMC2CommImpl(moe_config)
+    else:
+        _MoECommMethods[MoECommType.ALLGATHER] = AllGatherCommImpl(moe_config)
+```
+
+### set_lora_context @ ops\fused_moe\moe_comm_method.py
+```python
+    def set_lora_context(self, lora_context) -> None:
+        self.lora_context = lora_context
+        self.prepare_finalize.set_lora_context(lora_context)
+        self.token_dispatcher.set_lora_context(lora_context)
+```
+
+### prepare @ ops\fused_moe\moe_comm_method.py (HTML标记13行/实际6行)
+```python
+    def prepare(
+        self,
+        hidden_states: torch.Tensor,
+        router_logits: torch.Tensor,
+        replace_allreduce: bool = False,
+        quant_type: QuantType = QuantType.NONE,
+```
+
+### finalize @ ops\fused_moe\moe_comm_method.py (HTML标记8行/实际5行)
+```python
+    def finalize(
+        self,
+        hidden_states: torch.Tensor,
+        reduce_results: bool,
+        padded_hidden_states_shape: torch.Size | None = None,
+```
+
+### fused_experts @ ops\fused_moe\moe_comm_method.py (HTML标记45行/实际3行)
+```python
+    def fused_experts(
+        self,
+        fused_experts_input: MoEFusedExpertsInput,
+```
+
+### _apply_mlp @ ops\fused_moe\moe_comm_method.py
+```python
+    def _apply_mlp(self, mlp_compute_input: MoEMlpComputeInput) -> torch.Tensor:
+        return unified_apply_mlp(mlp_compute_input=mlp_compute_input)
+```
+
+### _get_token_dispatcher @ ops\fused_moe\moe_comm_method.py
+```python
+    def _get_token_dispatcher(self) -> MoETokenDispatcher:
+        raise NotImplementedError("_get_token_dispatcher function not implemented.")
+```
+
+### _get_prepare_finalize @ ops\fused_moe\moe_comm_method.py
+```python
+    def _get_prepare_finalize(self) -> PrepareAndFinalize:
+        raise NotImplementedError("_get_prepare_finalize function not implemented.")
+```
+
+### pad_and_split_input_ids @ ops\fused_moe\moe_comm_method.py
+```python
+    def pad_and_split_input_ids(self, input_ids):
+        return self.prepare_finalize.pad_and_split_input_ids(input_ids)  # type: ignore[attr-defined]
+```
+
+### _init_mega_moe_symm_buffer @ ops\fused_moe\moe_comm_method.py (HTML标记79行/实际6行)
+```python
+    def _init_mega_moe_symm_buffer(
+        self,
+        dispatch_quant_mode: int = 0,
+        dispatch_quant_out_dtype: torch.dtype | None = None,
+        *,
+        is_decode_only_node: bool,
+```
+
+### _apply_cann_mega_moe @ ops\fused_moe\moe_comm_method.py (HTML标记83行/实际4行)
+```python
+    def _apply_cann_mega_moe(
+        self,
+        fused_experts_input: MoEFusedExpertsInput,
+        is_decode_only_node: bool,
+```
+
+### to_list @ ops\fused_moe\moe_comm_method.py
+```python
+        def to_list(x):
+            return x if isinstance(x, list) else [x]
+```
+
+### _custom_gmm_swiglu_enabled @ ops\fused_moe\moe_mlp.py
+```python
+def _custom_gmm_swiglu_enabled(fusion, dynamic_eplb, activation=None):
+    activation_name = getattr(activation, "value", activation)
+    return fusion and dynamic_eplb and activation_name not in ("situ", "swigluoai_uninterleave") and enable_custom_op()
+```
+
+### _gmm_swiglu_quant_fusion_enabled @ ops\fused_moe\moe_mlp.py
+```python
+def _gmm_swiglu_quant_fusion_enabled(use_mxfp_quant, fusion, dynamic_eplb, activation=None):
+    activation_name = getattr(activation, "value", activation)
+    return (use_mxfp_quant or (fusion and not dynamic_eplb)) and activation_name not in (
+        "situ",
+        "swigluoai_uninterleave",
+    )
+```
+
+### cumsum_group_list @ ops\fused_moe\moe_mlp.py (HTML标记30行/实际2行)
+```python
+def cumsum_group_list(
+    group_list: torch.Tensor, src_list_type: int, dst_list_type: int, active_num: int = 0, expert_num: int = 0
+```
+
+### _require_single_tensor_for_swiglu_quant @ ops\fused_moe\moe_mlp.py (HTML标记8行/实际2行)
+```python
+def _require_single_tensor_for_swiglu_quant(
+    tensor_or_list: list[torch.Tensor] | torch.Tensor, *, name: str
+```
+
+### _prepare_dequant_swiglu_weight_scale @ ops\fused_moe\moe_mlp.py (HTML标记18行/实际3行)
+```python
+def _prepare_dequant_swiglu_weight_scale(
+    w1_scale: list[torch.Tensor] | torch.Tensor,
+    is_swigluoai_uninterleave: bool,
+```
+
+### _prepare_swigluoai_grouped_matmul_scales @ ops\fused_moe\moe_mlp.py (HTML标记5行/实际2行)
+```python
+def _prepare_swigluoai_grouped_matmul_scales(
+    weight_scale: list[torch.Tensor] | torch.Tensor, output_dtype: torch.dtype
+```
+
+### _apply_clipped_swiglu @ ops\fused_moe\moe_mlp.py (HTML标记23行/实际6行)
+```python
+def _apply_clipped_swiglu(
+    hidden_states: torch.Tensor,
+    *,
+    swiglu_limit: float,
+    swiglu_alpha: float,
+    swiglu_beta: float,
+```
+
+### _swiglu_oai_dynamic_mx_quant @ ops\fused_moe\moe_mlp.py (HTML标记24行/实际7行)
+```python
+def _swiglu_oai_dynamic_mx_quant(
+    hidden_states: torch.Tensor,
+    *,
+    act_quant_type: torch.dtype,
+    swiglu_limit: float,
+    swiglu_alpha: float,
+    swiglu_beta: float,
+```
+
+### quant_apply_mlp @ ops\fused_moe\moe_mlp.py (HTML标记457行/实际29行)
+```python
+def quant_apply_mlp(
+    hidden_states: torch.Tensor,
+    w1: list[torch.Tensor] | torch.Tensor,
+    w1_scale: list[torch.Tensor] | torch.Tensor,
+    w2: list[torch.Tensor] | torch.Tensor,
+    w2_scale: list[torch.Tensor] | torch.Tensor,
+    group_list: torch.Tensor,
+    group_list_type: int = 1,
+    dynamic_scale: torch.Tensor = None,
+    w1_scale_bias: torch.Tensor = None,
+    w2_scale_bias: torch.Tensor = None,
+    w1_offset: torch.Tensor | None = None,
+    w2_offset: torch.Tensor | None = None,
+    fusion: bool = False,
+    dynamic_eplb: bool = False,
+    use_mxfp_quant: bool = False,
+    mxfp_quant_dtype: QuantType | None = None,
+    act_quant_type: torch.dtype = torch.float8_e4m3fn,
+    weight_quant_type: torch.dtype | None = None,
+    scale_type: torch.dtype | None = None,
+    per_token_scale_type: torch.dtype | None = None,
+    use_bf16: bool = True,
+    activation: str | MoEActivation | None = None,
+    activation_situ_beta: float | None = None,
+    activation_situ_linear_beta: float | None = None,
+    swiglu_limit: float = 0.0,
+    swiglu_alpha: float = 1.0,
+    swiglu_beta: float = 0.0,
+    use_w4a8_per_channel_gmm_swiglu: bool = False,
+```
+
+### unquant_apply_mlp @ ops\fused_moe\moe_mlp.py (HTML标记123行/实际19行)
+```python
+def unquant_apply_mlp(
+    hidden_states: torch.Tensor,
+    w1: torch.Tensor,
+    w2: torch.Tensor,
+    group_list: torch.Tensor,
+    w1_bias: torch.Tensor = None,
+    w2_bias: torch.Tensor = None,
+    activation: str | MoEActivation | None = None,
+    activation_situ_beta: float | None = None,
+    activation_situ_linear_beta: float | None = None,
+    group_list_type: int = 1,
+    topk_scales: torch.Tensor | None = None,
+    need_trans: bool = True,
+    swiglu_limit: float = 0.0,
+    swiglu_alpha: float = 1.0,
+    swiglu_beta: float = 0.0,
+    lora_context=None,
+    expanded_row_idx: torch.Tensor | None = None,
+    topk_ids: torch.Tensor | None = None,
+```
+
+### async_all_to_all @ ops\fused_moe\moe_utils.py
+```python
+def async_all_to_all(input_, output_split_sizes, input_split_sizes, group, event=None):
+    if output_split_sizes is None:
+        # Equal split (all2all)
+        a2a_out = torch.empty_like(input_)
+    else:
+        # Unequal split (all2all-v)
+        a2a_out = input_.new_empty(
+            size=[sum(output_split_sizes)] + list(input_.size()[1:]),
+            dtype=input_.dtype,
+            device=torch.npu.current_device(),
+        )
+
+    if event:
+        # multi stream wait event
+        global COMM_STREAM
+        if COMM_STREAM is None:
+            COMM_STREAM = torch_npu.npu.Stream(device=torch.npu.current_device())
+        with torch_npu.npu.stream(COMM_STREAM):
+            event.wait()
+            handle = dist.all_to_all_single(
+                a2a_out,
+                input_.contiguous(),
+                output_split_sizes=output_split_sizes,
+                input_split_sizes=input_split_sizes,
+                group=group,
+                async_op=True,
+            )
+    else:
+        handle = dist.all_to_all_single(
+            a2a_out,
+            input_.contiguous(),
+            output_split_sizes=output_split_sizes,
+            input_split_sizes=input_split_sizes,
+            group=group,
+            async_op=True,
+        )
+    return input_, a2a_out, handle
+```
+
+### load_cann_mega_moe_ops @ ops\fused_moe\moe_utils.py
+```python
+def load_cann_mega_moe_ops():
+    ops_module = import_module("cann_ops_transformer.ops")
+    get_symm_buffer_for_mega_moe = ops_module.get_symm_buffer_for_mega_moe
+    mega_moe = ops_module.mega_moe
+    return get_symm_buffer_for_mega_moe, mega_moe
+```
+
+### _get_cann_mega_moe_quant_settings @ ops\fused_moe\moe_utils.py
+```python
+def _get_cann_mega_moe_quant_settings(quant_type: QuantType) -> tuple[int, int | None, int | None]:
+    # Returns (dispatch_quant_mode, dispatch_quant_out_dtype, weight_type).
+    # The current custom op package still requires explicit INT4 for W4A8
+    # packed weights; otherwise it derives W4A8's packed N as an INT8 N and
+    # rejects weight2.
+    #
+    # dispatch_quant_out_dtype: the doc types this as torch.dtype (torch.int8 /
+    # torch.float8_e4m3fn). We pass the ACL enum ints (258 / 24) because W8A8
+    # was validated end-to-end this way in PD; switching W4A8 to torch.int8 did
+    # NOT fix the W4A8 accuracy issue and slowed graph capture (see bug_a3.md),
+    # so keep the working values until the W4A8 accuracy root cause is found on
+    # the operator side.
+    if quant_type == QuantType.W8A8:
+        return (_CANN_MEGA_MOE_QUANT_MODE_INT8, _CANN_ACL_INT8, _CANN_ACL_INT8)
+    if quant_type == QuantType.W4A8:
+        return (_CANN_MEGA_MOE_QUANT_MODE_INT8, _CANN_ACL_INT8, _CANN_ACL_INT4)
+    if quant_type == QuantType.NONE:
+        return (_CANN_MEGA_MOE_QUANT_MODE_None, None, None)
+
+    raise RuntimeError(
+        "MegaMoe integration supports W8A8/W4A8 INT on A2/A3 and MXFP on FP8-capable "
+        "MegaMoe platforms. "
+        f"Unsupported quant type: {quant_type}."
+    )
+```
+
+### get_moe_num_logical_experts @ ops\fused_moe\moe_utils.py (HTML标记12行/实际5行)
+```python
+def get_moe_num_logical_experts(
+    layer: torch.nn.Module,
+    num_experts: int,
+    global_redundant_expert_num: int = 0,
+    num_shared_experts: int = 0,
+```
+
+### enable_fusion_gmmswigluquant @ ops\fused_moe\moe_utils.py
+```python
+def enable_fusion_gmmswigluquant():
+    from vllm_ascend.ascend_config import get_ascend_config
+
+    ascend_config = get_ascend_config()
+    return ascend_config.ascend_fusion_config.fusion_ops_gmmswigluquant
+```
+
+### set_lora_context @ ops\fused_moe\prepare_finalize.py
+```python
+    def set_lora_context(self, lora_context) -> None:
+        self.lora_context = lora_context
+```
+
+### pad_and_split_input_ids @ ops\fused_moe\prepare_finalize.py (HTML标记22行/实际3行)
+```python
+    def pad_and_split_input_ids(
+        self,
+        input_ids,
+```
+
+### _prepare_with_ep_group @ ops\fused_moe\prepare_finalize.py (HTML标记54行/实际2行)
+```python
+    def _prepare_with_ep_group(
+        self, hidden_states: torch.Tensor, router_logits: torch.Tensor, quant_type=QuantType.NONE
+```
+
+### all_gather_input_id_with_dp_group @ ops\fused_moe\prepare_finalize.py
+```python
+    def all_gather_input_id_with_dp_group(self, input_ids: torch.Tensor) -> torch.Tensor:
+        if self.moe_config.dp_size > 1:
+            max_tokens_across_dp = _EXTRA_CTX.max_tokens_across_dp
+            pad_size = max_tokens_across_dp - self.num_tokens
+            if pad_size > 0:
+                input_ids = nn.functional.pad(input_ids, (0, pad_size))
+
+            input_ids = self.moe_config.dp_group.all_gather(input_ids, 0)
+        return input_ids
+```
+
+### set_lora_context @ ops\fused_moe\routed_experts.py
+```python
+    def set_lora_context(self, lora_context) -> None:
+        self.lora_context = lora_context
+```
+
+### is_monolithic @ ops\fused_moe\routed_experts.py
+```python
+    def is_monolithic(self) -> bool:
+        return False
+```
+
+### maybe_make_prepare_finalize @ ops\fused_moe\routed_experts.py
+```python
+    def maybe_make_prepare_finalize(self, routing_tables=None):
+        # Ascend uses its own MoE communication and forward_impl path.
+        # Do not let upstream modular-kernel initialization replace it.
+        return None
+```
+
+### get_eplb_weight_views @ ops\fused_moe\routed_experts.py
+```python
+    def get_eplb_weight_views(layer) -> list[torch.Tensor]:
+        weights = [layer.w13_weight, layer.w2_weight]
+        if layer.w13_bias is not None:
+            weights.append(layer.w13_bias)
+        if layer.w2_bias is not None:
+            weights.append(layer.w2_bias)
+        return weights
+```
+
+### shape @ ops\fused_moe\routed_experts.py
+```python
+    def shape(self) -> torch.Size:
+        return torch.Size((len(self), *self[0].shape))
+```
+
+### __torch_function__ @ ops\fused_moe\routed_experts.py
+```python
+    def __torch_function__(cls, func, types, args=(), kwargs=None):
+        if func is torch.empty_like:
+            source = args[0]
+            return cls(torch.empty_like(tensor, **(kwargs or {})) for tensor in source)
+        return NotImplemented
+```
+
+### get_expert_weights @ ops\fused_moe\routed_experts.py
+```python
+    def get_expert_weights(self) -> Iterable[torch.Tensor]:
+        try:
+            get_weight_views = self.quant_method.get_eplb_weight_views
+        except AttributeError as exc:
+            raise NotImplementedError(
+                f"{self.quant_method.__class__.__name__} must implement get_eplb_weight_views() for Ascend EPLB."
+            ) from exc
+        weights = list(get_weight_views(self))
+        if not weights:
+            raise NotImplementedError(f"EPLB weight views are not defined for {self.quant_method.__class__.__name__}.")
+        flattened_weights = []
+        for weight in weights:
+            if isinstance(weight, (list, tuple)):
+                if len(weight) != self.local_num_experts:
+                    raise ValueError(
+                        "Every EPLB expert tensor list must contain "
+                        f"local_num_experts ({self.local_num_experts}) tensors, got {len(weight)}."
+                    )
+                if not all(is_weak_contiguous(expert_weight) for expert_weight in weight):
+                    raise ValueError("Every tensor in an Ascend EPLB expert tensor list must be weakly contiguous.")
+                flattened_weights.append(EplbExpertTensorList(weight))
+                continue
+            if weight.shape[0] != self.local_num_experts:
+                raise ValueError(
+                    "The first dimension of every EPLB weight view must equal "
+                    f"local_num_experts ({self.local_num_experts}), got {tuple(weight.shape)}."
+                )
+            if not is_weak_contiguous(weight):
+                raise ValueError("Every Ascend EPLB weight view must be weakly contiguous.")
+            try:
+                flattened_weights.append(weight.view(self.local_num_experts, -1))
+            except RuntimeError as exc:
+                raise ValueError("Every Ascend EPLB expert row must be flattenable without a copy.") from exc
+        return flattened_weights
+```
+
+### init_eplb @ ops\fused_moe\routed_experts.py
+```python
+    def init_eplb(self, n_shared_experts):
+        # EPLB initialization (Ascend-specific; mirrors old AscendFusedMoE logic).
+        AscendRoutedExperts.moe_counter += 1
+        self.moe_instance_id = AscendRoutedExperts.moe_counter
+
+        eplb_config = get_ascend_config().eplb_config
+
+        # The upstream FusedMoEFactory factory has already included redundant expert
+        # slots in moe_config and allocated RoutedExperts weights accordingly.
+        # Ascend's placement builder operates on logical expert IDs, so give it
+        # a shallow config view with the logical count.
+        placement_moe_config = copy(self.moe_config)
+        placement_moe_config.num_experts = self.moe_config.num_logical_experts + (
+            n_shared_experts if self.mix_placement else 0
+        )
+        allocated_redundancy = self.moe_config.num_experts - self.moe_config.num_logical_experts
+        if eplb_config.num_redundant_experts not in (0, allocated_redundancy):
+            raise ValueError(
+                "Conflicting EPLB redundant expert counts: "
+                f"allocated={allocated_redundancy}, Ascend={eplb_config.num_redundant_experts}."
+            )
+        placement_eplb_config = make_eplb_placement_config(eplb_config, allocated_redundancy)
+        vllm_config = get_current_vllm_config()
+        (
+            self.global_expert_map,
+            self.ascend_expert_map,
+            self.log2phy,
+            self.global_redundant_expert_num,
+        ) = init_eplb_config(
+            placement_eplb_config,
+            AscendRoutedExperts.moe_counter,
+            placement_moe_config,
+            self.mix_placement,
+            n_shared_experts,
+            tp_size=vllm_config.parallel_config.tensor_parallel_size,
+        )
+
+        self.moe_config.global_redundant_expert_num = self.global_redundant_expert_num
+        local_num_experts = self.moe_config.num_local_experts
+        expected_local_num_experts = (
+            placement_moe_config.num_experts + self.global_redundant_expert_num
+        ) // self.moe_config.ep_size
+        if local_num_experts != expected_local_num_experts:
+            raise ValueError(
+                "EPLB local expert capacity mismatch: "
+                f"allocated={local_num_experts}, placement={expected_local_num_experts}. "
+                "Ensure vLLM and Ascend use the same redundant expert count."
+            )
+        # Keep ExpertMapManager's physical-expert map until checkpoint loading
+        # finishes. The upstream loader uses it to place both original and
+        # redundant physical experts. Ascend execution uses ascend_expert_map,
+        # which maps logical expert IDs to the local physical slots.
+
+        self.dynamic_eplb = eplb_config.dynamic_eplb and (self.log2phy is not None)
+        self.multi_stage = False
+        self.load_counter = None
+        self.num_iter = None
+        self.moe_load = torch.zeros(local_num_experts, dtype=torch.int64).npu()
+        # Only FlashLB consumes a time series of expert loads. Other EPLB
+        # policies (including the default SwiftBalance policy) expect one load
+```
+
+### _get_quant_method @ ops\fused_moe\routed_experts.py
+```python
+    def _get_quant_method(self, prefix, quant_config, moe_config):
+        if quant_config is None:
+            return super()._get_quant_method(prefix, quant_config, moe_config)
+        return quant_config.get_quant_method(self, prefix, tid2eid=self.tid2eid)
+```
+
+### get_log2phy_map @ ops\fused_moe\routed_experts.py
+```python
+    def get_log2phy_map(self) -> torch.Tensor | None:
+        return self.log2phy
+```
+
+### ep_rank @ ops\fused_moe\routed_experts.py
+```python
+    def ep_rank(self) -> int:
+        return self.moe_config.ep_rank
+```
+
+### wrapped_process_weights @ ops\fused_moe\shared_experts.py
+```python
+            def wrapped_process_weights(*args, **kwargs):
+                result = original_process_weights(*args, **kwargs)
+                self.validate_consistency()
+                return result
+```
+
+### set_lora_context @ ops\fused_moe\shared_experts.py
+```python
+    def set_lora_context(self, lora_context) -> None:
+        self.lora_context = lora_context
+```
+
+### part1 @ ops\fused_moe\shared_experts.py
+```python
+    def part1(self, hidden_states: torch.Tensor):
+        shared_gate_up, _ = self.layer.gate_up_proj(hidden_states)  # type: ignore
+        return shared_gate_up
+```
+
+### part2 @ ops\fused_moe\shared_experts.py
+```python
+    def part2(self, hidden_states: torch.Tensor, shared_gate_up: torch.Tensor):
+        shared_act = self.layer.act_fn(shared_gate_up)  # type: ignore
+        shared_out, _ = self.layer.down_proj(shared_act)  # type: ignore
+
+        # Qwen3-Next specific gating mechanism
+        if hasattr(self.layer, "expert_gate") and self.layer.expert_gate is not None:
+            gate_out, _ = self.layer.expert_gate(hidden_states)  # type: ignore
+            shared_out = F.sigmoid(gate_out) * shared_out
+        return shared_out
+```
+
+### _prepare_local_dp_input @ ops\fused_moe\shared_experts.py (HTML标记18行/实际3行)
+```python
+    def _prepare_local_dp_input(
+        self,
+        hidden_states: torch.Tensor,
+```
+
+### _finalize_local_dp_output @ ops\fused_moe\shared_experts.py (HTML标记10行/实际4行)
+```python
+    def _finalize_local_dp_output(
+        self,
+        shared_out: torch.Tensor,
+        metadata: tuple[int, int],
+```
+
+### maybe_wait_event @ ops\fused_moe\shared_experts.py
+```python
+        def maybe_wait_event(evt: torch.npu.Event | None):
+            if evt is not None:
+                torch.npu.current_stream().wait_event(evt)
+```
+
+### _get_expert_token_nums_type @ ops\fused_moe\token_dispatcher.py
+```python
+def _get_expert_token_nums_type(token_dispatch_input: MoETokenDispatchInput) -> int:
+    # grouped_matmul_swiglu_quant_v2 consumes per-expert counts; existing
+    # MC2 grouped-matmul paths consume prefix sums.
+    if token_dispatch_input.quant.use_w4a8_per_channel_gmm_swiglu:
+        return EXPERT_TOKEN_NUMS_TYPE_COUNT
+    return EXPERT_TOKEN_NUMS_TYPE_CUMSUM
+```
+
+### set_lora_context @ ops\fused_moe\token_dispatcher.py
+```python
+    def set_lora_context(self, lora_context) -> None:
+        self.lora_context = lora_context
+```
+
+### ep_rank @ ops\fused_moe\token_dispatcher.py
+```python
+    def ep_rank(self):
+        return get_ep_group().rank_in_group
+```
+
+### ep_size @ ops\fused_moe\token_dispatcher.py
+```python
+    def ep_size(self):
+        return get_ep_group().world_size
+```
+
+### token_dispatch @ ops\fused_moe\token_dispatcher.py (HTML标记83行/实际3行)
+```python
+    def token_dispatch(
+        self,
+        token_dispatch_input: MoETokenDispatchInput,
+```
+
+### token_combine @ ops\fused_moe\token_dispatcher.py (HTML标记20行/实际5行)
+```python
+    def token_combine(
+        self,
+        hidden_states: torch.Tensor,
+        combine_metadata: TMoECombineMetadata,
+        bias: torch.Tensor | None = None,
+```
+
+### get_dispatch_mc2_kwargs @ ops\fused_moe\token_dispatcher.py (HTML标记73行/实际3行)
+```python
+    def get_dispatch_mc2_kwargs(
+        self,
+        token_dispatch_input: MoETokenDispatchInput,
+```
+
+### get_combine_mc_kwargs @ ops\fused_moe\token_dispatcher.py
+```python
+    def get_combine_mc_kwargs(self, hidden_states: torch.Tensor, combine_metadata: MoEMC2CombineMetadata):
+        expert_map = combine_metadata.expert_map
+        topk_ids = combine_metadata.topk_ids
+        topk_weights = combine_metadata.topk_weights
+        ep_recv_counts = combine_metadata.ep_recv_counts
+        tp_recv_counts = combine_metadata.tp_recv_counts
+        assist_info_for_combine = combine_metadata.assist_info_for_combine
+        expand_scales = combine_metadata.expand_scales
+        quant_type = combine_metadata.quant.quant_type
+        comm_quant_mode = combine_metadata.quant.comm_quant_mode
+
+        assert expert_map is not None
+        # NOTE: quant_mode differs by quant features:
+        # - A5 MXFP communication uses quant_mode=4 only for W8A8MXFP currently.
+        if comm_quant_mode is not None:
+            quant_mode = comm_quant_mode
+        elif quant_type == QuantType.W8A8MXFP:
+            quant_mode = 4
+        else:
+            quant_mode = 0
+        kwargs_mc2 = {
+            "expand_x": hidden_states,
+            "expert_ids": topk_ids,
+            "expert_scales": topk_weights.to(torch.float32),
+            "expert_shard_type": 0,
+            "shared_expert_rank_num": 0,
+            "moe_expert_num": self.moe_expert_num,
+            "global_bs": self.global_bs,
+        }
+        if self.global_bs == 0:
+            kwargs_mc2["x_active_mask"] = combine_metadata.mc2_mask
+
+        if combine_metadata.quant.dispatch_with_quant:
+            tp_recv_counts = torch.empty(1, dtype=torch.int32, device=hidden_states.device)
+
+        stage3_kwargs = {
+            "ep_send_counts": ep_recv_counts,
+            "group_ep": self.moe_all_to_all_group_name,
+            "ep_world_size": self.ep_world_size,
+            "ep_rank_id": self.ep_rank_id,
+            "expand_scales": expand_scales,
+            "comm_quant_mode": quant_mode,
+            "comm_alg": self.mc2_comm_alg,
+            "assist_info_for_combine": assist_info_for_combine,
+        }
+
+        if self.need_extra_args:
+            stage3_kwargs.update(
+                {
+                    "tp_send_counts": tp_recv_counts,
+                    "group_tp": self.moe_all_to_all_group_name,
+                    "tp_world_size": 1,
+                    "tp_rank_id": 0,
+                }
+            )
+
+        kwargs_mc2.update(stage3_kwargs)
+        return kwargs_mc2
+```
+
+### _dispatch_preprocess @ ops\fused_moe\token_dispatcher.py
+```python
+    def _dispatch_preprocess(self, hidden_states, topk_ids):
+        hidden_shape = hidden_states.shape
+        hidden_states = hidden_states.view(-1, hidden_states.size(-1))
+        (
+            tokens_per_expert,
+            input_splits,
+            output_splits,
+            global_input_tokens_local_experts_indices,
+            num_out_tokens,
+        ) = self._preprocess(topk_ids)
+        hidden_shape_before_permute = hidden_states.shape
+
+        permutated_local_input_tokens, reversed_local_input_permutation_mapping = torch_npu.npu_moe_token_permute(
+            tokens=hidden_states,
+            indices=topk_ids,
+            num_out_tokens=num_out_tokens,
+        )
+
+        if self.lora_context is not None:
+            preprocess_lora_indices(
+                self.lora_context,
+                topk_ids=topk_ids,
+                reversed_permutation_mapping=reversed_local_input_permutation_mapping,
+            )
+
+        return (
+            permutated_local_input_tokens,
+            reversed_local_input_permutation_mapping,
+            tokens_per_expert,
+            input_splits,
+            output_splits,
+            global_input_tokens_local_experts_indices,
+            hidden_shape,
+            hidden_shape_before_permute,
+        )
+```
+
+### _preprocess @ ops\fused_moe\token_dispatcher.py
+```python
+    def _preprocess(self, topk_ids: torch.Tensor):
+        num_local_tokens_per_expert = torch.histc(topk_ids, bins=self.num_experts, min=0, max=self.num_experts)
+
+        ep_size = self.ep_size
+        num_out_tokens = topk_ids.numel()
+
+        input_splits = (
+            num_local_tokens_per_expert.reshape(ep_size, self.num_local_experts)
+            .sum(axis=1)
+            .to(torch.device("cpu"), non_blocking=True)
+            .numpy()
+        )
+
+        num_global_tokens_per_expert = gather_from_sequence_parallel_region(
+            num_local_tokens_per_expert, group=self.ep_group
+        ).reshape(ep_size, self.num_experts)
+        num_global_tokens_per_local_expert = num_global_tokens_per_expert[
+            :, self.local_expert_indices[0] : self.local_expert_indices[-1] + 1
+        ]
+        if num_global_tokens_per_local_expert is None:
+            raise ValueError("num_global_tokens_per_local_expert must be set before sum.")
+
+        output_splits = (
+            num_global_tokens_per_local_expert.sum(axis=-1).to(torch.device("cpu"), non_blocking=True).numpy()
+        )
+        num_tokens_per_local_expert = num_global_tokens_per_local_expert.sum(axis=0)
+
+        global_input_tokens_local_experts_indices = None
+        if self.num_local_experts > 1:
+            if num_global_tokens_per_local_expert is None:
+                raise ValueError("num_global_tokens_per_local_expert must be set before operations.")
+            global_input_tokens_local_experts_indices = torch.repeat_interleave(
+                self.expert_ids_per_ep_rank, num_global_tokens_per_local_expert.ravel()
+            )
+        else:
+            torch.npu.synchronize()
+
+        return (
+            num_tokens_per_local_expert,
+            input_splits,
+            output_splits,
+            global_input_tokens_local_experts_indices,
+            num_out_tokens,
+        )
+```
+
+### _dispatch_postprocess @ ops\fused_moe\token_dispatcher.py (HTML标记38行/实际7行)
+```python
+    def _dispatch_postprocess(
+        self,
+        global_input_tokens,
+        dynamic_scale_after_all2all,
+        global_input_tokens_local_experts_indices,
+        with_quant,
+        dst_type,
+```
+
+### _combine_preprocess @ ops\fused_moe\token_dispatcher.py (HTML标记8行/实际2行)
+```python
+    def _combine_preprocess(
+        self, hidden_states: torch.Tensor, combine_metadata: MoEAllToAllCombineMetadata
+```
+
+### _combine_postprocess @ ops\fused_moe\token_dispatcher.py (HTML标记14行/实际4行)
+```python
+    def _combine_postprocess(
+        self,
+        permutated_local_input_tokens: torch.Tensor,
+        combine_metadata: MoEAllToAllCombineMetadata,
+```
+
+### build_fused_experts_input @ ops\fused_moe\dataclass\fused_experts.py (HTML标记71行/实际32行)
+```python
+def build_fused_experts_input(
+    *,
+    hidden_states: torch.Tensor,
+    topk_weights: torch.Tensor,
+    topk_ids: torch.Tensor,
+    w1: torch.Tensor | list[torch.Tensor],
+    w2: torch.Tensor | list[torch.Tensor],
+    quant_type: QuantType,
+    dynamic_eplb: bool,
+    expert_map: torch.Tensor | None = None,
+    global_redundant_expert_num: int = 0,
+    mc2_mask: torch.Tensor | None = None,
+    apply_router_weight_on_input: bool = False,
+    pertoken_scale: torch.Tensor | None = None,
+    activation: MoEActivation | str = MoEActivation.SILU,
+    need_trans: bool = False,
+    w1_bias: torch.Tensor | None = None,
+    w2_bias: torch.Tensor | None = None,
+    comm_quant_mode: int | None = None,
+    mxfp_act_quant_type: torch.dtype | None = None,
+    mxfp_weight_quant_type: torch.dtype | None = None,
+    mxfp_scale_dtype: torch.dtype | None = None,
+    mxfp_per_token_scale_dtype: torch.dtype | None = None,
+    mxfp_use_bf16: bool | None = None,
+    is_per_channel_weight: bool = False,
+    w1_scale: list[torch.Tensor] | torch.Tensor | None = None,
+    w2_scale: list[torch.Tensor] | torch.Tensor | None = None,
+    w1_scale_bias: list[torch.Tensor] | torch.Tensor | None = None,
+    w2_scale_bias: list[torch.Tensor] | torch.Tensor | None = None,
+    w1_offset: torch.Tensor | None = None,
+    w2_offset: torch.Tensor | None = None,
+    lora_context=None,
+```
+
+### build_mlp_compute_input @ ops\fused_moe\dataclass\moe_mlp.py (HTML标记53行/实际6行)
+```python
+def build_mlp_compute_input(
+    *,
+    fused_experts_input: MoEFusedExpertsInput,
+    token_dispatch_output: MoETokenDispatchOutput[TMoECombineMetadata],
+    moe_config: FusedMoEConfig | None = None,
+    use_fusion_ops: bool | None = None,
+```
+
+### is_quant @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def is_quant(self) -> bool:
+        return self.quant_type != QuantType.NONE
+```
+
+### is_mxfp @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def is_mxfp(self) -> bool:
+        return self.quant_type in (QuantType.W8A8MXFP, QuantType.W4A4MXFP, QuantType.W4A8MXFP, QuantType.W4A16MXFP)
+```
+
+### is_w4a4_mxfp @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def is_w4a4_mxfp(self) -> bool:
+        return self.quant_type == QuantType.W4A4MXFP
+```
+
+### is_int_quant @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def is_int_quant(self) -> bool:
+        return self.quant_type in (QuantType.W8A8, QuantType.W4A8)
+```
+
+### is_fp8 @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def is_fp8(self) -> bool:
+        return self.quant_type == QuantType.W8A8FP
+```
+
+### use_w4a8_per_channel_gmm_swiglu @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def use_w4a8_per_channel_gmm_swiglu(self) -> bool:
+        return self.quant_type == QuantType.W4A8 and self.is_per_channel_weight
+```
+
+### dispatch_with_quant @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def dispatch_with_quant(self) -> bool:
+        return self.quant_type in (
+            QuantType.W8A8,
+            QuantType.W4A8,
+            QuantType.W8A8MXFP,
+            QuantType.W4A4MXFP,
+            QuantType.W4A8MXFP,
+            QuantType.W8A8FP,
+        )
+```
+
+### get_dst_type @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def get_dst_type(self):
+        if self.is_w4a4_mxfp:
+            return torch_npu.float4_e2m1fn_x2
+        elif self.is_mxfp or self.is_fp8:
+            return torch.float8_e4m3fn
+        elif self.dispatch_with_quant:
+            return torch.int8
+        else:
+            return None
+```
+
+### get_scale_type @ ops\fused_moe\dataclass\moe_quant.py
+```python
+    def get_scale_type(self):
+        if self.is_mxfp:
+            return torch.float8_e8m0fnu
+        elif self.dispatch_with_quant:
+            return torch.float32
+        else:
+            return None
+```
+
+### _build_mxfp_params @ ops\fused_moe\dataclass\moe_quant.py (HTML标记32行/实际8行)
+```python
+def _build_mxfp_params(
+    *,
+    quant_type: QuantType,
+    mxfp_act_quant_type: torch.dtype | None = None,
+    mxfp_weight_quant_type: torch.dtype | None = None,
+    mxfp_scale_dtype: torch.dtype | None = None,
+    mxfp_per_token_scale_dtype: torch.dtype | None = None,
+    mxfp_use_bf16: bool | None = None,
+```
+
+### build_quant_params @ ops\fused_moe\dataclass\moe_quant.py (HTML标记23行/实际9行)
+```python
+def build_quant_params(
+    quant_type,
+    comm_quant_mode,
+    mxfp_act_quant_type,
+    mxfp_weight_quant_type,
+    mxfp_scale_dtype,
+    mxfp_per_token_scale_dtype,
+    mxfp_use_bf16,
+    is_per_channel_weight,
+```
+
+### build_token_dispatch_input @ ops\fused_moe\dataclass\token_dispatcher.py (HTML标记11行/实际3行)
+```python
+def build_token_dispatch_input(
+    *,
+    fused_experts_input: MoEFusedExpertsInput,
+```
+
+### is_fused_supported @ ops\fused_moe\router\fused_topk_router.py (HTML标记17行/实际3行)
+```python
+    def is_fused_supported(
+        self,
+        hidden_states: torch.Tensor,
+```
+
+### _compute_routing @ ops\fused_moe\router\fused_topk_router.py (HTML标记76行/实际7行)
+```python
+    def _compute_routing(
+        self,
+        hidden_states: torch.Tensor,
+        router_logits: torch.Tensor,
+        indices_type: torch.dtype | None,
+        *,
+        input_ids: torch.Tensor | None = None,
+```
+
+### routing_method_type @ ops\fused_moe\router\grouped_topk_router.py
+```python
+    def routing_method_type(self) -> RoutingMethodType:
+        return get_routing_method_type(
+            scoring_func=self.scoring_func,
+            top_k=self.top_k,
+            renormalize=self.renormalize,
+            num_expert_group=self.num_expert_group if self.use_grouped_topk else None,
+            has_e_score_bias=self.e_score_correction_bias is not None,
+            routed_scaling_factor=self.routed_scaling_factor,
+        )
+```
+
+### _renormalize_topk_weights @ ops\fused_moe\router\grouped_topk_router.py (HTML标记7行/实际3行)
+```python
+    def _renormalize_topk_weights(
+        self,
+        topk_weights: torch.Tensor,
+```
+
+### _native_grouped_topk @ ops\fused_moe\router\grouped_topk_router.py (HTML标记20行/实际3行)
+```python
+    def _native_grouped_topk(
+        self,
+        topk_weights: torch.Tensor,
+```
+
+### _compute_routing @ ops\fused_moe\router\grouped_topk_router.py (HTML标记50行/实际7行)
+```python
+    def _compute_routing(
+        self,
+        hidden_states: torch.Tensor,
+        router_logits: torch.Tensor,
+        indices_type: torch.dtype | None,
+        *,
+        input_ids: torch.Tensor | None = None,
+```
+
+### check_npu_moe_gating_top_k @ ops\fused_moe\router\router_factory.py (HTML标记19行/实际7行)
+```python
+def check_npu_moe_gating_top_k(
+    top_k: int,
+    renormalize: bool,
+    topk_group: int | None = None,
+    num_expert_group: int | None = None,
+    scoring_func: str = "softmax",
+    custom_routing_function: Callable | None = None,
+```
+
+### create_ascend_fused_moe_router @ ops\fused_moe\router\router_factory.py (HTML标记79行/实际17行)
+```python
+def create_ascend_fused_moe_router(
+    top_k: int,
+    global_num_experts: int,
+    renormalize: bool = True,
+    use_grouped_topk: bool = False,
+    num_expert_group: int | None = None,
+    topk_group: int | None = None,
+    scoring_func: str = "softmax",
+    num_fused_shared_experts: int = 0,
+    shared_expert_weight: float = 1.0,
+    routed_scaling_factor: float = 1.0,
+    e_score_correction_bias: torch.Tensor | None = None,
+    custom_routing_function: Callable | None = None,
+    eplb_state: EplbLayerState | None = None,
+    num_logical_experts: int | None = None,
+    hash_indices_table: torch.Tensor | None = None,
+    tid2eid: torch.Tensor | None = None,
+```
+
+### batch_memcpy_kernel @ ops\triton\batch_memcpy.py
+```python
+def batch_memcpy_kernel(src_ptrs, dst_ptrs, sizes, BLOCK_SIZE: tl.constexpr):
+    pid = tl.program_id(0)
+
+    src_ptr = tl.load(src_ptrs + pid)
+    dst_ptr = tl.load(dst_ptrs + pid)
+    size = tl.load(sizes + pid)
+
+    # We need to mv pointer_type cast outside the loop.
+    # Otherwise it causes potential bugs.
+    src_ptr = src_ptr.to(tl.pointer_type(tl.uint8))
+    dst_ptr = dst_ptr.to(tl.pointer_type(tl.uint8))
+
+    offsets = tl.arange(0, BLOCK_SIZE)
+    for i in range(0, size, BLOCK_SIZE):
+        mask = (i + offsets) < size
+
+        curr_src_ptr = src_ptr + i + offsets
+        curr_dst_ptr = dst_ptr + i + offsets
+
+        # cache_modifier=".cg" bypasses L1 cache for streaming data.
+        data = tl.load(curr_src_ptr, mask=mask, cache_modifier=".cg")
+        tl.store(curr_dst_ptr, data, mask=mask, cache_modifier=".cg")
+```
+
+### _next_power_of_2 @ ops\triton\compute_slot_mapping.py
+```python
+def _next_power_of_2(value: int) -> int:
+    return 1 << (value - 1).bit_length()
+```
+
+### _compute_slot_mapping_kernel @ ops\triton\compute_slot_mapping.py (HTML标记73行/实际17行)
+```python
+def _compute_slot_mapping_kernel(
+    num_tokens,
+    max_num_tokens,
+    query_start_loc_ptr,  # [num_reqs + 1], int32
+    positions_ptr,  # [num_tokens], int64
+    block_table_ptr,  # [max_num_reqs, max_num_blocks_per_req], int32 (flat)
+    block_table_stride,  # max_num_blocks_per_req
+    block_size,  # Logical block size used by the attention kernel
+    slot_mapping_ptr,  # [max_num_tokens], int32
+    KV_CACHE_BLOCK_SIZE: tl.constexpr,  # Physical KV cache allocation block size
+    BLOCKS_PER_KV_BLOCK: tl.constexpr,  # KV_CACHE_BLOCK_SIZE = BLOCKS_PER_KV_BLOCK * block_size
+    TOTAL_CP_WORLD_SIZE: tl.constexpr,
+    TOTAL_CP_RANK: tl.constexpr,
+    CP_KV_CACHE_INTERLEAVE_SIZE: tl.constexpr,
+    PAD_ID: tl.constexpr,
+    TILE_BLOCK_SIZE: tl.constexpr,
+    BLOCK_TABLE_WINDOW_SIZE: tl.constexpr,
+```
+
+### _map_to_physical_and_record_kernel @ ops\triton\eplb.py (HTML标记37行/实际13行)
+```python
+def _map_to_physical_and_record_kernel(
+    topk_ids_ptr,
+    routing_table_ptr,
+    physical_ids_ptr,
+    expert_load_ptr,
+    record_enabled_ptr,
+    num_unpadded_tokens_ptr,
+    num_logical_experts,
+    num_physical_experts,
+    numel,
+    topk,
+    routing_table_rows,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### fused_gdn_gating_kernel @ ops\triton\fused_gdn_gating.py (HTML标记43行/实际15行)
+```python
+def fused_gdn_gating_kernel(
+    g,
+    beta_output,
+    A_log,
+    a,
+    b,
+    dt_bias,
+    seq_len,
+    NUM_HEADS,
+    NUM_BATCHES,
+    beta,
+    threshold,
+    BLK_HEADS: tl.constexpr,
+    BLK_BATCHES: tl.constexpr,
+    ROW_ITER,
+```
+
+### fused_gdn_gating_patch @ ops\triton\fused_gdn_gating.py (HTML标记41行/实际7行)
+```python
+def fused_gdn_gating_patch(
+    A_log: torch.Tensor,
+    a: torch.Tensor,
+    b: torch.Tensor,
+    dt_bias: torch.Tensor,
+    beta: float = 1.0,
+    threshold: float = 20.0,
+```
+
+### _layer_norm_fwd_1pass_kernel_npu @ ops\triton\layernorm_gated.py (HTML标记85行/实际20行)
+```python
+def _layer_norm_fwd_1pass_kernel_npu(
+    X,  # pointer to the input
+    Y,  # pointer to the output
+    W,  # pointer to the weights
+    B,  # pointer to the biases
+    Z,  # pointer to the other branch
+    Mean,  # pointer to the mean
+    Rstd,  # pointer to the 1/std
+    stride_x_row,  # how much to increase the pointer when moving by 1 row
+    stride_y_row,
+    stride_z_row,
+    M,  # number of rows in X
+    N,  # number of columns in X
+    eps,  # epsilon to avoid division by zero
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    HAS_BIAS: tl.constexpr,
+    HAS_Z: tl.constexpr,
+    NORM_BEFORE_GATE: tl.constexpr,
+    IS_RMS_NORM: tl.constexpr,
+```
+
+### layer_norm_fwd_npu @ ops\triton\layernorm_gated.py (HTML标记66行/实际10行)
+```python
+def layer_norm_fwd_npu(
+    x,
+    weight,
+    bias,
+    eps,
+    z=None,
+    out=None,
+    group_size=None,
+    norm_before_gate=True,
+    is_rms_norm=False,
+```
+
+### muls_add_kernel @ ops\triton\mul_add.py (HTML标记19行/实际8行)
+```python
+def muls_add_kernel(
+    x_ptr,  # *Pointer* to first input vector.
+    y_ptr,  # *Pointer* to second input vector.
+    output_ptr,  # *Pointer* to output vector.
+    scale,  # Scale factor.
+    n_elements,  # Size of the vector.
+    n_blocks,  # Total number of blocks.
+    BLOCK_SIZE: tl.constexpr,  # Number of elements each program should process.
+```
+
+### muls_add_triton @ ops\triton\mul_add.py
+```python
+def muls_add_triton(x: torch.Tensor, y: torch.Tensor, scale: float) -> torch.Tensor:
+    assert x.shape == y.shape, "Input tensors must have the same shape."
+    hidden_size = x.shape[-1]
+
+    n_elements = x.numel()
+    output = torch.empty_like(x)
+
+    # Determine the number of vector cores available
+    num_cores = get_vectorcore_num()
+
+    # Define block size
+    BLOCK_SIZE = max(hidden_size // 2, 1024)
+
+    # Calculate the number of programs to launch
+    num_blocks = (n_elements + BLOCK_SIZE - 1) // BLOCK_SIZE
+    num_programs = min(num_blocks, num_cores)
+
+    # Launch the Triton kernel
+    muls_add_kernel[(num_programs,)](
+        x,
+        y,
+        output,
+        scale,
+        n_elements,
+        num_blocks,
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+```
+
+### muls_add_kernel @ ops\triton\muls_add.py (HTML标记19行/实际8行)
+```python
+def muls_add_kernel(
+    x_ptr,  # *Pointer* to first input vector.
+    y_ptr,  # *Pointer* to second input vector.
+    output_ptr,  # *Pointer* to output vector.
+    scale,  # Scale factor.
+    n_elements,  # Size of the vector.
+    n_blocks,  # Total number of blocks.
+    BLOCK_SIZE: tl.constexpr,  # Number of elements each program should process.
+```
+
+### muls_add_triton @ ops\triton\muls_add.py
+```python
+def muls_add_triton(x: torch.Tensor, y: torch.Tensor, scale: float) -> torch.Tensor:
+    assert x.shape == y.shape, "Input tensors must have the same shape."
+    hidden_size = x.shape[-1]
+
+    n_elements = x.numel()
+    output = torch.empty_like(x)
+
+    # Determine the number of vector cores available
+    num_cores = get_vectorcore_num()
+
+    # Define block size
+    BLOCK_SIZE = max(hidden_size // 2, 1024)
+
+    # Calculate the number of programs to launch
+    num_blocks = (n_elements + BLOCK_SIZE - 1) // BLOCK_SIZE
+    num_programs = min(num_blocks, num_cores)
+
+    # Launch the Triton kernel
+    muls_add_kernel[(num_programs,)](
+        x,
+        y,
+        output,
+        scale,
+        n_elements,
+        num_blocks,
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+
+    return output
+```
+
+### cal_grid_and_block_size @ ops\triton\reject_sample.py
+```python
+def cal_grid_and_block_size(batch_size: int):
+    vectorcore_num = get_vectorcore_num()
+    if batch_size <= vectorcore_num:
+        grid = batch_size
+        block_size = 1
+    else:
+        grid = vectorcore_num
+        block_size = next_power_of_2(triton.cdiv(batch_size, grid))
+    return grid, block_size
+```
+
+### rejection_greedy_sample_spec_len_1_triton @ ops\triton\reject_sample.py (HTML标记36行/实际10行)
+```python
+def rejection_greedy_sample_spec_len_1_triton(
+    output_token_ids_ptr,  # [batch_size, 2]
+    draft_token_ids_ptr,  # [num_tokens]
+    target_argmax_ptr,  # [num_tokens]
+    bonus_token_ids_ptr,
+    vec_len,
+    uniform_probs_ptr,  # [num_tokens] or None (synthetic only)
+    synthetic_conditional_rates_ptr,  # [num_speculative_tokens] or None
+    SYNTHETIC_MODE: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### bonus_renew @ ops\triton\reject_sample.py (HTML标记9行/实际6行)
+```python
+def bonus_renew(
+    bonus_token_ids_ptr,
+    position,
+    output_token_ids_ptr,
+    max_spec_len,
+    num_tokens1,
+```
+
+### rejection_greedy_sample_triton @ ops\triton\reject_sample.py (HTML标记77行/实际13行)
+```python
+def rejection_greedy_sample_triton(
+    output_token_ids_ptr,  # [batch_size, max_spec_len + 1]
+    cu_num_draft_tokens_ptr,  # [batch_size]
+    draft_token_ids_ptr,  # [num_tokens]
+    target_argmax_ptr,  # [num_tokens]
+    bonus_token_ids_ptr,  # [batch_size]
+    is_greedy_ptr,  # [batch_size] or None
+    vec_len,
+    max_spec_len,
+    uniform_probs_ptr,  # [num_tokens] or None (synthetic only)
+    synthetic_conditional_rates_ptr,  # [num_speculative_tokens] or None
+    SYNTHETIC_MODE: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### rejection_random_sample_kernel @ ops\triton\reject_sample.py (HTML标记182行/实际28行)
+```python
+def rejection_random_sample_kernel(
+    output_token_ids_ptr,  # [batch_size, max_spec_len + 1]
+    cu_num_draft_tokens_ptr,  # [batch_size]
+    draft_token_ids_ptr,  # [num_tokens]
+    draft_probs_ptr,  # [num_tokens, vocab_size] or None
+    target_probs_ptr,  # [num_tokens, vocab_size] or [num_tokens, selected_vocab_size] if ENABLE_REDUCE_SAMPLING
+    target_indices_ptr,  # [num_tokens, selected_vocab_size] global vocab indices, only used if ENABLE_REDUCE_SAMPLING
+    bonus_token_ids_ptr,  # [batch_size]
+    recovered_token_ids_ptr,  # [num_tokens]
+    uniform_probs_ptr,  # [num_tokens]
+    is_greedy_ptr,  # [batch_size]
+    max_spec_len,
+    vocab_size,  # vocab_size or selected_vocab_size if ENABLE_REDUCE_SAMPLING
+    global_vocab_size,  # global vocab size for draft_probs indexing (only used if ENABLE_REDUCE_SAMPLING)
+    vec_len,
+    ori_target_probs_ptr,  # [num_tokens, ori_vocab_size] original probs for entropy
+    synthetic_conditional_rates_ptr,  # [num_speculative_tokens] or None
+    NO_ORI_TARGET_PROBS: tl.constexpr,
+    NO_DRAFT_PROBS: tl.constexpr,
+    ENABLE_REDUCE_SAMPLING: tl.constexpr,  # Whether using reduce sampling
+    SYNTHETIC_MODE: tl.constexpr,
+    ENTROPY_VERIFY: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+    VOCAB_BLOCK_SIZE: tl.constexpr = 512,
+    POSTERIOR_THRESHOLD: tl.constexpr = 0.95,
+    POSTERIOR_ALPHA: tl.constexpr = 0.4,
+    SUB_BLOCK: tl.constexpr = 4096,
+    EPSILON: tl.constexpr = 1e-10,
+```
+
+### expand_kernel @ ops\triton\reject_sample.py (HTML标记27行/实际9行)
+```python
+def expand_kernel(
+    output_ptr,  # [num_tokens]
+    input_ptr,  # [batch_size]
+    cu_num_tokens_ptr,  # [batch_size]
+    replace_from,
+    replace_to,
+    vec_len,
+    MAX_NUM_TOKENS: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### sample_recovered_tokens_kernel @ ops\triton\reject_sample.py (HTML标记125行/实际14行)
+```python
+def sample_recovered_tokens_kernel(
+    output_token_ids_ptr,
+    cu_num_draft_tokens_ptr,
+    draft_token_ids_ptr,
+    draft_probs_ptr,
+    target_probs_ptr,
+    target_indices_ptr,
+    q_ptr,
+    vocab_size,
+    global_vocab_size,
+    NO_DRAFT_PROBS: tl.constexpr,
+    ENABLE_REDUCE_SAMPLING: tl.constexpr,
+    SUB_BLOCK: tl.constexpr,
+    VOCAB_BLOCK_SIZE: tl.constexpr = 512,
+```
+
+### rejection_greedy_sample_with_triton @ ops\triton\reject_sample.py (HTML标记44行/实际14行)
+```python
+def rejection_greedy_sample_with_triton(
+    output_token_ids,
+    num_draft_tokens,
+    cu_num_draft_tokens,
+    draft_token_ids,
+    target_argmax,
+    bonus_token_ids,
+    is_greedy,
+    max_spec_len,
+    grid,
+    block_size,
+    uniform_probs=None,
+    synthetic_conditional_rates=None,
+    synthetic_mode=False,
+```
+
+### expand_triton @ ops\triton\reject_sample.py
+```python
+def expand_triton(batch_size, expanded_x, x, cu_num_tokens, replace_from, replace_to, max_num_tokens):
+    vec_len = batch_size
+    grid, block_size = cal_grid_and_block_size(batch_size)
+
+    expand_kernel[(grid,)](
+        expanded_x,
+        x,
+        cu_num_tokens,
+        replace_from,
+        replace_to,
+        vec_len,
+        MAX_NUM_TOKENS=max_num_tokens,  # To avoid recompilation.
+        BLOCK_SIZE=block_size,
+    )
+```
+
+### rejection_random_sample_block_verify_kernel @ ops\triton\reject_sample.py (HTML标记195行/实际26行)
+```python
+def rejection_random_sample_block_verify_kernel(
+    output_token_ids_ptr,  # [batch_size, max_spec_len + 1]
+    cu_num_draft_tokens_ptr,  # [batch_size]
+    draft_token_ids_ptr,  # [num_tokens]
+    draft_probs_ptr,  # [num_tokens, vocab_size] or None
+    target_probs_ptr,  # [num_tokens, vocab_size] or [num_tokens, selected_vocab_size] if ENABLE_REDUCE_SAMPLING
+    target_indices_ptr,  # [num_tokens, selected_vocab_size] global vocab indices, only used if ENABLE_REDUCE_SAMPLING
+    bonus_token_ids_ptr,  # [batch_size]
+    recovered_token_ids_ptr,  # [num_tokens]
+    uniform_probs_ptr,  # [num_tokens]
+    is_greedy_ptr,  # [batch_size]
+    max_spec_len,
+    vocab_size,  # vocab_size or selected_vocab_size if ENABLE_REDUCE_SAMPLING
+    global_vocab_size,  # global vocab size for draft_probs indexing (only used if ENABLE_REDUCE_SAMPLING)
+    vec_len,
+    ori_target_probs_ptr,  # [num_tokens, ori_vocab_size] original probs for entropy
+    NO_ORI_TARGET_PROBS: tl.constexpr,
+    NO_DRAFT_PROBS: tl.constexpr,
+    ENABLE_REDUCE_SAMPLING: tl.constexpr,  # Whether using reduce_sampling
+    BLOCK_SIZE: tl.constexpr,
+    ENTROPY_VERIFY: tl.constexpr,
+    VOCAB_BLOCK_SIZE: tl.constexpr = 512,
+    POSTERIOR_THRESHOLD: tl.constexpr = 0.95,
+    POSTERIOR_ALPHA: tl.constexpr = 0.4,
+    SUB_BLOCK: tl.constexpr = 4096,
+    EPSILON: tl.constexpr = 1e-10,
+```
+
+### triton_rms_kernel @ ops\triton\rms_norm.py (HTML标记28行/实际8行)
+```python
+def triton_rms_kernel(
+    hidden_state_ptr,
+    hidden_state_stride_bs,
+    norm_output_ptr,
+    variance_epsilon,
+    total_batch,
+    DIM: tl.constexpr,
+    BLOCK_M: tl.constexpr,
+```
+
+### triton_q_rms @ ops\triton\rms_norm.py (HTML标记32行/实际3行)
+```python
+def triton_q_rms(
+    q,  # bs, 64, 512
+    variance_epsilon,
+```
+
+### _triton_rope_siso @ ops\triton\rope.py (HTML标记73行/实际19行)
+```python
+def _triton_rope_siso(
+    qk_ptr,
+    qk_row_stride,
+    cos_ptr,
+    cos_row_stride,
+    sin_ptr,
+    sin_row_stride,
+    cos_sin_ptr,
+    cos_sin_row_stride,
+    pos_ptr,
+    num_tokens,
+    n_h: tl.constexpr,
+    hd: tl.constexpr,
+    rope_dim: tl.constexpr,
+    pad_n_h: tl.constexpr,
+    pad_rope_dim: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+    IS_NEOX_STYLE: tl.constexpr,
+    USE_COS_SIN: tl.constexpr,
+```
+
+### rope_forward_triton @ ops\triton\rope.py (HTML标记96行/实际9行)
+```python
+def rope_forward_triton(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    cos: torch.Tensor = None,
+    sin: torch.Tensor = None,
+    cos_sin_cache: torch.Tensor = None,
+    positions: torch.Tensor = None,
+    rope_dim: int = -1,
+    is_neox_style: bool = True,
+```
+
+### rope_forward_triton_siso @ ops\triton\rope.py (HTML标记78行/实际8行)
+```python
+def rope_forward_triton_siso(
+    qk: torch.Tensor,
+    cos: torch.Tensor = None,
+    sin: torch.Tensor = None,
+    cos_sin_cache: torch.Tensor = None,
+    positions: torch.Tensor = None,
+    rope_dim: int = -1,
+    is_neox_style: bool = True,
+```
+
+### _pack_sfa_dcp_output_lse_kernel @ ops\triton\sfa_cp.py (HTML标记91行/实际20行)
+```python
+def _pack_sfa_dcp_output_lse_kernel(
+    output_ptr,
+    lse_ptr,
+    send_ptr,
+    output_stride_t,
+    output_stride_h,
+    output_stride_d,
+    lse_stride_t,
+    lse_stride_h,
+    send_stride_rank,
+    send_stride_scatter,
+    send_stride_replicated,
+    send_stride_d,
+    local_scatter_size,
+    head_dim,
+    num_heads,
+    total_rows,
+    SCATTER_TOKENS: tl.constexpr,
+    LSE_PACK_DIM: tl.constexpr,
+    BLOCK_D: tl.constexpr,
+```
+
+### _fused_sfa_dcp_lse_combine_kernel @ ops\triton\sfa_cp.py (HTML标记102行/实际17行)
+```python
+def _fused_sfa_dcp_lse_combine_kernel(
+    recv_ptr,
+    output_ptr,
+    recv_stride_rank,
+    recv_stride_scatter,
+    recv_stride_replicated,
+    recv_stride_d,
+    output_stride_t,
+    output_stride_h,
+    output_stride_d,
+    head_dim,
+    num_heads,
+    total_rows,
+    DCP_SIZE: tl.constexpr,
+    SCATTER_TOKENS: tl.constexpr,
+    LSE_PACK_DIM: tl.constexpr,
+    BLOCK_D: tl.constexpr,
+```
+
+### _lse_pack_dim @ ops\triton\sfa_cp.py
+```python
+def _lse_pack_dim(output_dtype: torch.dtype) -> int:
+    if output_dtype in (torch.bfloat16, torch.float16):
+        return 4
+    if output_dtype == torch.float32:
+        return 1
+    raise TypeError(f"SFA DCP fused A2A supports bfloat16, float16, or float32 output, got {output_dtype}.")
+```
+
+### _validate_sfa_dcp_inputs @ ops\triton\sfa_cp.py (HTML标记42行/实际5行)
+```python
+def _validate_sfa_dcp_inputs(
+    sfa_output: torch.Tensor,
+    softmax_lse: torch.Tensor,
+    dcp_size: int,
+    scatter_dim: int,
+```
+
+### _resolve_triton_ascend_op @ ops\triton\triton_utils.py
+```python
+def _resolve_triton_ascend_op(op_name: str):
+    if not HAS_TRITON:
+        raise RuntimeError(f"Triton op '{op_name}' cannot be resolved because HAS_TRITON is False")
+
+    if _extension_module is not None:
+        extension_op = getattr(_extension_module, op_name, None)
+        if extension_op is not None:
+            return extension_op
+
+    tl_op = getattr(tl, op_name, None)
+    if tl_op is not None:
+        return tl_op
+
+    raise RuntimeError(
+        f"Failed to resolve Triton op '{op_name}': "
+        "neither triton.language.extra.cann.extension nor triton.language provides it."
+    )
+```
+
+### init_device_properties_triton @ ops\triton\triton_utils.py
+```python
+def init_device_properties_triton():
+    global _NUM_AICORE, _NUM_VECTORCORE
+    if _NUM_AICORE == -1 and HAS_TRITON:
+        device_properties: dict[str, Any] = triton.runtime.driver.active.utils.get_device_properties(
+            torch.npu.current_device()
+        )
+        _NUM_AICORE = device_properties.get("num_aicore", -1)
+        _NUM_VECTORCORE = device_properties.get("num_vectorcore", -1)
+        assert _NUM_AICORE > 0 and _NUM_VECTORCORE > 0, "Failed to detect device properties."
+```
+
+### get_aicore_num @ ops\triton\triton_utils.py
+```python
+def get_aicore_num():
+    global _NUM_AICORE
+    assert _NUM_AICORE > 0, "Device properties not initialized. Please call init_device_properties_triton() first."
+    return _NUM_AICORE
+```
+
+### get_vectorcore_num @ ops\triton\triton_utils.py
+```python
+def get_vectorcore_num():
+    global _NUM_VECTORCORE
+    assert _NUM_VECTORCORE > 0, "Device properties not initialized. Please call init_device_properties_triton() first."
+    return _NUM_VECTORCORE
+```
+
+### _swiglu_quant_kernel @ ops\triton\activation\swiglu_quant.py (HTML标记56行/实际14行)
+```python
+def _swiglu_quant_kernel(
+    x_ptr,
+    group_list_ptr,
+    out_ptr,
+    scale_ptr,
+    TOTAL_COLS: tl.constexpr,
+    HALF_COLS: tl.constexpr,
+    COL_BLOCK_SIZE: tl.constexpr,
+    NUM_EXPERTS: tl.constexpr,
+    NUM_EXPERTS_ALGIN: tl.constexpr,
+    GROUP_LIST_TYPE: tl.constexpr,
+    NUM_CORES: tl.constexpr,
+    DTYPE_MAX: tl.constexpr,
+    SCALE: tl.constexpr,
+```
+
+### swiglu_quant @ ops\triton\activation\swiglu_quant.py
+```python
+def swiglu_quant(x, group_list, group_list_type, need_quant=True):
+    # group_list_type must be 0 cusum or 1 count
+    if group_list_type not in [0, 1]:
+        raise ValueError(f"swiglu_quant: group_list_type must be 0 or 1, but got {group_list_type}")
+    s, h = x.shape
+    out_dtype = torch.int8 if need_quant else x.dtype
+    out = torch.empty((s, h // 2), dtype=out_dtype, device=x.device)
+    scale = torch.empty((s,), dtype=torch.float32, device=x.device)
+    num_experts = group_list.shape[0]
+    # ub must be 32-byte aligned on npu
+    if group_list.dtype == torch.int64:
+        num_experts_algin = (num_experts + 7) // 8 * 8
+    elif group_list.dtype == torch.int32:
+        num_experts_algin = (num_experts + 15) // 16 * 16
+    else:
+        raise ValueError(
+            f"swiglu_quant: group_list dtype must be torch.int32 or torch.int64, but got {group_list.dtype}"
+        )
+
+    num_vectorcore = get_vectorcore_num()
+    _swiglu_quant_kernel[(num_vectorcore,)](
+        x,
+        group_list,
+        out,
+        scale,
+        TOTAL_COLS=h,
+        HALF_COLS=h // 2,
+        COL_BLOCK_SIZE=1536,
+        NUM_EXPERTS=num_experts,
+        NUM_EXPERTS_ALGIN=num_experts_algin,
+        GROUP_LIST_TYPE=group_list_type,
+        NUM_CORES=num_vectorcore,
+        DTYPE_MAX=127,
+        SCALE=need_quant,
+        multibuffer=True,
+    )
+    return out, scale
+```
+
+### _swiglustep_kernel @ ops\triton\activation\swiglustep.py (HTML标记38行/实际8行)
+```python
+def _swiglustep_kernel(
+    x_ptr,
+    out_ptr,
+    M,  # total rows (runtime value, not constexpr)
+    TOTAL_COLS: tl.constexpr,  # 2N
+    HALF_COLS: tl.constexpr,  # N
+    LIMIT: tl.constexpr,
+    NUM_CORES: tl.constexpr,
+```
+
+### matmul_bias_persistent_kernel @ ops\triton\batch_invariant\matmul.py (HTML标记74行/实际24行)
+```python
+def matmul_bias_persistent_kernel(
+    # Input tensor pointers
+    x_ptr,
+    y_ptr,
+    bias_ptr,
+    output_ptr,
+    # Matrix dimensions
+    M,
+    N,
+    K,
+    # Stride information
+    stride_xm,
+    stride_xk,  # Strides of x: [M, K]
+    stride_yk,
+    stride_yn,  # Strides of y: [K, N]
+    stride_bias,  # Stride of bias: [N]
+    stride_outm,
+    stride_outn,  # Strides of output: [M, N]
+    # Whether to use bias
+    has_bias: tl.constexpr,
+    # Block sizes
+    BLOCK_M: tl.constexpr,
+    BLOCK_N: tl.constexpr,
+    BLOCK_K: tl.constexpr,
+```
+
+### linear_persistent_kernel @ ops\triton\batch_invariant\matmul.py (HTML标记67行/实际19行)
+```python
+def linear_persistent_kernel(
+    a_ptr,  # Pointer to tensor a, shape [M, K]
+    b_ptr,  # Pointer to tensor b, shape [N, K]
+    c_ptr,  # Pointer to output tensor c, shape [M, N]
+    M,  # Number of rows in tensor a
+    N,  # Number of rows in tensor b (number of columns in output c)
+    K,  # Number of columns in both tensor a and tensor b
+    stride_am,  # Stride of tensor a along dimension M (typically K)
+    stride_ak,  # Stride of tensor a along dimension K (typically 1)
+    stride_bn,  # Stride of tensor b along dimension N (typically K)
+    stride_bk,  # Stride of tensor b along dimension K (typically 1)
+    stride_cm,  # Stride of tensor c along dimension M (typically N)
+    stride_cn,  # Stride of tensor c along dimension N (typically 1)
+    BLOCK_M: tl.constexpr,  # Block size for M dimension
+    BLOCK_N: tl.constexpr,  # Block size for N dimension
+    BLOCK_K: tl.constexpr,  # Block size for K dimension
+    NUM_BLOCKS_M: tl.constexpr,  # New: Number of blocks in M dimension
+    NUM_BLOCKS_N: tl.constexpr,  # New: Number of blocks in N dimension
+    GRID_SIZE: tl.constexpr,  # New: Fixed 1D grid size
+```
+
+### mm_batch_invariant @ ops\triton\batch_invariant\matmul.py
+```python
+def mm_batch_invariant(a, b):
+    return matmul_persistent(a, b)
+```
+
+### bmm_batch_invariant @ ops\triton\batch_invariant\matmul.py
+```python
+def bmm_batch_invariant(a, b, *, out=None):
+    # Batched matrix multiply: (B, M, K) x (B, K, N) -> (B, M, N)
+    # Process each batch separately with our persistent kernel
+    if a.ndim == 3 and b.ndim == 3:
+        results = []
+        for i in range(a.shape[0]):
+            results.append(matmul_persistent(a[i], b[i]))
+        result = torch.stack(results, dim=0)
+
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    else:
+        raise ValueError(f"bmm_batch_invariant expects 3D tensors, got shapes {a.shape} and {b.shape}")
+```
+
+### addmm_batch_invariant @ ops\triton\batch_invariant\matmul.py
+```python
+def addmm_batch_invariant(input_, a, b, *, beta=1, alpha=1):
+    if alpha == 1 and beta == 1 and input_.dim() == 1:
+        return matmul_persistent(a, b, bias=input_)
+
+    output = matmul_persistent(a, b)
+    return output * alpha + input_ * beta
+```
+
+### matmul_batch_invariant @ ops\triton\batch_invariant\matmul.py
+```python
+def matmul_batch_invariant(a, b, *, out=None):
+    # torch.matmul can handle various dimensions
+    # For 2D x 2D, it's the same as matmul
+    if a.ndim == 2 and b.ndim == 2:
+        result = matmul_persistent(a, b)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    elif a.ndim == 3 and b.ndim == 3:
+        # Handle batched case like bmm
+        return bmm_batch_invariant(a, b, out=out)
+    elif a.ndim == 3 and b.ndim == 2:
+        # Handle 3D x 2D: common for linear layers
+        # (batch, seq, hidden) @ (hidden, out) -> (batch, seq, out)
+        # Reshape to 2D, do mm, reshape back
+        batch, seq, hidden = a.shape
+        a_2d = a.reshape(-1, hidden)
+        result_2d = matmul_persistent(a_2d, b)
+        result = result_2d.reshape(batch, seq, -1)
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    elif a.ndim == 2 and b.ndim == 3:
+        # Handle 2D x 3D: (M, K) @ (B, K, N) -> (B, M, N)
+        # By broadcasting `a` to 3D, we can reuse the batched matrix
+        # multiplication logic.
+        a_expanded = a.unsqueeze(0).expand(b.shape[0], -1, -1)
+        return bmm_batch_invariant(a_expanded, b, out=out)
+    elif a.ndim == 4 and b.ndim == 4:
+        # Handle 4D attention tensors: [batch, heads, seq, dim]
+        # Reshape to 3D, process, reshape back
+        batch, heads, seq_a, dim_a = a.shape
+        _, _, dim_b, seq_b = b.shape
+
+        # Reshape to [batch*heads, seq_a, dim_a]
+        a_3d = a.reshape(batch * heads, seq_a, dim_a)
+        b_3d = b.reshape(batch * heads, dim_b, seq_b)
+
+        # Do batched matmul
+        result_3d = bmm_batch_invariant(a_3d, b_3d)
+
+        # Reshape back to [batch, heads, seq_a, seq_b]
+        result = result_3d.reshape(batch, heads, seq_a, seq_b)
+
+        if out is not None:
+            out.copy_(result)
+            return out
+        return result
+    else:
+        raise ValueError(
+            f"matmul_batch_invariant currently only supports 2D x 2D, 3D x 3D, "
+            f"3D x 2D, 2D x 3D, and 4D x 4D, "
+            f"got shapes {a.shape} and {b.shape}"
+        )
+```
+
+### linear_batch_invariant @ ops\triton\batch_invariant\matmul.py
+```python
+def linear_batch_invariant(input_, weight, bias=None):
+    input_shape = input_.shape
+    input_2d = input_.reshape(-1, input_shape[-1])
+    output = linear_persistent(input_2d, weight)
+    output = output.reshape(input_shape[:-1] + (weight.shape[0],))
+
+    if bias is not None:
+        output = output + bias
+    return output
+```
+
+### mean_batch_invariant @ ops\triton\batch_invariant\mean.py (HTML标记17行/实际5行)
+```python
+def mean_batch_invariant(
+    input_: torch.Tensor,
+    dim: list[int],
+    keepdim: bool = False,
+    dtype: torch.dtype = torch.float16,
+```
+
+### softmax_batch_invariant @ ops\triton\batch_invariant\softmax.py
+```python
+def softmax_batch_invariant(input_, dim, dtype=None):
+    # ``aten::softmax`` passes an optional output dtype, while
+    # ``aten::_softmax`` passes a ``half_to_float`` boolean as its third
+    # argument. This implementation is registered for both operators.
+    if isinstance(dtype, bool):
+        if dtype:
+            input_ = input_.float()
+    elif dtype is not None:
+        input_ = input_.to(dtype=dtype)
+
+    # Compute softmax in a deterministic way
+    # First subtract max for numerical stability (standard practice)
+    input_max = torch.amax(input_, dim=dim, keepdim=True)
+    input_ = input_ - input_max
+    exp_x = torch.exp(input_)
+    sum_exp_x = torch.sum(exp_x, dim=dim, keepdim=True)
+    return exp_x / sum_exp_x
+```
+
+### chunk_gated_delta_rule_fwd @ ops\triton\fla\chunk.py (HTML标记189行/实际11行)
+```python
+def chunk_gated_delta_rule_fwd(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    scale: float,
+    initial_state: torch.Tensor,
+    output_final_state: bool,
+    cu_seqlens: torch.LongTensor | None = None,
+    prebuilt_meta=None,
+```
+
+### chunk_gated_delta_rule_fwd_kernel_h_blockdim64 @ ops\triton\fla\chunk_delta_h.py (HTML标记147行/实际23行)
+```python
+def chunk_gated_delta_rule_fwd_kernel_h_blockdim64(
+    k,
+    v,
+    w,
+    v_new,
+    g,
+    h,
+    h0,
+    ht,
+    cu_seqlens,
+    chunk_offsets,
+    h_update,
+    T,
+    H,
+    Hg,
+    K,
+    V,
+    BT: tl.constexpr,
+    USE_G: tl.constexpr,
+    USE_INITIAL_STATE: tl.constexpr,
+    STORE_FINAL_STATE: tl.constexpr,
+    SAVE_NEW_VALUE: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_gated_delta_rule_fwd_h @ ops\triton\fla\chunk_delta_h.py (HTML标记66行/实际12行)
+```python
+def chunk_gated_delta_rule_fwd_h(
+    k: torch.Tensor,
+    w: torch.Tensor,
+    u: torch.Tensor,
+    g: torch.Tensor | None = None,
+    initial_state: torch.Tensor | None = None,
+    output_final_state: bool = False,
+    chunk_size: int = 64,  # SY: remove this argument and force chunk size 64?
+    save_new_value: bool = True,
+    cu_seqlens: torch.LongTensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    chunk_offsets: torch.Tensor | None = None,
+```
+
+### grid @ ops\triton\fla\chunk_delta_h.py
+```python
+    def grid(meta):
+        return (1, N * H)
+```
+
+### chunk_gated_delta_rule_fwd_kernel_hupdate_blockdim64 @ ops\triton\fla\chunk_delta_hupdate.py (HTML标记130行/实际14行)
+```python
+def chunk_gated_delta_rule_fwd_kernel_hupdate_blockdim64(
+    k,
+    w,
+    g,
+    cu_seqlens,
+    chunk_offsets,
+    h_update,
+    T,
+    H: tl.constexpr,
+    Hg: tl.constexpr,
+    K: tl.constexpr,
+    BT: tl.constexpr,
+    USE_G: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_gated_delta_rule_fwd_hupdate @ ops\triton\fla\chunk_delta_hupdate.py (HTML标记61行/实际11行)
+```python
+def chunk_gated_delta_rule_fwd_hupdate(
+    k: torch.Tensor,
+    w: torch.Tensor,
+    u: torch.Tensor,
+    g: torch.Tensor | None = None,
+    chunk_size: int = 64,  # SY: remove this argument and force chunk size 64?
+    cu_seqlens: torch.LongTensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    chunk_offsets: torch.Tensor | None = None,
+    update_chunk_offsets: torch.Tensor | None = None,
+    num_decodes: int = 0,
+```
+
+### grid @ ops\triton\fla\chunk_delta_hupdate.py
+```python
+    def grid(meta):
+        return (1, N * H)
+```
+
+### chunk_fwd_kernel_o @ ops\triton\fla\chunk_o.py (HTML标记84行/实际20行)
+```python
+def chunk_fwd_kernel_o(
+    q,
+    k,
+    v,
+    h,
+    g,
+    o,
+    cu_seqlens,
+    chunk_offsets,
+    scale,
+    T,
+    H,
+    Hg,
+    K,
+    V,
+    BT: tl.constexpr,
+    BK: tl.constexpr,
+    BV: tl.constexpr,
+    USE_G: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_fwd_o @ ops\triton\fla\chunk_o.py (HTML标记52行/实际10行)
+```python
+def chunk_fwd_o(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    h: torch.Tensor,
+    g: torch.Tensor | None = None,
+    scale: float | None = None,
+    cu_seqlens: torch.LongTensor | None = None,
+    chunk_size: int = 64,
+    chunk_offsets: torch.Tensor | None = None,
+```
+
+### grid @ ops\triton\fla\chunk_o.py
+```python
+    def grid(meta):
+        return (triton.cdiv(V, meta["BV"]), N * H)
+```
+
+### chunk_scaled_dot_kkt_fwd_kernel @ ops\triton\fla\chunk_scaled_dot_kkt.py (HTML标记61行/实际19行)
+```python
+def chunk_scaled_dot_kkt_fwd_kernel(
+    k,
+    beta,  # [H, B, T]
+    g_cumsum,  # [H, B, T]
+    A,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    B,
+    bh_step,
+    task_num,
+    num_core,
+    H: tl.constexpr,
+    Hg: tl.constexpr,
+    K: tl.constexpr,
+    BT: tl.constexpr,
+    BK: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    USE_G: tl.constexpr,
+```
+
+### chunk_local_cumsum_scalar_kernel @ ops\triton\fla\cumsum.py (HTML标记53行/实际14行)
+```python
+def chunk_local_cumsum_scalar_kernel(
+    s,
+    o,
+    scale,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    BLOCK_T: tl.constexpr,
+    REVERSE: tl.constexpr,
+    HAS_SCALE: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    HEAD_FIRST: tl.constexpr,
+    CHUNK_SIZE: tl.constexpr = 64,
+```
+
+### chunk_local_cumsum_scalar @ ops\triton\fla\cumsum.py (HTML标记37行/实际9行)
+```python
+def chunk_local_cumsum_scalar(
+    g,
+    chunk_size,
+    reverse: bool = False,
+    scale: float = None,
+    cu_seqlens: torch.Tensor | None = None,
+    block_indices: torch.Tensor | None = None,
+    head_first: bool = False,
+    output_dtype: torch.Tensor | None = torch.float,
+```
+
+### chunk_local_cumsum @ ops\triton\fla\cumsum.py (HTML标记29行/实际9行)
+```python
+def chunk_local_cumsum(
+    g: torch.Tensor,
+    chunk_size: int,
+    reverse: bool = False,
+    scale: float = None,
+    cu_seqlens: torch.Tensor | None = None,
+    head_first: bool = False,
+    output_dtype: torch.dtype | None = torch.float,
+    **kwargs,
+```
+
+### fused_qkvzba_split_reshape_cat @ ops\triton\fla\fused_qkvzba_split_reshape.py (HTML标记82行/实际7行)
+```python
+def fused_qkvzba_split_reshape_cat(
+    mixed_qkvz,
+    mixed_ba,
+    num_heads_qk,
+    num_heads_v,
+    head_qk,
+    head_v,
+```
+
+### l2norm_fwd_kernel2_loop @ ops\triton\fla\l2norm.py
+```python
+def l2norm_fwd_kernel2_loop(X, Y, eps, M, N: tl.constexpr, MBLOCK: tl.constexpr, NUM_CHUNKS):
+    base_row = tl.program_id(0) * (NUM_CHUNKS * MBLOCK)
+    rindex = tl.arange(0, N)[None, :]
+
+    for chunk in range(NUM_CHUNKS):
+        row_idx = base_row + chunk * MBLOCK + tl.arange(0, MBLOCK)[:, None]
+        xmask = row_idx < M
+
+        xs = tl.load(X + (rindex + N * row_idx), mask=xmask, other=0.0).to(tl.float32)
+        square = xs * xs
+        square_sum = tl.sum(square, 1)[:, None]
+        rsqrt = tl.rsqrt(square_sum + eps)
+
+        tl.store(Y + (rindex + N * row_idx), xs * rsqrt, xmask)
+```
+
+### l2norm_fwd @ ops\triton\fla\l2norm.py
+```python
+def l2norm_fwd(x: torch.Tensor, eps: float = 1e-6, output_dtype: torch.dtype | None = None):
+    x_shape_og = x.shape
+    x = x.reshape(-1, x.shape[-1])
+    # allocate output
+    if output_dtype is None:
+        y = torch.empty_like(x)
+    else:
+        y = torch.empty_like(x, dtype=output_dtype)
+    assert y.stride(-1) == 1
+    T, D = x.shape[0], x.shape[-1]
+    # Less than 64KB per feature: enqueue fused kernel
+    MAX_FUSED_SIZE = 65536 // x.element_size()
+    BD = min(MAX_FUSED_SIZE, triton.next_power_of_2(D))
+    if D > BD:
+        raise RuntimeError(f"l2norm_fwd: This layer doesn't support feature dim >= 64KB, got {D}.")
+
+    MBLOCK = 69
+    # M, N = x.shape
+    num_core = get_vectorcore_num()
+    main_bs = triton.cdiv(T, num_core)
+    num_sub_blocks = triton.cdiv(main_bs, MBLOCK)
+    grid = (num_core,)
+    l2norm_fwd_kernel2_loop[grid](
+        X=x,
+        Y=y,
+        eps=eps,
+        M=T,
+        N=D,
+        MBLOCK=MBLOCK,
+        NUM_CHUNKS=num_sub_blocks,
+    )
+
+    return y.view(x_shape_og)
+```
+
+### layer_norm_fwd_kernel @ ops\triton\fla\layernorm_guard.py (HTML标记70行/实际20行)
+```python
+def layer_norm_fwd_kernel(
+    X,  # pointer to the input
+    Y,  # pointer to the output
+    W,  # pointer to the weights
+    B,  # pointer to the biases
+    Z,  # pointer to the other branch
+    Mean,  # pointer to the mean
+    Rstd,  # pointer to the 1/std
+    stride_x_row,  # how much to increase the pointer when moving by 1 row
+    stride_y_row,
+    stride_z_row,
+    M,  # number of rows in X_base
+    N,  # number of columns in X_base
+    eps,  # epsilon to avoid division by zero
+    BLOCK_N: tl.constexpr,
+    HAS_BIAS: tl.constexpr,
+    HAS_Z: tl.constexpr,
+    NORM_BEFORE_GATE: tl.constexpr,
+    IS_RMS_NORM: tl.constexpr,
+    N_CORES: tl.constexpr,
+```
+
+### _layer_norm_fwd @ ops\triton\fla\layernorm_guard.py (HTML标记63行/实际10行)
+```python
+def _layer_norm_fwd(
+    x,
+    weight,
+    bias,
+    eps,
+    z=None,
+    out=None,
+    group_size=None,
+    norm_before_gate=True,
+    is_rms_norm=False,
+```
+
+### solve_tril_16x16_kernel @ ops\triton\fla\solve_tril.py (HTML标记113行/实际11行)
+```python
+def solve_tril_16x16_kernel(
+    A,
+    Ad,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    LARGE_BLOCK_T: tl.constexpr,
+    EXTRACT_SLICE_STRIDE_1: tl.constexpr,
+```
+
+### merge_16x16_to_32x32_inverse_kernel @ ops\triton\fla\solve_tril.py (HTML标记60行/实际10行)
+```python
+def merge_16x16_to_32x32_inverse_kernel(
+    A,
+    Ad,
+    Ai,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### merge_16x16_to_64x64_inverse_kernel @ ops\triton\fla\solve_tril.py (HTML标记126行/实际10行)
+```python
+def merge_16x16_to_64x64_inverse_kernel(
+    A,
+    Ad,
+    Ai,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### prepare_lens @ ops\triton\fla\utils.py
+```python
+def prepare_lens(cu_seqlens: torch.LongTensor) -> torch.LongTensor:
+    return cu_seqlens[1:] - cu_seqlens[:-1]
+```
+
+### prepare_chunk_indices @ ops\triton\fla\utils.py
+```python
+def prepare_chunk_indices(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    indices = torch.cat([torch.arange(n) for n in triton.cdiv(prepare_lens(cu_seqlens), chunk_size).tolist()])
+    return torch.stack([indices.eq(0).cumsum(0) - 1, indices], 1).to(cu_seqlens)
+```
+
+### prepare_final_chunk_indices @ ops\triton\fla\utils.py
+```python
+def prepare_final_chunk_indices(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    indices = triton.cdiv(prepare_lens(cu_seqlens), chunk_size) + 1
+    return torch.cumsum(indices, 0) - 1
+```
+
+### prepare_chunk_offsets @ ops\triton\fla\utils.py
+```python
+def prepare_chunk_offsets(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    return torch.cat([cu_seqlens.new_tensor([0]), triton.cdiv(prepare_lens(cu_seqlens), chunk_size)]).cumsum(-1)
+```
+
+### prepare_update_chunk_offsets @ ops\triton\fla\utils.py
+```python
+def prepare_update_chunk_offsets(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    return torch.cat([cu_seqlens.new_tensor([0]), triton.cdiv(prepare_lens(cu_seqlens), chunk_size) + 1]).cumsum(-1)
+```
+
+### wrapper @ ops\triton\fla\utils.py
+```python
+    def wrapper(*args, **kwargs):
+        contiguous_args = (i if not isinstance(i, torch.Tensor) else i.contiguous() for i in args)
+        contiguous_kwargs = {k: (v if not isinstance(v, torch.Tensor) else v.contiguous()) for k, v in kwargs.items()}
+
+        tensor = None
+        for arg in args:
+            if isinstance(arg, torch.Tensor):
+                tensor = arg
+                break
+        if tensor is None:
+            for value in kwargs.values():
+                if isinstance(value, torch.Tensor):
+                    tensor = value
+                    break
+
+        if tensor is not None:
+            ctx = torch.npu.device(tensor.device.index)
+        else:
+            ctx = contextlib.nullcontext()
+
+        with ctx:
+            return fn(*contiguous_args, **contiguous_kwargs)
+```
+
+### safe_exp @ ops\triton\fla\utils.py
+```python
+def safe_exp(x):
+    return tl.exp(tl.where(x <= 0, x, float("-inf")))
+```
+
+### _clear_ssm_states_kernel @ ops\triton\fla\utils.py (HTML标记18行/实际6行)
+```python
+def _clear_ssm_states_kernel(
+    states_ptr,
+    has_initial_state_ptr,
+    inner_size,
+    row_stride,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### recompute_w_u_fwd_kernel @ ops\triton\fla\wy_fast.py (HTML标记75行/实际19行)
+```python
+def recompute_w_u_fwd_kernel(
+    k,
+    v,
+    beta,
+    w,
+    u,
+    A,
+    g,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H,
+    Hg,
+    K,
+    V,
+    BT: tl.constexpr,
+    BK: tl.constexpr,
+    BV: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### recompute_w_u_fwd @ ops\triton\fla\wy_fast.py (HTML标记46行/实际8行)
+```python
+def recompute_w_u_fwd(
+    k: torch.Tensor,
+    v: torch.Tensor,
+    beta: torch.Tensor,
+    g_cumsum: torch.Tensor,
+    A: torch.Tensor,
+    cu_seqlens: torch.LongTensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+```
+
+### chunk_gated_delta_rule_fwd_kernel_h_blockdim64_kda @ ops\triton\kda\chunk_delta_h.py (HTML标记232行/实际25行)
+```python
+def chunk_gated_delta_rule_fwd_kernel_h_blockdim64_kda(
+    k,
+    v,
+    w,
+    v_new,
+    g,
+    gk,
+    h,
+    h0,
+    ht,
+    cu_seqlens,
+    chunk_offsets,
+    T,
+    H: tl.constexpr,
+    Hg: tl.constexpr,
+    K: tl.constexpr,
+    V: tl.constexpr,
+    BT: tl.constexpr,
+    BV: tl.constexpr,
+    USE_G: tl.constexpr,
+    USE_GK: tl.constexpr,
+    USE_INITIAL_STATE: tl.constexpr,
+    STORE_FINAL_STATE: tl.constexpr,
+    SAVE_NEW_VALUE: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_gated_delta_rule_fwd_h_kda @ ops\triton\kda\chunk_delta_h.py (HTML标记59行/实际13行)
+```python
+def chunk_gated_delta_rule_fwd_h_kda(
+    k: torch.Tensor,
+    w: torch.Tensor,
+    u: torch.Tensor,
+    g: torch.Tensor | None = None,
+    gk: torch.Tensor | None = None,
+    initial_state: torch.Tensor | None = None,
+    output_final_state: bool = False,
+    chunk_size: int = FLA_CHUNK_SIZE,
+    save_new_value: bool = True,
+    cu_seqlens: torch.Tensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    chunk_offsets: torch.Tensor | None = None,
+```
+
+### grid @ ops\triton\kda\chunk_delta_h.py
+```python
+    def grid(meta):
+        return (triton.cdiv(V, meta["BV"]), N * H)
+```
+
+### chunk_local_cumsum_scalar_kernel @ ops\triton\kda\cumsum.py (HTML标记53行/实际14行)
+```python
+def chunk_local_cumsum_scalar_kernel(
+    s,
+    o,
+    scale,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    BLOCK_T: tl.constexpr,
+    REVERSE: tl.constexpr,
+    HAS_SCALE: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    HEAD_FIRST: tl.constexpr,
+    CHUNK_SIZE: tl.constexpr = 64,
+```
+
+### chunk_local_cumsum_scalar @ ops\triton\kda\cumsum.py (HTML标记37行/实际9行)
+```python
+def chunk_local_cumsum_scalar(
+    g,
+    chunk_size,
+    reverse: bool = False,
+    scale: float = None,
+    cu_seqlens: torch.Tensor | None = None,
+    block_indices: torch.Tensor | None = None,
+    head_first: bool = False,
+    output_dtype: torch.Tensor | None = torch.float,
+```
+
+### chunk_local_cumsum_vector_kernel @ ops\triton\kda\cumsum.py (HTML标记70行/实际14行)
+```python
+def chunk_local_cumsum_vector_kernel(
+    s,
+    o,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    B: tl.constexpr,
+    H: tl.constexpr,
+    S: tl.constexpr,
+    BT: tl.constexpr,
+    BS: tl.constexpr,
+    REVERSE: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    HEAD_FIRST: tl.constexpr,
+```
+
+### chunk_local_cumsum_vector @ ops\triton\kda\cumsum.py (HTML标记38行/实际8行)
+```python
+def chunk_local_cumsum_vector(
+    g: torch.Tensor,
+    chunk_size: int,
+    reverse: bool = False,
+    cu_seqlens: torch.Tensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    head_first: bool = False,
+    output_dtype: torch.dtype | None = torch.float,
+```
+
+### grid @ ops\triton\kda\cumsum.py
+```python
+    def grid(meta):
+        return (triton.cdiv(meta["S"], meta["BS"]), NT, B * H)
+```
+
+### chunk_local_cumsum @ ops\triton\kda\cumsum.py (HTML标记41行/实际10行)
+```python
+def chunk_local_cumsum(
+    g: torch.Tensor,
+    chunk_size: int,
+    reverse: bool = False,
+    scale: float = None,
+    cu_seqlens: torch.Tensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    head_first: bool = False,
+    output_dtype: torch.dtype | None = torch.float,
+    **kwargs,
+```
+
+### fused_recurrent_gated_delta_rule_fwd_kernel @ ops\triton\kda\fused_recurrent_kda.py (HTML标记135行/实际34行)
+```python
+def fused_recurrent_gated_delta_rule_fwd_kernel(
+    q,
+    k,
+    v,
+    g,
+    beta,
+    o,
+    h0,
+    ht,
+    cu_seqlens,
+    ssm_state_indices,
+    num_accepted_tokens,
+    scale,
+    N: tl.int64,  # num of sequences
+    T: tl.int64,  # num of tokens
+    B: tl.constexpr,
+    H: tl.constexpr,
+    HV: tl.constexpr,
+    K: tl.constexpr,
+    V: tl.constexpr,
+    BK: tl.constexpr,
+    BV: tl.constexpr,
+    stride_init_state_token: tl.constexpr,
+    stride_final_state_token: tl.constexpr,
+    stride_indices_seq: tl.constexpr,
+    stride_indices_tok: tl.constexpr,
+    USE_INITIAL_STATE: tl.constexpr,  # whether to use initial state
+    INPLACE_FINAL_STATE: tl.constexpr,  # whether to store final state inplace
+    IS_BETA_HEADWISE: tl.constexpr,  # whether beta is headwise vector or scalar,
+    USE_QK_L2NORM_IN_KERNEL: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    IS_CONTINUOUS_BATCHING: tl.constexpr,
+    IS_SPEC_DECODING: tl.constexpr,
+    IS_KDA: tl.constexpr,
+```
+
+### fused_recurrent_kda_fwd @ ops\triton\kda\kda.py (HTML标记75行/实际13行)
+```python
+def fused_recurrent_kda_fwd(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    scale: float,
+    initial_state: torch.Tensor,
+    inplace_final_state: bool = True,
+    cu_seqlens: torch.Tensor | None = None,
+    ssm_state_indices: torch.Tensor | None = None,
+    num_accepted_tokens: torch.Tensor | None = None,
+    use_qk_l2norm_in_kernel: bool = False,
+```
+
+### fused_recurrent_kda @ ops\triton\kda\kda.py (HTML标记37行/实际13行)
+```python
+def fused_recurrent_kda(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor = None,
+    scale: float = None,
+    initial_state: torch.Tensor = None,
+    inplace_final_state: bool = True,
+    use_qk_l2norm_in_kernel: bool = True,
+    cu_seqlens: torch.Tensor | None = None,
+    ssm_state_indices: torch.LongTensor | None = None,
+    **kwargs,
+```
+
+### layer_norm_gated_fwd_kernel @ ops\triton\kda\kda.py (HTML标记69行/实际21行)
+```python
+def layer_norm_gated_fwd_kernel(
+    x,  # pointer to the input
+    g,  # pointer to the gate
+    y,  # pointer to the output
+    w,  # pointer to the weights
+    b,  # pointer to the biases
+    residual,  # pointer to the residual
+    residual_out,  # pointer to the residual
+    mean,  # pointer to the mean
+    rstd,  # pointer to the 1/std
+    eps,  # epsilon to avoid division by zero
+    T,  # number of rows in x
+    D: tl.constexpr,  # number of columns in x
+    BT: tl.constexpr,
+    BD: tl.constexpr,
+    ACTIVATION: tl.constexpr,
+    IS_RMS_NORM: tl.constexpr,
+    STORE_RESIDUAL_OUT: tl.constexpr,
+    HAS_RESIDUAL: tl.constexpr,
+    HAS_WEIGHT: tl.constexpr,
+    HAS_BIAS: tl.constexpr,
+```
+
+### layer_norm_gated_fwd_kernel1 @ ops\triton\kda\kda.py (HTML标记65行/实际19行)
+```python
+def layer_norm_gated_fwd_kernel1(
+    x,  # pointer to the input
+    g,  # pointer to the gate
+    y,  # pointer to the output
+    w,  # pointer to the weights
+    b,  # pointer to the biases
+    residual,  # pointer to the residual
+    residual_out,  # pointer to the residual
+    mean,  # pointer to the mean
+    rstd,  # pointer to the 1/std
+    eps,  # epsilon to avoid division by zero
+    D: tl.constexpr,  # number of columns in x
+    BD: tl.constexpr,
+    ACTIVATION: tl.constexpr,
+    IS_RMS_NORM: tl.constexpr,
+    STORE_RESIDUAL_OUT: tl.constexpr,
+    HAS_RESIDUAL: tl.constexpr,
+    HAS_WEIGHT: tl.constexpr,
+    HAS_BIAS: tl.constexpr,
+```
+
+### layer_norm_gated_fwd @ ops\triton\kda\kda.py (HTML标记77行/实际11行)
+```python
+def layer_norm_gated_fwd(
+    x: torch.Tensor,
+    g: torch.Tensor,
+    weight: torch.Tensor,
+    bias: torch.Tensor,
+    activation: str = "swish",
+    eps: float = 1e-5,
+    residual: torch.Tensor = None,
+    out_dtype: torch.dtype = None,
+    residual_dtype: torch.dtype = None,
+    is_rms_norm: bool = False,
+```
+
+### rms_norm_gated @ ops\triton\kda\kda.py (HTML标记33行/实际10行)
+```python
+def rms_norm_gated(
+    x: torch.Tensor,
+    g: torch.Tensor,
+    weight: torch.Tensor,
+    bias: torch.Tensor,
+    activation: str = "swish",
+    residual: torch.Tensor | None = None,
+    prenorm: bool = False,
+    residual_in_fp32: bool = False,
+    eps: float = 1e-6,
+```
+
+### chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_inter @ ops\triton\kda\kda.py (HTML标记143行/实际18行)
+```python
+def chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_inter(
+    q,
+    k,
+    g,
+    beta,
+    A,
+    Aqk,
+    scale,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    K: tl.constexpr,
+    BT: tl.constexpr,
+    BC: tl.constexpr,
+    BK: tl.constexpr,
+    NC: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_intra @ ops\triton\kda\kda.py (HTML标记88行/实际17行)
+```python
+def chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_intra(
+    q,
+    k,
+    g,
+    beta,
+    A,
+    Aqk,
+    scale,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    K: tl.constexpr,
+    BT: tl.constexpr,
+    BC: tl.constexpr,
+    BK: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### recompute_w_u_fwd_kernel @ ops\triton\kda\kda.py (HTML标记137行/实际24行)
+```python
+def recompute_w_u_fwd_kernel(
+    q,
+    k,
+    qg,
+    kg,
+    v,
+    beta,
+    w,
+    u,
+    A,
+    gk,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    K: tl.constexpr,
+    V: tl.constexpr,
+    BT: tl.constexpr,
+    BK: tl.constexpr,
+    BV: tl.constexpr,
+    STORE_QG: tl.constexpr,
+    STORE_KG: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    DOT_PRECISION: tl.constexpr,
+```
+
+### recompute_w_u_fwd @ ops\triton\kda\kda.py (HTML标记45行/实际9行)
+```python
+def recompute_w_u_fwd(
+    k: torch.Tensor,
+    v: torch.Tensor,
+    beta: torch.Tensor,
+    A: torch.Tensor,
+    q: torch.Tensor | None = None,
+    gk: torch.Tensor | None = None,
+    cu_seqlens: torch.Tensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+```
+
+### chunk_gla_fwd_kernel_o @ ops\triton\kda\kda.py (HTML标记103行/实际18行)
+```python
+def chunk_gla_fwd_kernel_o(
+    q,
+    v,
+    g,
+    h,
+    o,
+    A,
+    cu_seqlens,
+    chunk_indices,
+    scale,
+    T,
+    H: tl.constexpr,
+    K: tl.constexpr,
+    V: tl.constexpr,
+    BT: tl.constexpr,
+    BK: tl.constexpr,
+    BV: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+```
+
+### chunk_gla_fwd_o_gk @ ops\triton\kda\kda.py (HTML标记39行/实际11行)
+```python
+def chunk_gla_fwd_o_gk(
+    q: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    A: torch.Tensor,
+    h: torch.Tensor,
+    o: torch.Tensor,
+    scale: float,
+    cu_seqlens: torch.Tensor | None = None,
+    chunk_indices: torch.Tensor | None = None,
+    chunk_size: int = 64,
+```
+
+### grid @ ops\triton\kda\kda.py
+```python
+    def grid(meta):
+        return (cdiv(V, meta["BV"]), NT, B * H)
+```
+
+### chunk_kda_fwd @ ops\triton\kda\kda.py (HTML标记77行/实际11行)
+```python
+def chunk_kda_fwd(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    scale: float,
+    initial_state: torch.Tensor,
+    output_final_state: bool,
+    cu_seqlens: torch.Tensor | None = None,
+    prebuilt_meta=None,
+```
+
+### chunk_kda @ ops\triton\kda\kda.py (HTML标记34行/实际13行)
+```python
+def chunk_kda(
+    q: torch.Tensor,
+    k: torch.Tensor,
+    v: torch.Tensor,
+    g: torch.Tensor,
+    beta: torch.Tensor,
+    scale: float = None,
+    initial_state: torch.Tensor = None,
+    output_final_state: bool = False,
+    use_qk_l2norm_in_kernel: bool = False,
+    cu_seqlens: torch.Tensor | None = None,
+    prebuilt_meta=None,
+    **kwargs,
+```
+
+### kda_gate_fwd_kernel @ ops\triton\kda\kda.py (HTML标记58行/实际13行)
+```python
+def kda_gate_fwd_kernel(
+    g,
+    A,
+    y,
+    g_bias,
+    beta: tl.constexpr,
+    threshold: tl.constexpr,
+    T,
+    H,
+    D: tl.constexpr,
+    BT: tl.constexpr,
+    BD: tl.constexpr,
+    HAS_BIAS: tl.constexpr,
+```
+
+### l2norm_fwd_persistent_kernel @ ops\triton\kda\l2norm.py
+```python
+def l2norm_fwd_persistent_kernel(X, Y, eps, M, N: tl.constexpr, MBLOCK: tl.constexpr, NUM_CHUNKS):
+    # One program per vector core; each program loops over NUM_CHUNKS blocks
+    # of MBLOCK rows so the grid stays resident on the device.
+    base_row = tl.program_id(0) * (NUM_CHUNKS * MBLOCK)
+    rindex = tl.arange(0, N)[None, :]
+
+    for chunk in range(NUM_CHUNKS):
+        row_idx = base_row + chunk * MBLOCK + tl.arange(0, MBLOCK)[:, None]
+        xmask = row_idx < M
+
+        xs = tl.load(X + (rindex + N * row_idx), mask=xmask, other=0.0).to(tl.float32)
+        square = xs * xs
+        square_sum = tl.sum(square, 1)[:, None]
+        rsqrt = tl.rsqrt(square_sum + eps)
+
+        tl.store(Y + (rindex + N * row_idx), xs * rsqrt, xmask)
+```
+
+### l2norm_fwd_tiled_kernel @ ops\triton\kda\l2norm.py
+```python
+def l2norm_fwd_tiled_kernel(X, Y, eps, M, N: tl.constexpr, BD: tl.constexpr, MBLOCK: tl.constexpr):
+    # One program per MBLOCK-row tile; columns are padded to BD and masked.
+    xoffset = tl.program_id(0) * MBLOCK
+    row_idx = xoffset + tl.arange(0, MBLOCK)[:, None]
+    xmask = row_idx < M
+    rindex = tl.arange(0, BD)[None, :]
+    cmask = rindex < N
+    mask = xmask & cmask
+    xs = tl.load(X + (rindex + N * row_idx), mask, other=0.0).to(tl.float32)
+    square = tl.broadcast_to(xs * xs, [MBLOCK, BD])
+    square_sum = tl.sum(tl.where(xmask, square, 0), 1)[:, None]
+    rsqrt = tl.rsqrt(square_sum + eps)
+    tl.store(Y + (rindex + N * row_idx), xs * rsqrt, mask)
+```
+
+### l2norm_fwd @ ops\triton\kda\l2norm.py (HTML标记48行/实际5行)
+```python
+def l2norm_fwd(
+    x: torch.Tensor,
+    eps: float = 1e-6,
+    output_dtype: torch.dtype | None = None,
+    use_tiled_kernel: bool = False,
+```
+
+### solve_tril_16x16_kernel_kda @ ops\triton\kda\solve_tril.py (HTML标记48行/实际10行)
+```python
+def solve_tril_16x16_kernel_kda(
+    A,
+    Ai,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    DOT_PRECISION: tl.constexpr,
+```
+
+### merge_16x16_to_32x32_inverse_kernel_kda @ ops\triton\kda\solve_tril.py (HTML标记79行/实际10行)
+```python
+def merge_16x16_to_32x32_inverse_kernel_kda(
+    A,
+    Ai,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    DOT_PRECISION: tl.constexpr,
+```
+
+### merge_16x16_to_64x64_inverse_kernel_kda @ ops\triton\kda\solve_tril.py (HTML标记174行/实际10行)
+```python
+def merge_16x16_to_64x64_inverse_kernel_kda(
+    A,
+    Ai,
+    cu_seqlens,
+    chunk_indices,
+    T,
+    H: tl.constexpr,
+    BT: tl.constexpr,
+    IS_VARLEN: tl.constexpr,
+    DOT_PRECISION: tl.constexpr,
+```
+
+### wrapper @ ops\triton\kda\utils.py (HTML标记22行/实际18行)
+```python
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        nonlocal cache_entries
+        for i, entry in enumerate(cache_entries):
+            last_args, last_kwargs, last_result = entry
+            if (
+                len(args) == len(last_args)
+                and len(kwargs) == len(last_kwargs)
+                and all(a is b for a, b in zip(args, last_args))
+                and all(k in last_kwargs and v is last_kwargs[k] for k, v in kwargs.items())
+            ):
+                cache_entries = cache_entries[:i] + cache_entries[i + 1 :] + [(args, kwargs, last_result)]
+                return last_result
+
+        result = fn(*args, **kwargs)
+        if len(cache_entries) >= cache_size:
+            cache_entries = cache_entries[1:]
+        cache_entries.append((args, kwargs, result))
+        return result
+```
+
+### prepare_lens @ ops\triton\kda\utils.py
+```python
+def prepare_lens(cu_seqlens: torch.LongTensor) -> torch.LongTensor:
+    return cu_seqlens[1:] - cu_seqlens[:-1]
+```
+
+### prepare_chunk_indices @ ops\triton\kda\utils.py
+```python
+def prepare_chunk_indices(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    indices = torch.cat([torch.arange(n) for n in triton.cdiv(prepare_lens(cu_seqlens), chunk_size).tolist()])
+    return torch.stack([indices.eq(0).cumsum(0) - 1, indices], 1).to(cu_seqlens)
+```
+
+### prepare_chunk_offsets @ ops\triton\kda\utils.py
+```python
+def prepare_chunk_offsets(cu_seqlens: torch.LongTensor, chunk_size: int) -> torch.LongTensor:
+    return torch.cat([cu_seqlens.new_tensor([0]), triton.cdiv(prepare_lens(cu_seqlens), chunk_size)]).cumsum(-1)
+```
+
+### _apply_attn_res_kernel @ ops\triton\kimi_k3\attention_residual.py (HTML标记56行/实际13行)
+```python
+def _apply_attn_res_kernel(
+    block_residual_ptr,
+    prefix_sum_ptr,
+    norm_w_ptr,
+    proj_w_ptr,
+    out_ptr,
+    N: tl.constexpr,
+    H: tl.constexpr,
+    B: tl.constexpr,
+    BLOCK_CAPACITY: tl.constexpr,
+    EPS: tl.constexpr,
+    NUM_CORES: tl.constexpr,
+    NB: tl.constexpr,
+```
+
+### split_qkv_rmsnorm_mrope_kernel @ ops\triton\linearnorm\split_qkv_rmsnorm_mrope.py (HTML标记251行/实际30行)
+```python
+def split_qkv_rmsnorm_mrope_kernel(
+    in_qkv_ptr: torch.Tensor,
+    q_weight_ptr: torch.Tensor,
+    q_bias_ptr: torch.Tensor,
+    k_weight_ptr: torch.Tensor,
+    k_bias_ptr: torch.Tensor,
+    cos_sin_ptr: torch.Tensor,
+    out_q_ptr: torch.Tensor,
+    out_k_ptr: torch.Tensor,
+    out_v_ptr: torch.Tensor,
+    out_gate_ptr: torch.Tensor,
+    num_tokens,
+    front_core_num,
+    num_tokens_each_front_core,
+    num_tokens_each_tail_core,
+    num_q_heads: tl.constexpr,
+    num_kv_heads: tl.constexpr,
+    head_size: tl.constexpr,
+    q_size: tl.constexpr,
+    kv_size: tl.constexpr,
+    eps: tl.constexpr,
+    mrope_section_t,
+    mrope_section_h,
+    mrope_section_w,
+    has_bias: tl.constexpr,
+    is_interleaved: tl.constexpr,
+    rope_dim: tl.constexpr,
+    half_rope_dim: tl.constexpr,
+    IS_PARTIAL_ROPE: tl.constexpr,
+    gate_size: tl.constexpr,
+```
+
+### triton_split_qkv_rmsnorm_mrope @ ops\triton\linearnorm\split_qkv_rmsnorm_mrope.py (HTML标记85行/实际15行)
+```python
+def triton_split_qkv_rmsnorm_mrope(
+    qkv: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    cos_sin: torch.Tensor,
+    num_q_heads: int,
+    num_kv_heads: int,
+    head_size: int,
+    eps: float,
+    mrope_section: list[int],
+    is_interleaved: bool,
+    rope_dim: int | None = None,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+    has_gate: bool = False,
+```
+
+### triton_split_qkv_rmsnorm_mrope_fake @ ops\triton\linearnorm\split_qkv_rmsnorm_mrope.py (HTML标记50行/实际15行)
+```python
+def triton_split_qkv_rmsnorm_mrope_fake(
+    qkv: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    cos_sin: torch.Tensor,
+    num_q_heads: int,
+    num_kv_heads: int,
+    head_size: int,
+    eps: float,
+    mrope_section: list[int],
+    is_interleaved: bool,
+    rope_dim: int | None = None,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+    has_gate: bool = False,
+```
+
+### split_qkv_rmsnorm_rope_kernel @ ops\triton\linearnorm\split_qkv_rmsnorm_rope.py (HTML标记236行/实际28行)
+```python
+def split_qkv_rmsnorm_rope_kernel(
+    input_gm_ptr,
+    q_gm_ptr,
+    k_gm_ptr,
+    v_gm_ptr,
+    q_weight_ptr,
+    q_bias_ptr,
+    k_weight_ptr,
+    k_bias_ptr,
+    batch_size,
+    q_hidden_size: tl.constexpr,
+    kv_hidden_size: tl.constexpr,
+    total_hidden_size: tl.constexpr,
+    eps: tl.constexpr,
+    BIAS: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    ROPE_DIM: tl.constexpr,
+    HALF_ROPE_DIM: tl.constexpr,
+    IS_PARTIAL_ROPE: tl.constexpr,
+    num_vectorcore: tl.constexpr,
+    batch_size_per_iter_per_vec: tl.constexpr,
+    qk_head_nums_per_iter_per_vec: tl.constexpr,
+    q_head_num: tl.constexpr,
+    kv_head_num: tl.constexpr,
+    qk_head_num_sum: tl.constexpr,
+    v_batch_size_per_iter_per_vec: tl.constexpr,
+    positions_gm_ptr,
+    cos_sin_cache_gm_ptr,
+```
+
+### split_qkv_rmsnorm_rope_impl @ ops\triton\linearnorm\split_qkv_rmsnorm_rope.py (HTML标记81行/实际12行)
+```python
+def split_qkv_rmsnorm_rope_impl(
+    input: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    positions: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    eps: float,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+```
+
+### split_qkv_rmsnorm_rope_impl_fake @ ops\triton\linearnorm\split_qkv_rmsnorm_rope.py (HTML标记35行/实际12行)
+```python
+def split_qkv_rmsnorm_rope_impl_fake(
+    input: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    positions: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    eps: float,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+```
+
+### precompute_rope_cos_sin_kernel @ ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py (HTML标记28行/实际8行)
+```python
+def precompute_rope_cos_sin_kernel(
+    positions_gm_ptr,
+    cos_sin_cache_gm_ptr,
+    out_cos_sin_gm_ptr,
+    batch_size,
+    ROPE_DIM: tl.constexpr,
+    num_vectorcore: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr = 128,
+```
+
+### split_qkv_rmsnorm_rope_simt_kernel @ ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py (HTML标记217行/实际27行)
+```python
+def split_qkv_rmsnorm_rope_simt_kernel(
+    input_gm_ptr,
+    q_gm_ptr,
+    k_gm_ptr,
+    v_gm_ptr,
+    q_weight_ptr,
+    q_bias_ptr,
+    k_weight_ptr,
+    k_bias_ptr,
+    cos_sin_precomputed_ptr,
+    batch_size,
+    q_hidden_size: tl.constexpr,
+    kv_hidden_size: tl.constexpr,
+    total_hidden_size: tl.constexpr,
+    eps: tl.constexpr,
+    BIAS: tl.constexpr,
+    HEAD_DIM: tl.constexpr,
+    ROPE_DIM: tl.constexpr,
+    HALF_ROPE_DIM: tl.constexpr,
+    IS_PARTIAL_ROPE: tl.constexpr,
+    num_vectorcore: tl.constexpr,
+    batch_size_per_iter_per_vec: tl.constexpr,
+    v_batch_size_per_iter_per_vec: tl.constexpr,
+    qk_head_nums_per_iter_per_vec: tl.constexpr,
+    q_head_num: tl.constexpr,
+    kv_head_num: tl.constexpr,
+    qk_head_num_sum: tl.constexpr,
+```
+
+### split_qkv_rmsnorm_rope_simt_impl @ ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py (HTML标记82行/实际12行)
+```python
+def split_qkv_rmsnorm_rope_simt_impl(
+    input: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    positions: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    eps: float,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+```
+
+### split_qkv_rmsnorm_rope_simt_impl_fake @ ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py (HTML标记35行/实际12行)
+```python
+def split_qkv_rmsnorm_rope_simt_impl_fake(
+    input: torch.Tensor,
+    cos_sin_cache: torch.Tensor,
+    positions: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    eps: float,
+    q_bias: torch.Tensor | None = None,
+    k_bias: torch.Tensor | None = None,
+```
+
+### _apply_global_rmsnorm_kernel @ ops\triton\linearnorm\split_qkv_tp_rmsnorm_rope.py (HTML标记123行/实际19行)
+```python
+def _apply_global_rmsnorm_kernel(
+    q_ptr,
+    k_ptr,
+    cos_ptr,
+    sin_ptr,
+    cs_row_stride,
+    q_weight_ptr,
+    k_weight_ptr,
+    qk_global_var_ptr,
+    eps: tl.constexpr,
+    inv_tp_world: tl.constexpr,
+    num_tokens,
+    q_cols: tl.constexpr,
+    k_cols: tl.constexpr,
+    q_num_heads: tl.constexpr,
+    k_num_heads: tl.constexpr,
+    head_dim: tl.constexpr,
+    rotary_dim: tl.constexpr,
+    HALF: tl.constexpr,
+```
+
+### split_qkv_tp_rmsnorm_rope_impl @ ops\triton\linearnorm\split_qkv_tp_rmsnorm_rope.py (HTML标记79行/实际12行)
+```python
+def split_qkv_tp_rmsnorm_rope_impl(
+    input: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    rotary_dim: int,
+    eps: float,
+    tp_world: int,
+    cos: torch.Tensor,
+    sin: torch.Tensor,
+```
+
+### split_qkv_tp_rmsnorm_rope_impl_fake @ ops\triton\linearnorm\split_qkv_tp_rmsnorm_rope.py (HTML标记33行/实际12行)
+```python
+def split_qkv_tp_rmsnorm_rope_impl_fake(
+    input: torch.Tensor,
+    q_weight: torch.Tensor,
+    k_weight: torch.Tensor,
+    q_hidden_size: int,
+    kv_hidden_size: int,
+    head_dim: int,
+    rotary_dim: int,
+    eps: float,
+    tp_world: int,
+    cos: torch.Tensor,
+    sin: torch.Tensor,
+```
+
+### extract_last_width @ ops\triton\mamba\causal_conv1d.py
+```python
+def extract_last_width(x, start_loc, width):
+    end_loc = start_loc[1:]
+    offsets = torch.arange(width, device=x.device)
+    indices = end_loc.unsqueeze(1) - width + offsets.unsqueeze(0)  # (num_seqs, width)
+
+    return x[:, indices].permute(1, 0, 2)
+```
+
+### _fwd_diag_kernel @ ops\triton\mamba\lightning_attn.py (HTML标记112行/实际14行)
+```python
+def _fwd_diag_kernel(
+    Q,
+    K,
+    V,
+    Out,
+    S,
+    b: tl.constexpr,
+    h: tl.constexpr,
+    n: tl.constexpr,
+    d: tl.constexpr,
+    e: tl.constexpr,
+    BLOCK: tl.constexpr,
+    CBLOCK: tl.constexpr,
+    NUM_BLOCK: tl.constexpr,
+```
+
+### _fwd_kv_parallel @ ops\triton\mamba\lightning_attn.py (HTML标记103行/实际17行)
+```python
+def _fwd_kv_parallel(
+    K,
+    V,
+    K_decay,
+    KV,
+    b: tl.constexpr,
+    h: tl.constexpr,
+    n: tl.constexpr,
+    d: tl.constexpr,
+    e: tl.constexpr,
+    BLOCK: tl.constexpr,
+    NUM_BLOCK: tl.constexpr,
+    D_FBLOCK: tl.constexpr,
+    E_FBLOCK: tl.constexpr,
+    NUM_FBLOCK: tl.constexpr,
+    CBLOCK: tl.constexpr,
+    NUM_CBLOCK: tl.constexpr,
+```
+
+### _fwd_kv_reduce @ ops\triton\mamba\lightning_attn.py (HTML标记61行/实际13行)
+```python
+def _fwd_kv_reduce(
+    S,
+    KV,
+    KV_HISTORY,
+    b: tl.constexpr,
+    h: tl.constexpr,
+    n,
+    d: tl.constexpr,
+    e: tl.constexpr,
+    BLOCK: tl.constexpr,
+    NUM_BLOCK,
+    D_FBLOCK: tl.constexpr,
+    E_FBLOCK: tl.constexpr,
+```
+
+### _fwd_none_diag_kernel @ ops\triton\mamba\lightning_attn.py (HTML标记68行/实际15行)
+```python
+def _fwd_none_diag_kernel(
+    Q,
+    Out,
+    S,
+    KV,
+    b: tl.constexpr,
+    h: tl.constexpr,
+    n,
+    d: tl.constexpr,
+    e: tl.constexpr,
+    BLOCK: tl.constexpr,
+    NUM_BLOCK,
+    E_FBLOCK: tl.constexpr,
+    CBLOCK: tl.constexpr,
+    NUM_CBLOCK: tl.constexpr,
+```
+
+### jit_linear_forward_prefix @ ops\triton\mamba\lightning_attn.py (HTML标记30行/实际9行)
+```python
+    def jit_linear_forward_prefix(
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        kv_caches: torch.Tensor,
+        slope_rate: torch.Tensor,
+        block_size: int,
+        layer_idx: int | None = None,
+        **kwargs,
+```
+
+### ngram_spec_decode_kernel @ ops\triton\spec_decode\ngram.py (HTML标记179行/实际16行)
+```python
+def ngram_spec_decode_kernel(
+    token_ids_ptr,
+    num_tokens_ptr,
+    sampled_ptr,
+    discard_ptr,
+    next_token_ids_ptr,
+    draft_token_ids_ptr,
+    num_valid_draft_ptr,
+    raw_valid_count_ptr,
+    max_seq_len: tl.constexpr,
+    max_new_tokens: tl.constexpr,
+    vocab_size: tl.constexpr,
+    min_n: tl.constexpr,
+    max_n: tl.constexpr,
+    k: tl.constexpr,
+    batch_size,
+```
+
+### triton_ngram_spec_decode @ ops\triton\spec_decode\ngram.py (HTML标记72行/实际9行)
+```python
+def triton_ngram_spec_decode(
+    token_ids,
+    num_tokens_no_spec,
+    sampled_token_ids,
+    discard_request_mask,
+    vocab_size,
+    min_n,
+    max_n,
+    k,
+```
+
+### prepare_inputs_padded_kernel @ ops\triton\spec_decode\utils.py (HTML标记44行/实际8行)
+```python
+def prepare_inputs_padded_kernel(
+    cu_num_draft_tokens_ptr,  # [num_reqs]
+    valid_sampled_tokens_count_ptr,  # [num_reqs]
+    query_start_loc_gpu_ptr,  # [num_reqs + 1]
+    token_indices_to_sample_ptr,  # [num_reqs] (output)
+    num_rejected_tokens_gpu_ptr,
+    num_reqs,  # tl.int32
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### copy_and_expand_dflash_and_dspark_inputs_kernel @ ops\triton\spec_decode\utils.py (HTML标记109行/实际29行)
+```python
+def copy_and_expand_dflash_and_dspark_inputs_kernel(
+    # Inputs
+    next_token_ids_ptr,  # [num_reqs]
+    target_positions_ptr,  # [num_context]
+    context_slot_mapping_ptr,  # [num_context]
+    # Outputs
+    out_input_ids_ptr,  # [num_query_total] (output)
+    out_context_positions_ptr,  # [num_context] (output)
+    out_query_positions_ptr,  # [num_query_total] (output)
+    out_context_slot_mapping_ptr,  # [num_context] (output)
+    out_query_slot_mapping_ptr,  # [num_query_total] (output)
+    out_token_indices_ptr,  # [num_reqs * num_speculative_tokens] (output)
+    # Block table
+    block_table_ptr,  # [max_reqs, max_blocks]
+    block_table_stride,  # stride of block_table dim 0 (in elements)
+    # Metadata
+    query_start_loc_ptr,  # [num_reqs + 1]
+    seq_lens_ptr,  # [num_reqs]
+    num_rejected_tokens_ptr,  # [num_reqs] or null (0) when not padded
+    # Scalars
+    parallel_drafting_token_id,  # tl.int32
+    block_size,  # tl.int32
+    num_query_per_req,  # tl.int32
+    num_speculative_tokens,  # tl.int32
+    total_input_tokens,  # tl.int32
+    batch_size,  # tl.int32
+    HAS_NUM_REJECTED: tl.constexpr = False,
+    SAMPLE_FROM_ANCHOR: tl.constexpr = False,
+    TILE_SIZE: tl.constexpr = 256,
+```
+
+### dflash2_greedy_selector_walk_kernel @ ops\triton\spec_decode\utils.py (HTML标记33行/实际7行)
+```python
+def dflash2_greedy_selector_walk_kernel(
+    scores_ptr,
+    candidate_ids_ptr,
+    output_ptr,
+    num_reqs,
+    num_steps: tl.constexpr,
+    top_k: tl.constexpr,
+```
+
+### _apply_grammar_bitmask_kernel_impl @ ops\triton\v2\apply_grammar_bitmask.py (HTML标记41行/实际11行)
+```python
+def _apply_grammar_bitmask_kernel_impl(
+    logits_ptr,
+    logits_stride,
+    logits_indices_ptr,
+    bitmask_ptr,
+    bitmask_stride,
+    vocab_size,
+    total_tasks,
+    NUM_PROGRAMS: tl.constexpr,
+    NUM_VOCAB_BLOCKS: tl.constexpr,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### __getitem__ @ ops\triton\v2\apply_grammar_bitmask.py
+```python
+    def __getitem__(self, grid):
+        num_masks, num_vocab_blocks = grid
+        total_tasks = num_masks * num_vocab_blocks
+
+        init_device_properties_triton()
+        num_programs = min(get_vectorcore_num(), total_tasks)
+
+        def launch(
+            logits_ptr,
+            logits_stride,
+            logits_indices_ptr,
+            bitmask_ptr,
+            bitmask_stride,
+            vocab_size,
+            BLOCK_SIZE,
+        ):
+            # Disable MULTIBUFFER to better utilize the UB buffer, which gives
+            # a significant performance improvement on A2/A3. It can be enabled
+            # again on A5.
+            return _apply_grammar_bitmask_kernel_impl[(num_programs,)](
+                logits_ptr,
+                logits_stride,
+                logits_indices_ptr,
+                bitmask_ptr,
+                bitmask_stride,
+                vocab_size,
+                total_tasks,
+                NUM_PROGRAMS=num_programs,
+                NUM_VOCAB_BLOCKS=num_vocab_blocks,
+                BLOCK_SIZE=BLOCK_SIZE,
+                multibuffer=False,
+            )
+
+        return launch
+```
+
+### launch @ ops\triton\v2\apply_grammar_bitmask.py (HTML标记25行/实际8行)
+```python
+        def launch(
+            logits_ptr,
+            logits_stride,
+            logits_indices_ptr,
+            bitmask_ptr,
+            bitmask_stride,
+            vocab_size,
+            BLOCK_SIZE,
+```
+
+### precopy_mamba_align_fused_kernel @ ops\triton\v2\mamba\precopy.py (HTML标记65行/实际20行)
+```python
+def precopy_mamba_align_fused_kernel(
+    mamba_state_idx_ptr,
+    src_col_ptr,
+    token_bias_ptr,
+    block_table_ptrs_ptr,
+    block_table_stride_req: tl.int64,
+    state_base_addrs_ptr,
+    state_block_strides_ptr,
+    state_elem_sizes_ptr,
+    state_inner_sizes_ptr,
+    state_conv_widths_ptr,
+    state_group_indices_ptr,
+    state_dim_row_count_ptr,
+    state_dim_row_stride_ptr,
+    idx_mapping_ptr,
+    num_reqs,
+    COPY_BLOCK_SIZE: tl.constexpr,
+    CONV_STATE_DIM_FIRST: tl.constexpr,
+    HAS_IDX_MAPPING: tl.constexpr,
+    TEMPORAL_TILES: tl.constexpr = 1,
+```
+
+### _num_nans_kernel @ ops\triton\v2\metrics\num_nans.py (HTML标记17行/实际6行)
+```python
+def _num_nans_kernel(
+    logits_ptr,
+    logits_stride,
+    num_nans_ptr,
+    vocab_size,
+    BLOCK_SIZE: tl.constexpr,
+```
+
+### get_num_nans @ ops\triton\v2\metrics\num_nans.py
+```python
+def get_num_nans(logits: torch.Tensor) -> torch.Tensor:
+    assert logits.ndim == 2, f"logits only support a 2D tensor now, but got shape {tuple(logits.shape)}"
+    num_reqs, vocab_size = logits.shape
+    BLOCK_SIZE = 8192
+    num_nans = torch.empty(num_reqs, dtype=torch.int32, device=logits.device)
+    _num_nans_kernel[(num_reqs,)](
+        logits,
+        logits.stride(0),
+        num_nans,
+        vocab_size,
+        BLOCK_SIZE=BLOCK_SIZE,
+    )
+    return num_nans
+```
+
+### _fill_logprob_token_ids_kernel @ ops\triton\v2\sample\fill_logprob_token_idx.py (HTML标记49行/实际16行)
+```python
+def _fill_logprob_token_ids_kernel(
+    # [batch_size, 1 + num_cols]
+    out_token_ids_ptr,
+    out_token_ids_stride,
+    # [batch_size, 1 + num_cols]
+    out_valid_mask_ptr,
+    out_valid_mask_stride,
+    sampled_token_ids_ptr,  # [batch_size]
+    topk_indices_ptr,  # [batch_size, NUM_TOPK] (unused when NUM_TOPK == 0)
+    topk_indices_stride,
+    expanded_idx_mapping_ptr,  # [batch_size] -> req_state_idx
+    num_per_req_token_ids_ptr,  # [max_num_reqs]
+    per_req_token_ids_ptr,  # [max_num_reqs, MAX_LOGPROB_TOKEN_IDS]
+    per_req_token_ids_stride,
+    NUM_TOPK: tl.constexpr,
+    PADDED_COLS: tl.constexpr,
+```

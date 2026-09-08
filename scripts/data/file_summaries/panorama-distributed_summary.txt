@@ -1,0 +1,435 @@
+===== FILE: distributed/device_communicators/npu_communicator.py =====
+[58行]
+class _NpuAll2AllManager: No-op all2all_manager for NPU. Used by vLLM main's fault-tolerance | methods: support_fault_tolerance, query_fault, query_active_mask
+class NPUCommunicator:  | methods: __init__
+
+===== FILE: distributed/device_communicators/pyhccl.py =====
+[171行]
+class PyHcclCommunicator:  | methods: __init__, all_reduce, broadcast
+
+===== FILE: distributed/device_communicators/pyhccl_wrapper.py =====
+[264行]
+class hcclUniqueId:  | methods: 
+class hcclDataTypeEnum:  | methods: from_torch
+class hcclRedOpTypeEnum:  | methods: from_torch
+class Function:  | methods: 
+class HCCLLibrary:  | methods: __init__, hcclGetErrorString, HCCL_CHECK, hcclGetUniqueId, hcclCommInitRank, hcclAllReduce, hcclBroadcast, hcclCommDestroy
+
+===== FILE: distributed/eplb/communicator.py =====
+[56行]
+class AscendGlooEplbCommunicator: Gloo CPU-staging EPLB communicator for async mode on Ascend. | methods: _to_global_peer_rank, add_send, add_recv, needs_profile_buffer_reservation
+
+===== FILE: distributed/eplb/state.py =====
+[179行] module doc: Ascend-owned extensions for the upstream EPLB state.
+def _upstream_from_mapping_accepts_valid_expert_count(): Return whether the selected vLLM uses the release mapping contract.
+class AscendEplbLayerState: EPLB layer state with a graph-stable replica routing table. | methods: __init__, from_upstream, set_layer_state, refresh_expert_replica_routing_table
+def refresh_model_routing_tables(model_state, layer_idx): Refresh every routing table, or one table after an async commit.
+class AscendEplbState: Keep Ascend routing and load-recording state around upstream EPLB. | methods: __init__, _has_global_fresh_recorded_load, rearrange, from_mapping
+
+===== FILE: distributed/kv_transfer/__init__.py =====
+[101行]
+def register_connector(): 
+
+===== FILE: distributed/kv_transfer/ascend_multi_connector.py =====
+[199行]
+class AscendMultiConnector:  | methods: __init__, _configure_layerwise_reuse_completion, _wait_for_external_slot_release, wait_for_layer_load, prepare_mamba_state_copy, finish_mamba_state_copy, save_kv_layer, on_kv_cache_written, update_state_after_alloc, get_num_new_matched_tokens, update_state_before_preempt, request_finished_all_groups
+
+===== FILE: distributed/kv_transfer/kv_p2p/mooncake_connector.py =====
+[4078行]
+class RemotePortInfo:  | methods: 
+class MooncakeAgentMetadata:  | methods: 
+class ReqMeta:  | methods: 
+class GroupPull:  | methods: 
+class GroupTransferInfo:  | methods: 
+class SizedDict:  | methods: __init__, __setitem__, __getitem__
+class KVCacheTaskTracker:  | methods: __init__, add_req_to_process, add_not_transfer_request, update_done_task_count, get_and_clear_finished_requests, add_delayed_request, _retrieve_expired_requests
+class KVCacheSendingThread:  | methods: __init__, get_and_clear_finished_requests, add_not_transfer_request, add_delayed_request, run, run_busy_loop
+class KVCacheRecvingThread:  | methods: __init__, add_request, get_and_clear_finished_requests, get_and_clear_invalid_block_ids, _is_failed_recv_request, _mark_failed_recv_request, _clear_failed_recv_request, run, _submit_request, _handle_peer_requests, _mark_request_task_submitted, _mark_request_task_done, _handle_request, _send_done_signal_to_free_remote_port, _transfer_kv_cache_all_groups ...
+class MooncakeConnectorMetadata:  | methods: __init__, add_new_req
+class MooncakeConnector:  | methods: __init__, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups, register_kv_caches, get_finished, get_block_ids_with_load_errors, start_load_kv, wait_for_layer_load, save_kv_layer, wait_for_save, get_handshake_metadata, set_xfer_handshake_metadata ...
+class MooncakeConnectorScheduler: Implementation of Scheduler side methods | methods: __init__, _model_uses_compress, _get_group_transfer_info, _get_group_unique_specs, _get_transfer_block_ids, _get_swa_transfer_block_ids, _state_prefill_token_count, _truncate_request_for_prefill, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, _port_offset_from_handshake_metadata, set_xfer_handshake_metadata_from_workers, set_xfer_handshake_metadata
+class MooncakeConnectorWorker: Implementation of Worker side methods | methods: __init__, _get_prefill_decode_size, _serialize_kv_group_spec, _is_index_cache_layer, _build_layer_specs_from_kv_cache_config, _get_spec_num_key_value_heads, _get_kv_transfer_spec_key, _group_skip_kv_reformat, _get_spec_total_num_kv_heads, _build_kv_group2layeridx, _has_mamba_group, _requires_group_aware_attention_transfer, _as_kv_cache_tuple, _get_layer_spec, _recover_aligned_kv_tensor_base ...
+def zmq_ctx(socket_type, addr): Context manager for a ZMQ socket
+def group_concurrent_contiguous(src, dst, src_block_stride, dst_block_stride, block_len): Group block ids that are contiguous in both id space and memory.
+def split_if_not_byte_contiguous(src_groups, dst_groups, src_block_stride, dst_block_stride, block_len): 
+def string_to_int64_hash(input_str): Hash the string using SHA-256 and convert it into an int64 integer.
+def ensure_zmq_send(socket, data, path, max_retries): 
+def ensure_zmq_recv(socket, path, max_retries): 
+def transfer_groups_need_independent_block_ids(kv_group2layeridx, block_size_scale): Whether split transfer groups need separately expanded block IDs.
+def build_layer_name_to_metadata_idx(kv_group2layeridx): 
+def resolve_remote_layer_idx(local_layer_idx, group_spec, local_layer_indices, remote_layer_name_to_idx): Resolve a remote metadata index by the stable cache-layer name.
+def get_prefill_pp_indices(num_hidden_layers, pp_rank, pp_size, partition_list_str): 
+
+===== FILE: distributed/kv_transfer/kv_p2p/mooncake_hybrid_connector.py =====
+[2132行]
+class RemotePortInfo:  | methods: 
+class MooncakeAgentMetadata:  | methods: 
+class ReqMeta:  | methods: 
+class SizedDict:  | methods: __init__, __setitem__, __getitem__
+class KVCacheTaskTracker:  | methods: __init__, add_req_to_process, add_not_transfer_request, update_done_task_count, get_and_clear_finished_requests, add_delayed_request, _retrieve_expired_requests
+class KVCacheSendingThread:  | methods: __init__, get_and_clear_finished_requests, add_not_transfer_request, add_delayed_request, run, run_busy_loop
+class KVCacheRecvingThread:  | methods: __init__, add_request, get_and_clear_finished_requests, run, _submit_request, _handle_peer_requests, _mark_request_task_submitted, _mark_request_task_done, _handle_request, _send_done_signal_to_free_remote_port, _transfer_kv_cache_all_groups, _transfer_kv_cache, reformat_kv_cache_with_fused_op, reformat_kv_cache, _cat_kv_cache ...
+class MooncakeConnectorMetadata:  | methods: __init__, add_new_req
+class MooncakeConnector:  | methods: __init__, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished_all_groups, register_kv_caches, get_finished, start_load_kv, wait_for_layer_load, save_kv_layer, wait_for_save, get_handshake_metadata, set_xfer_handshake_metadata, set_xfer_handshake_metadata_pp_aware
+class MooncakeConnectorScheduler: Implementation of Scheduler side methods | methods: __init__, get_sw_clipped_blocks, _state_prefill_token_count, _truncate_request_for_prefill, _compute_transfer_block_ids, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished_all_groups, _port_offset_from_handshake_metadata, set_xfer_handshake_metadata_from_workers, set_xfer_handshake_metadata
+class MooncakeConnectorWorker: Implementation of Worker side methods | methods: __init__, _get_prefill_decode_size, register_kv_caches, get_finished, start_load_kv, _get_tp_num_need_pulls, _get_remote_host_info_by_port, _prefill_get_remote_rank, _get_remote_rank, _get_remote_tp_ranks, _get_remote_ranks_for_req
+def zmq_ctx(socket_type, addr): Context manager for a ZMQ socket
+def group_concurrent_contiguous(src, dst): Vectorised NumPy implementation.
+def string_to_int64_hash(input_str): Hash the string using SHA-256 and convert it into an int64 integer.
+def ensure_zmq_send(socket, data, path, max_retries): 
+def ensure_zmq_recv(socket, path, max_retries): 
+def get_prefill_pp_indices(num_hidden_layers, pp_rank, pp_size, partition_list_str): 
+
+===== FILE: distributed/kv_transfer/kv_p2p/mooncake_layerwise_connector.py =====
+[2259行]
+class LayerMetadata:  | methods: 
+class MooncakeAgentMetadata:  | methods: 
+class ReqMeta:  | methods: 
+class SendTask:  | methods: 
+class TransferMeta:  | methods: 
+class SendReqInfo:  | methods: extend_local_block_ids, update_computed_tokens, update_transferred_tokens, unpack
+class SizedDict:  | methods: __init__, __setitem__, __getitem__
+class KVCacheSendingLayerThread:  | methods: __init__, run, _handle_request, get_transfer_meta, _transfer_kv_cache
+class KVCacheRecvingLayerThread:  | methods: __init__, get_and_clear_done_requests, get_and_clear_failed_requests, update_failed_task, update_done_task, run
+class MooncakeLayerwiseConnectorMetadata:  | methods: __init__, add_new_req
+class MooncakeLayerwiseConnector:  | methods: __init__, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups, register_kv_caches, get_finished, get_block_ids_with_load_errors, start_load_kv, wait_for_layer_load, wait_for_layer_reuse, on_kv_cache_written, save_kv_layer, wait_for_save
+class MooncakeLayerwiseConnectorScheduler: Implementation of Scheduler side methods | methods: __init__, _iter_kv_cache_specs, _has_attn_mamba_hybrid_cache, _hybrid_prefill_token_count, _truncate_request_for_hybrid_prefill, _trim_hybrid_remote_block_ids, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, _access_metaserver, request_finished, request_finished_all_groups
+class MooncakeLayerwiseConnectorWorker: Implementation of Worker side methods | methods: __init__, _init_layerwise_reuse_state, _mark_layer_reuse_pending, _complete_layer_reuse, wait_for_layer_reuse, create_kv_buffer, register_kv_caches, get_finished, get_block_ids_with_load_errors, _get_kv_split_metadata, _get_kv_split_metadata_for_mamba, _align_remote_block_ids, _get_kernel_block_ids, start_load_kv, on_kv_cache_written ...
+def zmq_ctx(socket_type, addr): Context manager for a ZMQ socket
+def group_concurrent_contiguous(src, dst): Vectorised NumPy implementation.
+def string_to_int64_hash(input_str): Hash the string using SHA-256 and convert it into an int64 integer.
+def ensure_zmq_send(socket, data, path, max_retries): 
+def ensure_zmq_recv(socket, poller, path, timeout, max_retries): 
+def get_external_request_id(request_id): 
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/connector.py =====
+[243行] module doc: PD-disaggregated SFA Remote D2H KV-transfer connector.
+class SfaRemoteD2HConnector: Decode-offload Remote D2H connector branching on role and KV role. | methods: __init__, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups, register_kv_caches, get_finished, get_block_ids_with_load_errors, start_load_kv, wait_for_layer_load, save_kv_layer, on_kv_cache_written, wait_for_save, get_num_cpu_blocks ...
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/protocol.py =====
+[178行] module doc: Wire protocol helpers for SFA PD RD2H.
+def infer_sfa_component_group_ids(kv_cache_config): Return ``(main_group_id, indexer_group_id)`` from layer names.
+class LayerMetadata:  | methods: 
+class SfaPDProducerReqMeta:  | methods: 
+class SfaPDProducerMetadata:  | methods: __init__, add_new_req
+class SfaPDConsumerReqMeta: D-side destinations owned by vLLM's normal KV block manager. | methods: 
+class SfaPDConsumerMetadata:  | methods: __init__, add_request
+class SendTask:  | methods: 
+def get_external_request_id(request_id): 
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/read_thread.py =====
+[754行] module doc: D-side memfabric pull read thread for SFA PD RD2H.
+class ConsumerReadState:  | methods: 
+def _coalesce_desc(peer, local, length): 
+def _tp_block_range(num_blocks, tp_rank, tp_size, start_block): 
+class MembPullReadThread: D-side thread for memfabric pull. | methods: __init__, _record_chunk_done, discard_requests, get_and_clear_done, get_and_clear_failed, run, stop, _resolve_read_layer, _build_req_descriptors, _log_read_result, _do_read_batch
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/scheduler.py =====
+[509行] module doc: Scheduler side of the decode-offload SFA Remote D2H connector.
+class _SendReqInfo:  | methods: __init__, extend_local_block_ids, update_computed_tokens, update_transferred_tokens
+class SFAPDRD2HProducerScheduler: P-side scheduler for SFA PD (pull mode). | methods: __init__, _normalize_block_ids, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups
+class SFAPDRD2HScheduler:  | methods: __init__, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups, _access_metaserver, _submit_metaserver_request, _on_metaserver_done, shutdown
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/send_thread.py =====
+[366行] module doc: P-side memfabric pull sending thread for SFA PD RD2H.
+class ProducerSendState:  | methods: 
+class MembPullSendingThread: P-side sending thread for memfabric pull mode. | methods: __init__, _ensure_dealer, run, stop, record_p_save_event, mark_layer_pending, _process_send_task, _send_mf_meta, _drain_read_replies, _signal_layer_done, _fail_layer, _record_layer_error, get_storage_send_event, get_storage_error
+
+===== FILE: distributed/kv_transfer/kv_p2p/sfa_pd_rd2h/worker.py =====
+[855行] module doc: Worker side of the decode-offload SFA Remote D2H connector.
+def _layer_idx(layer_name): 
+def _resolve_kv_transfer_backend(vllm_config): Pick the KV transfer backend.
+def _validate_tcp_port(port): 
+class SFAPDRD2HConsumerWorker:  | methods: __init__, _ensure_engine, register_kv_caches, start_load_kv, save_kv_layer, wait_for_save, _cleanup_request_state, _gather_tp_read_status, get_finished, get_block_ids_with_load_errors, get_num_cpu_blocks, _build_consumer_read_state, _register_memfabric_pull, shutdown
+class SFAPDRD2HProducerWorker: P-side worker for memfabric pull mode. | methods: __init__, get_finished, get_block_ids_with_load_errors, get_num_cpu_blocks, update_decoder_info, start_load_kv, _map_prefill_rank_to_decode_rank, _build_producer_send_state, _infer_layer_storage_slots, register_kv_caches, _has_memfabric_pull_target, on_kv_cache_written, save_kv_layer, _enqueue_layer_send, _wait_for_pd_read_completion ...
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/ascend_store_connector.py =====
+[369行]
+class AscendStoreKVEvents:  | methods: __init__, add_events, aggregate, increment_workers, get_all_events, get_number_of_workers, clear_events, __repr__
+class AscendStoreConnector:  | methods: requires_piecewise_for_cudagraph, __init__, set_xfer_handshake_metadata_pp_aware, get_num_new_matched_tokens, update_state_after_alloc, build_connector_meta, request_finished, request_finished_all_groups, update_connector_output, take_events, set_external_slot_release_waiter, register_kv_caches, start_load_kv, wait_for_layer_load, prepare_mamba_state_copy ...
+class LookupKeyServer:  | methods: __init__, close
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/attention_fence.py =====
+[91行]
+class AttentionComputeStartGate: Gate that opens when the compute stream reaches attention. | methods: __init__, record, wait
+def reset_attention_compute_start_gate(): Create a new per-layer gate for MemCache work.
+def get_attention_compute_start_gate(): 
+def record_attention_compute_start(): Record the compute-stream boundary immediately before attention.
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/backend/__init__.py =====
+[57行]
+def get_layerwise_protocol(backend_name): Return the backend module carrying the layerwise transfer protocol
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/backend/base.py =====
+[56行]
+class Backend:  | methods: __init__, create_scheduler_client, set_device, register_buffer, exists, batch_is_exist, batch_get_key_info, batch_alloc, batch_add_lease, batch_remove_lease, batch_write_finish, put, get
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/backend/memcache_backend.py =====
+[311行]
+def _is_device_sdma(): 
+class MmcDirect:  | methods: 
+def extract_layout_config(extra_config): Return the connector's extra config when it opts into the layerwise
+def make_full_key(model_name, group_id, block_hash_hex, head_or_tp_rank, num_groups): Full-block key for the layerwise transfer.
+def make_partial_key(model_name, req_id, group_id, block_index, end_token, head_or_tp_rank): 
+def make_hit_check_keys(model_name, group_id, block_hash_hex, num_ranks, num_groups): All-rank keys for scheduler-side hit check.
+class MemcacheBackend:  | methods: __init__, ensure_initialized, _setup_store, create_scheduler_client, init_store, set_device, register_buffer, _register_buffers_if_needed, exists, batch_get_key_info, batch_alloc, batch_add_lease, batch_remove_lease, batch_write_finish, get ...
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/backend/mooncake_backend.py =====
+[411行]
+def _mooncake_setup_supports_ssd_offload(): True when installed Mooncake exposes SSD kwargs on setup() (v0.3.11+).
+def _ssd_setup_kwargs(config): Keyword args for store.setup(); empty on old Mooncake or when SSD is off.
+class MooncakeBackend:  | methods: __init__, ensure_initialized, _setup_store, create_scheduler_client, set_device, register_buffer, exists, put, get
+class MooncakeStoreConfig:  | methods: __post_init__, from_file, load_from_env
+def _normalize_tenant_id(value): 
+def _parse_global_segment_size(value): Parse storage size strings with support for units: GB, MB, KB, B
+def _convert_to_bytes(number_str, multiplier, original_input): Convert numeric string to byte count
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/backend/yuanrong_backend.py =====
+[162行]
+class YuanrongConfig:  | methods: from_file, load_from_env
+class YuanrongBackend:  | methods: __init__, set_device, register_buffer, _register_buffers_if_needed, exists, get, put
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/coordinator.py =====
+[390行]
+class ExternalCachedBlockPool: Duck-typed BlockPool backed by external AscendStore key existence. | methods: __init__, get_cached_block
+class AscendStoreCoordinator: Hybrid cache-hit/mask coordinator for AscendStore external KV Pool. | methods: __init__, _verify_and_split_kv_cache_groups, find_longest_cache_hit, load_mask, _reachable_masks, store_mask, lookup_mask, block_hashes_for_spec, _find_hit_blocks
+def _unwrap_spec(spec): 
+def _copy_spec_with_block_size(spec, block_size): 
+def _get_manager_class_cache(): 
+def _get_manager_class(spec): 
+def _find_longest_cache_hit(manager_cls): 
+def _reachable_block_mask(manager_cls): 
+def _uses_reachable_mask(cache_family): 
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/kv_transfer.py =====
+[1621行]
+def _circular_shift(lst, offset): 
+class LayerBatchBuilder:  | methods: __init__, _ensure_buf, _dedupe_transfer_blocks, _build_transfer_arrays, _require_request_arrays, build_shared, build_addrs, build
+class KVTransferThread:  | methods: __init__, _get_block_size, add_request, get_and_clear_finished_requests, discard_finished_requests, raise_if_failed, set_finished_request, add_stored_request, dec_stored_request, try_finish_and_delete_stored_request, _split_transfer_packets, _batch_copy_with_limits, _set_os_thread_name, run, _handle_request ...
+class KVCacheStoreSendingThread:  | methods: __init__, is_stored_request, get_stored_request_count, delete_finished_stored_request, get_completed_events, _handle_request_exception, _handle_request, _handle_stored_request
+class KVCacheStoreRecvingThread:  | methods: __init__, _handle_request
+class KVCacheStoreKeyLayerSendingThread:  | methods: __init__, build_cached_process_tokens, _handle_request
+class KVCacheStoreKeyLayerRecvingThread:  | methods: __init__, _wait_for_save, _handle_request
+class KVCacheStoreLayerSendingThread:  | methods: __init__, delete_finished_stored_request, build_shared_data, _handle_request
+class KVCacheStoreLayerRecvingThread:  | methods: __init__, build_shared_data, _get_h2d_stagger_delay_us, _stagger_h2d_submit, _handle_request
+def record_failed_blocks(block_ids, ret_codes): 
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/layerwise_cache_layout.py =====
+[369行]
+def get_layerwise_physical_layer_index(layer_name, base_layers): 
+class LayerwiseCacheLayout:  | methods: 
+class NamedKVCacheSpec:  | methods: 
+class LayerwiseLayerCacheSpecs:  | methods: 
+class LayerwiseReuseLayout:  | methods: 
+def get_layerwise_reuse_config(kv_transfer_config): Return the extra config of the layerwise-reuse connector, if any.
+def _parse_int_config(value, name): 
+def build_layerwise_cache_layout(num_layers, extra_config): 
+def get_layerwise_kv_cache_specs(kv_cache_config): Expand group specs into a cache spec for every logical layer.
+def build_layerwise_reuse_layout(layer_specs, base_layers, extra_config): Build reusable physical-layer slots by grouping layers on their main cache spec.
+def apply_layerwise_kv_cache_plan(kv_cache_config, vllm_config): Rewrite logical layer tensors to use shared physical KV buffers.
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/metadata.py =====
+[1236行]
+class TPMismatchInfo:  | methods: 
+def _as_positive_int(value, default): 
+def infer_tp_mismatch_info(kv_role, extra_config, local_tp_size, num_kv_heads, use_mla, use_hybrid): 
+class KeyMetadata: name of the LLM model | methods: 
+class PoolKey:  | methods: __hash__, to_string, split_layers
+class LayerPoolKey: A key for the layer cache engine | methods: __hash__, to_string
+def infer_cache_family_from_ratio(compress_ratio): 
+def _get_layer_compress_ratio(layer_name, compress_ratios, hf_config): 
+def _get_group_spec_ratios(group): 
+def infer_group_cache_families(kv_cache_groups, compress_ratios, hf_config): 
+def uses_hybrid_kv_cache(scheduler_config, kv_cache_groups): 
+def infer_group_block_sizes(cache_block_size, kv_cache_groups): 
+def get_group_block_size(group_block_sizes, group_id): 
+def get_group_cache_family(group_cache_families, group_id): 
+def infer_cache_transfer_granularity(group_block_sizes, lcm_block_size, kv_cache_group_ids): 
+class ChunkedTokenDatabase:  | methods: __init__, _get_key_prefix, store_mask, load_mask, mask_allows_chunk, _make_key_by_hash, get_block_size, set_group_buffers, _get_group_buffers, prepare_value, prepare_value_layer, _iter_token_chunks, process_tokens, process_token_key_strings, process_token_key_strings_with_block_ids ...
+def normalize_block_ids_by_group(block_ids): 
+def get_block_hashes(block_hashes, group_block_size, hash_block_size): 
+def get_partial_block_index(token_count, block_size, hash_count, enabled): Index of the trailing partial block to transfer, if any.
+class _LazyGroupedBlockHashList:  | methods: __init__, __len__, __getitem__
+def block_hash_to_str(block_hash): 
+def block_hash_to_bytes(block_hash): 
+class LoadSpec:  | methods: 
+class RequestTracker:  | methods: __init__, allocated_block_ids, allocated_block_ids, update, update_mamba_spec_blocks
+class ReqMeta:  | methods: __init__, block_ids, block_ids, from_request_tracker
+class AscendConnectorMetadata:  | methods: __init__, add_request
+class LayerBatchReqMeta:  | methods: 
+class LayerBlockRange:  | methods: 
+class SharedBlockData: Pre-computed block data shared across all layers for the same request. | methods: 
+class LayerTransferTask:  | methods: 
+class LayerLoadTask:  | methods: 
+class LayerMultiBlockReqMeta:  | methods: __init__, block_ids, block_ids
+class AscendStoreKVConnectorWorkerMetadata:  | methods: aggregate
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/pool_scheduler.py =====
+[1073行]
+class KVPoolScheduler:  | methods: __init__, _get_or_create_request_tracker, _generate_store_query_keys, _get_store_lookup_hit_tokens, _make_layerwise_hit_check_keys, _get_layerwise_hit_tokens, _floor_to_cache_transfer_granularity, _infer_mamba_groups, _infer_swa_blocks, get_sw_clipped_blocks, get_num_new_matched_tokens, update_state_after_alloc, _get_last_chunk_tokens_num, _build_req_meta, _process_new_request ...
+class LookupKeyClient:  | methods: __init__, lookup, close
+def get_zmq_rpc_path_lookup(vllm_config): 
+
+===== FILE: distributed/kv_transfer/kv_pool/ascend_store/pool_worker.py =====
+[2475行]
+class KVPoolWorker:  | methods: __init__, _init_parallelism_info, _init_kv_transfer_config, _init_key_head_config, _init_metadata, _init_backend, _init_kv_events, _init_state_vars, _init_layerwise_config, _build_group_layer_builders, set_external_slot_release_waiter, _start_kv_transfer_threads, _build_cache_coordinator, _infer_group_uses_align_state, _uses_mamba_kv_cache ...
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/native/cpu_npu.py =====
+[328行] module doc: Ascend worker for vLLM's native CPU KV-cache offloading.
+class Transfer:  | methods: 
+def _new_descriptor_buffers(num_copy_ops): 
+class SingleDirectionNPUOffloadingHandler: Transfer blocks in one direction using an ordered NPU DMA stream. | methods: __init__, transfer_async, get_finished, wait, shutdown
+class NPUOffloadingWorker: Native CPU offloading worker backed by Ascend batched DMA. | methods: __init__
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/native/npu.py =====
+[97行] module doc: Ascend adaptation of vLLM's native CPU offloading spec.
+def _normalize_legacy_num_blocks(config, alignment): Translate legacy block capacity without mutating vLLM's config.
+class NPUOffloadingSpec: Use vLLM's CPU manager with an Ascend-specific transfer worker. | methods: __init__, create_worker, get_worker
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/native/offloading_connector.py =====
+[338行] module doc: Ascend layout adaptation for vLLM's native offloading connector.
+def _make_int8_block_view(tensor, num_blocks, logical_blocks_per_manager_block, bytes_per_logical_block): Build a zero-copy ``[num_blocks, page_bytes]`` view of a cache part.
+def _canonicalize_split_attention_cache(cache_parts, num_blocks, unpadded_page_size_bytes): Canonicalize Ascend's separate K/V (and optional scale) tensors.
+class AscendOffloadingConnectorWorker: Offloading worker boundary supporting Ascend's separate K/V layout. | methods: register_kv_caches
+class AscendOffloadingConnector: vLLM OffloadingConnector with an Ascend layout adapter. | methods: __init__
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/simple/copy_backend.py =====
+[124行] module doc: DMA copy backend for NPU<->CPU block transfers.
+class NPUDmaCopyBackend: ``aclrtMemcpyBatchAsync`` copy backend running on a worker thread. | methods: __init__, init, launch_copy, shutdown, _copy_loop
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/simple/npu_mem_ops.py =====
+[99行] module doc: Low-level NPU memory helpers: batched DMA transfers.
+class BatchMemcpyParams: Pre-computed per-tensor descriptors for batched block copy. | methods: 
+def _ordered_tensors(caches): Return values in insertion order (kept as a function for clarity).
+def build_params(src_caches, dst_caches, direction): Build cached pointer/stride descriptors for all sub-tensors.
+def copy_blocks(src_block_ids, dst_block_ids, params): Issue a batched async DMA on the *current* NPU stream.
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/simple/simple_cpu_offload_connector.py =====
+[54行] module doc: Ascend NPU adaptation of vLLM's simple CPU offload connector.
+class AscendSimpleCPUOffloadConnector: Reuse vLLM's connector while replacing its CUDA worker on NPU. | methods: __init__
+
+===== FILE: distributed/kv_transfer/kv_pool/kv_offload/simple/worker.py =====
+[286行] module doc: Worker-side handler for the Ascend ``SimpleCPUOffloadConnector``.
+def _flatten_kv_value(value): Yield every constituent tensor of a per-layer KV-cache entry.
+class SimpleCPUOffloadNPUWorker: NPU-flavored ``SimpleCPUOffloadWorker``. | methods: __init__, register_kv_caches, get_finished, _build_block_views
+
+===== FILE: distributed/kv_transfer/kv_pool/recompute_cpu_offload/manager.py =====
+[647行] module doc: Scheduler-side manager for recompute CPU offloading.
+class TransferMeta:  | methods: 
+class PreemptedRequestState:  | methods: 
+class RecomputeCPUOffloadScheduler: Preserve preempted requests' KV blocks in CPU memory. | methods: __init__, _get_group_is_sliding_window, _get_group_is_mamba, _derive_cpu_config, _align_group_block_ids, bind_gpu_block_pool, has_preempted_request, get_num_new_matched_tokens, update_state_after_alloc, update_state_before_preempt, _create_preempt_state, _prepare_preempt_store_specs, _prepare_preempt_load_after_alloc, build_connector_meta, update_connector_output ...
+
+===== FILE: distributed/kv_transfer/kv_pool/recompute_cpu_offload/metadata.py =====
+[52行] module doc: Metadata for RecomputeCPUOffloadConnector.
+class RecomputeCPUOffloadMetadata: Recompute offload transfers passed from scheduler to worker. | methods: 
+class RecomputeCPUOffloadWorkerMetadata: Worker -> Scheduler metadata for completed store events. | methods: aggregate
+
+===== FILE: distributed/kv_transfer/kv_pool/recompute_cpu_offload/recompute_cpu_offload_connector.py =====
+[246行] module doc: RecomputeCPUOffloadConnector: minimal CPU KV cache offloading.
+class RecomputeCPUOffloadConnectorV1: CPU KV cache preservation for recompute-preempted requests. | methods: __init__, register_kv_caches, bind_connector_metadata, clear_connector_metadata, handle_preemptions, start_load_kv, wait_for_layer_load, save_kv_layer, wait_for_save, get_finished, build_connector_worker_meta, bind_gpu_block_pool, get_num_new_matched_tokens, update_state_after_alloc, update_state_before_preempt ...
+
+===== FILE: distributed/kv_transfer/kv_pool/recompute_cpu_offload/worker.py =====
+[319行] module doc: Worker-side handler for Ascend RecomputeCPUOffloadConnector.
+class RecomputeCPUOffloadWorker: Worker-side handler for recompute CPU/NPU KV cache transfers. | methods: __init__, register_kv_caches, bind_connector_metadata, clear_connector_metadata, handle_preemptions, start_load_kv, wait_for_layer_load, _flush_and_sync_all, _poll_load_events, _submit_transfer, get_finished, build_connector_worker_meta
+
+===== FILE: distributed/kv_transfer/kv_pool/ucm_connector/connector.py =====
+[324行]
+class UCMConnectorV1:  | methods: __init__, _get_ucm_delegate_for, _call_ucm_reserved_hook, shutdown, has_connector_metadata, register_kv_caches, set_host_xfer_buffer_ops, handle_preemptions, start_load_kv, wait_for_layer_load, save_kv_layer, wait_for_save, clear_connector_metadata, bind_connector_metadata, get_block_ids_with_load_errors ...
+
+===== FILE: distributed/kv_transfer/sparse_kv_offload/sparse_kv_offload_manager.py =====
+[1206行]
+def get_subscribed_compute_streams(): 
+def allocate_kv_offload_topk_buffer_pair(vllm_config, sparse_kv_offload_config): 
+def allocate_kv_offload_topk_profile_buffers(kv_cache_spec, vllm_config, sparse_kv_offload_config): 
+def empty_aligned_int8_cpu_tensors(sizes, alignment): Allocate multiple int8 tensors with specified sizes,
+class SparseKVOffloadMemoryBudget:  | methods: 
+def _split_host_device_kv_specs(kv_cache_spec): 
+def plan_sparse_kv_offload_memory(kv_cache_spec, vllm_config, available_device_memory_bytes, dram_limit_bytes, keep_device_kv_cache): Bound sparse KV offload blocks by NPU, DRAM, and active demand.
+def get_sparse_kv_offload_cpu_pool_size_bytes(kv_cache_config): Return a safe upper bound for aligned host KV allocations.
+def allocate_kv_cache_tensors_for_sparse_kv_offload(k_tensor_size, v_tensor_size, alignment, tp_rank, keep_device_kv_cache, npu_kv_cache_allocate_func): 
+def reshape_kv_cache_tensors_for_sparse_kv_offload(raw_cache_tensors, current_kv_cache_spec, attn_backend, tp_rank, vllm_config, sparse_kv_offload_config): 
+def update_sparse_kv_offload_metadata(num_tokens, num_reqs, num_tokens_padded, num_reqs_padded, req_ids, query_start_loc): Populate per-request identity tensors for the Sparse KV offload LRU.
+def prepare_sparse_kv_offload_mtp_dummy_metadata(num_tokens, num_reqs, query_start_loc_cpu, req_ids_buffer, token_to_req_buffer): 
+class SparseKVOffloadManager: A manager responsible to the Sparse KV cache Offload. | methods: __init__, _build_cpp, _infer_group_block_sizes, _as_cache_tuple, _register_offload_layers, _get_offload_layer_id, register_kv_caches, offload_new_kv, onload_topk_kv, _onload_topk_kv_cpu
+def init_sparse_kv_offload_manager(vllm_config, kv_cache_config, sparse_kv_offload_config): 
+def get_sparse_kv_offload_manager(): 
+
+===== FILE: distributed/kv_transfer/utils/memfabric_transfer_engine.py =====
+[165行] module doc: Process-wide MemFabric transfer-engine initialization.
+class MemfabricBackend: Normalize the MemFabric API used by the SFA PD connector. | methods: __init__, get_rpc_port, register_memory, batch_transfer_sync_read
+class GlobalMemfabricTE: Lazily create one role-bound MemFabric engine per process. | methods: __init__, unique_id, configure, get_transfer_engine, _build_engine, register_buffer
+
+===== FILE: distributed/kv_transfer/utils/mooncake_transfer_engine.py =====
+[43行]
+class GlobalTE:  | methods: __init__, get_transfer_engine, register_buffer
+
+===== FILE: distributed/kv_transfer/utils/utils.py =====
+[445行]
+def kv_alltoall_and_rearrange(pd_tp_ratio, key, value): 
+def alltoall_and_rearrange(tp_ratio, input_tensor): 
+def rearrange_output(base_output, cut_num, num_kv_heads): 
+def align_memory(tensor, alignment): 
+def get_transfer_timeout_value(): 
+class parallel_info:  | methods: 
+def get_cp_group(tp, heads, dcp): 
+def context_parallel_parameters_check(remote_pcp_size, remote_dcp_size, p_parallel_info, d_parallel_info, total_num_kv_heads): 
+def get_tp_rank_head_mapping(num_key_value_heads, tp_size): 
+def get_head_group_mapping(num_key_value_heads, tp_size, num_groups, select_cp_group): 
+def get_local_remote_block_port_mappings(to_trans_idx, p_parallel_info, d_parallel_info, d_hosts, d_port, selected_p_cp_group): 
+def get_transfer_mappings(p_rank_block_mapping, d_block_rank_mapping, pd_head_mapping, d_trans_count_mapping, req_meta, block_group_idx): 
+class RegisterRange:  | methods: 
+class RegisterRegions:  | methods: registered_bytes
+def iter_kv_cache_tensors(obj): Flatten kv_caches into tensors without materializing new tensors.
+def tensor_storage_key(tensor): Return a stable grouping key for tensors sharing the same storage.
+def collect_storage_merged_register_regions(kv_caches): Collect HCCL/Mooncake register regions with storage-aware merging.
+def validate_register_region_count(regions): 
+
+===== FILE: distributed/parallel_state.py =====
+[243行]
+def init_ascend_model_parallel(parallel_config): 
+def model_parallel_initialized(): 
+def get_mc2_group(): 
+def get_mlp_tp_group(): 
+def get_otp_group(): 
+def get_lmhead_tp_group(): 
+def get_embed_tp_group(): 
+def get_p_tp_group(): 
+def get_dynamic_eplb_group(): 
+def destroy_ascend_model_parallel(): 
+def get_global_rank(parallel_config): Return a globally unique rank for the current worker across all parallel
+
+===== FILE: distributed/utils.py =====
+[55行]
+def get_decode_context_model_parallel_world_size(): Return DCP world size (v0.21.0 helper removed on vLLM main).
+def get_decode_context_model_parallel_rank(): Return DCP rank within group (v0.21.0 helper removed on vLLM main).
+def all_gather_async(input, group, output, async_op): 
+def split_tensor_along_first_dim(tensor, num_partitions, contiguous_split_chunks): Split a tensor along its first dimension.
+
+===== FILE: distributed/weight_transfer/__init__.py =====
+[40行]
+def register_engine(): Register Ascend weight transfer engines as vLLM plugins.
+
+===== FILE: distributed/weight_transfer/hccl_engine.py =====
+[340行] module doc: HCCL-based weight transfer engine.
+class HCCLWeightTransferInitInfo: Initialization info for HCCL weight transfer backend. | methods: 
+class HCCLTrainerSendWeightsArgs: Arguments for HCCL trainer_send_weights method. | methods: 
+class HCCLWeightTransferUpdateInfo: Update info for HCCL weight transfer backend. | methods: __post_init__
+class HCCLWeightTransferEngine: Weight transfer engine using HCCL for communication between trainer and workers. | methods: __init__, start_weight_update, finish_weight_update, init_transfer_engine, receive_weights, shutdown, trainer_send_weights, trainer_init, _stateless_init_process_group
+
+===== FILE: distributed/weight_transfer/npu_ipc_engine.py =====
+[426行] module doc: NPU IPC-based weight transfer engine using Ascend IPC for communication.
+class NPUIPCWeightTransferInitInfo: Initialization info for NPU IPC weight transfer backend. | methods: 
+def get_ip(): 
+def npu_generate_uuid(logical_device): Generate a unique identifier for the current process's physical NPU chip.
+class NPUIPCTrainerInitInfo: NPU IPC trainer init info — overrides the backend key only. | methods: 
+class NPUIPCWeightTransferUpdateInfo: NPU IPC variant — inherits all fields and validation from the CUDA IPC | methods: 
+class NPUIPCWeightTransferEngine: Weight transfer engine using NPU IPC for communication between | methods: trainer_send_weights, __init__, init_transfer_engine, start_weight_update, finish_weight_update, receive_weights, shutdown
+class NPUIPCTrainerWeightTransferEngine: Trainer-side NPU IPC weight transfer engine. | methods: __init__, trainer_init, send_weights, _send, _all_gather_and_merge_handles, _post_send_sync, _send_unpacked, _send_packed, _do_send
+
+===== FILE: distributed/weight_transfer/packed_tensor.py =====
+[325行] module doc: Packed tensor utilities for efficient weight transfer.
+def packed_broadcast_producer(iterator, group, src, post_iter_func, buffer_size_bytes, num_buffers): Broadcast tensors in a packed manner from trainer to workers.
+def packed_broadcast_consumer(iterator, group, src, post_unpack_func, buffer_size_bytes, num_buffers): Consume packed tensors and unpack them into a list of tensors.
+def packed_npu_ipc_producer(iterator, npu_uuid, post_iter_func, buffer_size_bytes): Pack tensors into a reusable NPU IPC buffer and yield chunks.
+def packed_npu_ipc_consumer(ipc_handle, physical_npu_id, names, shapes, dtype_names, tensor_sizes): Unpack a single packed IPC chunk into named tensors.
+

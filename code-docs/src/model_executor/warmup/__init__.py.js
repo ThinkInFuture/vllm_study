@@ -1,0 +1,1 @@
+window.__SRC_SET("model_executor/warmup/__init__.py","# Copyright (c) 2026 Huawei Technologies Co., Ltd. All Rights Reserved.\n\"\"\"Triton kernel warmup for Ascend NPU.\"\"\"\n\nfrom vllm_ascend.model_executor.warmup.kernel_warmup import kernel_warmup\n\n__all__ = [\n    \"kernel_warmup\",\n]\n");

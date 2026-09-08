@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上下游衔接详解</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.2rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar-nav { display: flex; gap: 12px; list-style: none; }
+        .navbar-nav a { color: #666; text-decoration: none; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
+        .navbar-nav a:hover, .navbar-nav a.active { background: #667eea; color: white; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-size: 2.2rem; color: #333; margin-bottom: 8px; }
+        .page-header p { color: #666; font-size: 1.1rem; }
+        .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section h2 { color: #333; font-size: 1.4rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .section h3 { color: #667eea; font-size: 1.15rem; margin: 25px 0 12px 0; }
+        .section p { color: #555; margin-bottom: 12px; }
+        .mermaid-box { background: #fafbfc; border: 1px solid #e8ecf0; border-radius: 10px; padding: 20px; margin: 20px 0; }
+        .mermaid-box .chart-label { color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 15px; text-align: center; }
+        .mermaid-box .chart-content { text-align: center; overflow-x: auto; }
+        .note { background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 15px 0; }
+        .note h4 { color: #667eea; margin-bottom: 6px; font-size: 0.95rem; }
+        .note p { color: #555; margin: 0; font-size: 0.9rem; }
+        .code-block { background: #1e1e1e; border-radius: 8px; margin: 15px 0; overflow: hidden; }
+        .code-block .filename { background: #2d2d2d; padding: 8px 15px; color: #ccc; font-size: 0.85rem; border-bottom: 1px solid #404040; }
+        .code-block pre { padding: 15px; overflow-x: auto; color: #d4d4d4; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; line-height: 1.5; margin: 0; }
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .code-block .cls { color: #4ec9b0; }
+        .highlight-box { background: #fff3cd; border-radius: 10px; padding: 15px; margin: 15px 0; border-left: 4px solid #ffc107; }
+        .highlight-box h4 { color: #856404; margin-bottom: 10px; }
+        .highlight-box ul { color: #856404; margin: 0; padding-left: 20px; }
+        .green-box { background: #d4edda; border-radius: 10px; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; }
+        .green-box h4 { color: #155724; margin-bottom: 10px; }
+        .green-box ul { color: #155724; margin: 0; padding-left: 20px; }
+        footer { text-align: center; color: #999; padding: 30px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="upstream.html" class="active">上下游衔接</a></li>
+            <li><a href="source-guide.html">源码讲解</a></li>
+            <li><a href="models.html">模型模块</a></li>
+            <li><a href="worker.html">执行器</a></li>
+            <li><a href="attention.html">注意力</a></li>
+            <li><a href="ops.html">算子</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>上下游衔接详解</h1>
+        <p>vLLM核心引擎与vllm-ascend插件如何协作</p>
+    </header>
+
+    <!-- ==================== 1. 整体关系 ==================== -->
+    <div class="section">
+        <h2>一、整体关系</h2>
+        
+        <p>vllm-ascend是一个<strong>硬件插件</strong>，它不独立工作，必须配合vLLM核心引擎一起使用。理解它们的衔接关系，关键要搞清楚：<strong>哪些代码是vLLM的，哪些代码是vllm-ascend的，它们之间通过什么接口对接</strong>。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图1：vLLM与vllm-ascend的边界</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    subgraph "vLLM核心引擎（上游）"
+        A1[LLMEngine] --> A2[Scheduler]
+        A2 --> A3[Executor]
+        A3 --> A4[Worker]
+        A5[Platform接口] --> A6[ModelRegistry]
+    end
+    
+    subgraph "vllm-ascend插件（本项目）"
+        B1[NPUPlatform]
+        B2[Attention Backend]
+        B3[Custom Ops]
+        B4[NPUModelRunner]
+        B5[Model注册]
+    end
+    
+    A5 -->|实现| B1
+    A4 -->|调用| B1
+    A4 -->|调用| B2
+    A4 -->|调用| B3
+    A4 -->|使用| B4
+    A6 -->|注册| B5
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 2. 接口对接 ==================== -->
+    <div class="section">
+        <h2>二、接口对接：vLLM定义接口，vllm-ascend实现接口</h2>
+        
+        <p>vLLM定义了一套<strong>Hardware Plugin接口</strong>，告诉插件开发者："你需要实现这些方法，我才能用你的硬件"。vllm-ascend实现了这些接口，让vLLM能够在NPU上运行。</p>
+        
+        <h3>2.1 Platform接口（核心对接点）</h3>
+        <p>vLLM在<code>vllm/platforms/interface.py</code>中定义了Platform基类，vllm-ascend在<code>vllm_ascend/platform.py</code>中实现NPUPlatform类继承它。</p>
+        
+        <div class="code-block">
+<div class="filename">vLLM定义的Platform接口（vllm/platforms/interface.py）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">Platform</span>:
+    <span class="str">"""硬件平台基类，插件需要继承并实现这个类"""</span>
+    
+    _enum: PlatformEnum  <span class="cmt"># 平台枚举值</span>
+    device_name: str     <span class="cmt"># 设备名称，如 "npu"</span>
+    device_type: str     <span class="cmt"># 设备类型，如 "npu"</span>
+    
+    <span class="kw">def</span> <span class="fn">get_attn_backend_cls</span>(self):
+        <span class="str">"""返回注意力后端类"""</span>
+        <span class="kw">raise</span> NotImplementedError
+    
+    <span class="kw">def</span> <span class="fn">get_device_name</span>(self):
+        <span class="str">"""返回设备名称"""</span>
+        <span class="kw">return</span> self.device_name
+</pre>
+        </div>
+        
+        <div class="code-block">
+<div class="filename">vllm-ascend实现的NPUPlatform（vllm_ascend/platform.py）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">NPUPlatform</span>(Platform):
+    <span class="str">"""昇腾NPU平台实现"""</span>
+    
+    _enum = PlatformEnum.OOT
+    device_name: str = <span class="str">"npu"</span>
+    device_type: str = <span class="str">"npu"</span>
+    
+    <span class="kw">def</span> <span class="fn">get_attn_backend_cls</span>(self, config):
+        <span class="str">"""根据模型配置返回对应的注意力后端"""</span>
+        <span class="kw">if</span> config.use_mla:
+            <span class="kw">return</span> <span class="str">"vllm_ascend.attention.AscendMLABackend"</span>
+        <span class="kw">elif</span> config.use_sparse:
+            <span class="kw">return</span> <span class="str">"vllm_ascend.attention.AscendSFABackend"</span>
+        <span class="kw">else</span>:
+            <span class="kw">return</span> <span class="str">"vllm_ascend.attention.AscendAttentionBackend"</span>
+</pre>
+        </div>
+
+        <h3>2.2 模型注册接口</h3>
+        <p>vLLM定义了ModelRegistry，vllm-ascend通过register_model()将NPU优化的模型注册进去。</p>
+        
+        <div class="code-block">
+<div class="filename">vllm-ascend注册模型（vllm_ascend/models/__init__.py）</div>
+<pre>
+<span class="kw">from</span> vllm <span class="kw">import</span> ModelRegistry
+
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    <span class="cmt"># 将NPU优化的模型注册到vLLM的ModelRegistry</span>
+    ModelRegistry.register_model(
+        <span class="str">"DeepseekV4ForCausalLM"</span>,  <span class="cmt"># 模型名称（用户指定）</span>
+        <span class="str">"vllm_ascend.models.deepseek_v4:AscendDeepseekV4ForCausalLM"</span>,  <span class="cmt"># 类路径</span>
+    )
+</pre>
+        </div>
+
+        <div class="note">
+            <h4>对接流程总结</h4>
+            <p>1. vLLM定义接口（Platform、ModelRegistry等）</p>
+            <p>2. vllm-ascend实现接口（NPUPlatform、register_model等）</p>
+            <p>3. vLLM启动时扫描插件，调用vllm-ascend的register函数</p>
+            <p>4. vllm-ascend将NPUPlatform注册到vLLM，告诉vLLM"我支持NPU"</p>
+            <p>5. 用户指定模型时，vLLM从ModelRegistry找到vllm-ascend注册的模型类</p>
+        </div>
+    </div>
+
+    <!-- ==================== 3. 模型加载衔接 ==================== -->
+    <div class="section">
+        <h2>三、模型加载衔接：用户指定名称 → 怎么找到模型类</h2>
+        
+        <p>当用户指定"model=DeepseekV4ForCausalLM"时，vLLM需要找到对应的模型类并实例化。这个过程涉及vLLM和vllm-ascend的协作。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图2：模型加载衔接流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant E as Engine
+    participant R as ModelRegistry
+    participant W as Worker
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant M as 模型类
+    end
+    
+    U->>E: model="DeepseekV4ForCausalLM"
+    E->>R: 查找模型
+    R->>R: 在注册表中搜索
+    Note over R: 找到: "vllm_ascend.models.deepseek_v4:AscendDeepseekV4ForCausalLM"
+    R-->>E: 返回类路径
+    E->>E: importlib动态导入
+    E->>M: 获取类并实例化
+    M->>M: __init__(config) 创建模型结构
+    M->>M: 加载预训练权重到NPU
+    M-->>E: 返回模型对象
+    E->>W: 传入模型对象
+    W->>W: 准备推理环境
+    W-->>U: 模型就绪
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vLLM查找并加载模型的代码（简化版）</div>
+<pre>
+<span class="cmt"># vLLM内部代码（vllm/v1/engine/llm_engine.py）</span>
+<span class="kw">def</span> <span class="fn">load_model</span>(self, model_name):
+    <span class="cmt"># 1. 从ModelRegistry查找类路径</span>
+    model_cls_path = ModelRegistry.get_model_class(model_name)
+    <span class="cmt"># 例如: "vllm_ascend.models.deepseek_v4:AscendDeepseekV4ForCausalLM"</span>
+    
+    <span class="cmt"># 2. 动态导入模块</span>
+    module_path, class_name = model_cls_path.split(<span class="str">":"</span>)
+    module = importlib.import_module(module_path)
+    
+    <span class="cmt"># 3. 获取模型类并实例化</span>
+    model_cls = getattr(module, class_name)
+    model = model_cls(config)  <span class="cmt"># 调用vllm-ascend定义的__init__</span>
+    
+    <span class="cmt"># 4. 加载预训练权重</span>
+    model.load_weights(weights_path)
+    
+    <span class="kw">return</span> model  <span class="cmt"># 返回给Worker使用</span>
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 4. 推理执行衔接 ==================== -->
+    <div class="section">
+        <h2>四、推理执行衔接：Worker怎么调用vllm-ascend的组件</h2>
+        
+        <p>Worker是vLLM的核心执行器，它负责在GPU/NPU上执行推理。Worker通过vllm-ascend提供的组件（Attention Backend、Custom Ops、Model Runner）完成实际计算。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图3：推理执行衔接流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    box rgb(255,243,205) 上游vLLM
+    participant W as Worker
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant MR as NPUModelRunner
+    participant A as Attention Backend
+    participant O as Custom Ops
+    end
+    participant N as NPU设备
+    
+    W->>MR: model_runner.execute(input_ids)
+    MR->>O: 调用RMSNorm算子
+    O->>N: NPU执行归一化
+    N-->>O: 返回结果
+    MR->>A: 调用注意力后端
+    A->>N: NPU执行注意力计算
+    N-->>A: 返回注意力结果
+    MR->>O: 调用FFN算子
+    O->>N: NPU执行前馈网络
+    N-->>O: 返回结果
+    MR-->>W: 返回logits
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">Worker调用vllm-ascend组件的代码（简化版）</div>
+<pre>
+<span class="cmt"># vLLM Worker代码（vllm/v1/worker/gpu_worker.py）</span>
+<span class="kw">class</span> <span class="cls">Worker</span>:
+    <span class="kw">def</span> <span class="fn">execute_model</span>(self, input_ids):
+        <span class="cmt"># 1. 获取ModelRunner（由vllm-ascend提供）</span>
+        model_runner = self.model_runner  <span class="cmt"># NPUModelRunner实例</span>
+        
+        <span class="cmt"># 2. 调用ModelRunner执行前向传播</span>
+        logits = model_runner.execute(input_ids)
+        
+        <span class="cmt"># 3. ModelRunner内部调用vllm-ascend的组件：</span>
+        <span class="cmt">#    - 调用Attention Backend计算注意力</span>
+        <span class="cmt">#    - 调用Custom Ops执行自定义算子</span>
+        <span class="cmt">#    - 所有计算都在NPU上执行</span>
+        
+        <span class="kw">return</span> logits
+</pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">NPUModelRunner执行前向传播（vllm_ascend/worker/model_runner_v1.py）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">NPUModelRunner</span>:
+    <span class="kw">def</span> <span class="fn">execute</span>(self, input_ids):
+        <span class="cmt"># 1. 调用自定义算子处理输入</span>
+        hidden_states = self.model.embed_tokens(input_ids)
+        
+        <span class="cmt"># 2. 逐层执行Transformer</span>
+        <span class="kw">for</span> layer <span class="kw">in</span> self.model.layers:
+            <span class="cmt"># 调用RMSNorm算子</span>
+            hidden_states = layer.input_layernorm(hidden_states)
+            
+            <span class="cmt"># 调用注意力后端</span>
+            attn_output = layer.attention(hidden_states)
+            
+            <span class="cmt"># 调用FFN算子</span>
+            ffn_output = layer.feed_forward(attn_output)
+        
+        <span class="cmt"># 3. 返回logits</span>
+        <span class="kw">return</span> self.model.head(hidden_states)
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 5. 完整链路 ==================== -->
+    <div class="section">
+        <h2>五、完整链路：从用户输入到推理结果</h2>
+        
+        <p>将所有环节串起来，一次完整的推理请求经历以下流程：</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图4：完整推理链路</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant E as Engine
+    participant R as ModelRegistry
+    participant W as Worker
+    participant S as Sampler
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant P as Ascend插件
+    participant MR as NPUModelRunner
+    participant A as Attention
+    participant O as Ops
+    end
+    participant N as NPU
+    
+    U->>E: model=DeepseekV4, input=你好
+    E->>P: 初始化插件
+    P->>R: register_model()
+    R->>R: 存储模型映射
+    
+    E->>R: 查找模型
+    R-->>E: 返回类路径
+    E->>MR: 动态导入并实例化
+    MR->>MR: 加载权重
+    
+    loop 每个token
+        E->>W: 发送输入
+        W->>O: RMSNorm归一化
+        O->>N: NPU执行
+        N-->>O: 结果
+        W->>A: MLA注意力计算
+        A->>N: NPU执行
+        N-->>A: 结果
+        W->>O: FFN前馈网络
+        O->>N: NPU执行
+        N-->>O: 结果
+        W->>S: 采样得到token
+        S-->>W: token
+    end
+    W-->>U: 返回: 你好, 我是...
+                </pre>
+            </div>
+        </div>
+
+        <div class="note">
+            <h4>关键点总结</h4>
+            <p>1. <strong>vLLM负责什么</strong>：请求调度、资源管理、Worker进程管理、采样策略</p>
+            <p>2. <strong>vllm-ascend负责什么</strong>：NPU硬件适配、注意力计算、自定义算子、模型注册</p>
+            <p>3. <strong>接口是什么</strong>：Platform接口（硬件抽象）、ModelRegistry（模型注册）、AttentionBackend（注意力后端）</p>
+            <p>4. <strong>数据怎么流动</strong>：用户输入 → Engine → Worker → ModelRunner → Attention/Ops → NPU → 结果返回</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        themeVariables: { fontSize: '16px', fontFamily: 'Arial, sans-serif' }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+window.__SRC_SET("ops/fused_moe/router/__init__.py","from vllm_ascend.ops.fused_moe.router.fused_topk_router import (\n    AscendFusedTopKRouter as AscendFusedMoERouter,\n)\nfrom vllm_ascend.ops.fused_moe.router.router_factory import create_ascend_fused_moe_router\n\n__all__ = [\n    \"AscendFusedMoERouter\",\n    \"create_ascend_fused_moe_router\",\n]\n");

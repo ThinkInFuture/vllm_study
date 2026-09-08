@@ -1,0 +1,1879 @@
+### _grouped_conv @ models\qwen3_dflash2.py (HTML标记21行/实际8行)
+```python
+def _grouped_conv(
+    hidden_states: torch.Tensor,
+    delta: torch.Tensor,
+    base: torch.Tensor,
+    block_size: int,
+    num_groups: int,
+    group_size: int,
+    taps: int,
+```
+
+### _convolve @ models\qwen3_dflash2.py
+```python
+    def _convolve(self, hidden_states: torch.Tensor, delta: torch.Tensor, side: int) -> torch.Tensor:
+        return _grouped_conv(
+            hidden_states,
+            delta,
+            self.base_kernel[side],
+            self.block_size,
+            self.num_groups,
+            self.group_size,
+            self.taps,
+        )
+```
+
+### prepare @ models\qwen3_dflash2.py
+```python
+    def prepare(self, hidden_states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        coefficients = self.kernel_projection(hidden_states).reshape(
+            hidden_states.shape[0], 2, self.taps, self.num_groups
+        )
+        return self._convolve(hidden_states, coefficients[:, 0], 0), coefficients[:, 1]
+```
+
+### finish @ models\qwen3_dflash2.py
+```python
+    def finish(self, hidden_states: torch.Tensor, coefficients: torch.Tensor) -> torch.Tensor:
+        return self._convolve(hidden_states, coefficients, 1)
+```
+
+### _score_edges @ models\qwen3_dflash2.py (HTML标记19行/实际8行)
+```python
+def _score_edges(
+    predecessor_table: torch.Tensor,
+    successor_table: torch.Tensor,
+    candidate_ids: torch.Tensor,
+    unary_logits: torch.Tensor,
+    hidden: torch.Tensor,
+    anchor_token_ids: torch.Tensor,
+    top_k: int,
+```
+
+### compute_candidates @ models\qwen3_dflash2.py
+```python
+    def compute_candidates(self, hidden_states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        if not isinstance(self.lm_head.quant_method, UnquantizedEmbeddingMethod):
+            raise ValueError("DFlash2 requires an unquantized target LM head for candidate TopK.")
+
+        selector = self.model.candidate_selector
+        logits = self.lm_head.quant_method.apply(self.lm_head, hidden_states, bias=None)
+        num_pad = self.lm_head.shard_indices.num_org_vocab_padding
+        if num_pad > 0:
+            logits[..., -num_pad:] = -float("inf")
+        values, ids = torch.topk(logits, selector.top_k, dim=-1)
+        ids = ids.to(torch.int64) + self.lm_head.shard_indices.org_vocab_start_index
+
+        if get_tensor_model_parallel_world_size() > 1:
+            values = tensor_model_parallel_all_gather(values, dim=-1)
+            ids = tensor_model_parallel_all_gather(ids, dim=-1)
+            values, selected = torch.topk(values, selector.top_k, dim=-1)
+            ids = ids.gather(-1, selected)
+
+        values = values.float() * self.output_multiplier
+        if self.final_logit_softcapping is not None:
+            cap = self.final_logit_softcapping
+            values = torch.tanh(values / cap) * cap
+        return ids, values
+```
+
+### process_weight @ models\qwen3_dspark.py
+```python
+def process_weight(linear_weight: torch.Tensor, rotation_weight: torch.Tensor):
+    assert linear_weight.shape[1] % rotation_weight.shape[0] == 0, (
+        f"Linear weight shape[1] must be a multiple of rotation weight shape[0],"
+        f" but get {linear_weight.shape[1]=} and {rotation_weight.shape[0]=}"
+    )
+    if rotation_weight.dtype != torch.float32:
+        rotation_weight = rotation_weight.to(torch.float32)
+    hidden_size = rotation_weight.shape[0]
+    ori_dtype = linear_weight.dtype
+    processed_weight = torch.empty(linear_weight.shape, dtype=torch.float32)
+    for start_pos in range(0, linear_weight.shape[1], hidden_size):
+        linear_weight_chunked = linear_weight[:, start_pos : start_pos + hidden_size].to(torch.float32)
+        processed_weight[:, start_pos : start_pos + hidden_size].copy_(
+            torch.matmul(linear_weight_chunked, rotation_weight)
+        )
+    return processed_weight.to(ori_dtype)
+```
+
+### _get_confidence_relative_name @ models\qwen3_dspark.py (HTML标记10行/实际2行)
+```python
+    def _get_confidence_relative_name(
+        checkpoint_name: str,
+```
+
+### get_kv_cache_spec @ models\deepseek_v4\compressor.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec:
+        from vllm_ascend.models.layer.attention.layer import dsv4_block_sizes
+
+        pads = dsv4_block_sizes(vllm_config)[vllm_config.cache_config.block_size][1]
+        page_size_padded = pads[0] if self.state_dim == 2 * 256 and self.compress_ratio == 4 else pads[1]
+
+        return AscendSlidingWindowMLASpec(
+            block_size=self.block_size,
+            num_kv_heads=1,
+            head_size=self.state_dim,
+            dtype=self.dtype,
+            sliding_window=self.sliding_window,
+            alignment=None,
+            page_size_padded=page_size_padded,
+        )
+```
+
+### _compute_metadata @ models\deepseek_v4\compressor.py (HTML标记31行/实际3行)
+```python
+    def _compute_metadata(
+        self,
+        metadata: typing.Any,
+```
+
+### _apply_dsv4_rope @ models\deepseek_v4\dspark.py (HTML标记14行/实际6行)
+```python
+def _apply_dsv4_rope(
+    rotary_emb: nn.Module,
+    positions: torch.Tensor,
+    x: torch.Tensor,
+    *,
+    inverse: bool = False,
+```
+
+### _get_dspark_num_mtp_layers @ models\deepseek_v4\dspark.py
+```python
+def _get_dspark_num_mtp_layers(config: PretrainedConfig) -> int:
+    num_layers = getattr(config, "n_mtp_layers", None)
+    if num_layers is None:
+        num_layers = getattr(config, "dspark_num_mtp_layers", 3)
+    return int(num_layers or 3)
+```
+
+### embed @ models\deepseek_v4\dspark.py
+```python
+    def embed(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self.markov_w1(token_ids)
+```
+
+### bias @ models\deepseek_v4\dspark.py
+```python
+    def bias(self, markov_embed: torch.Tensor) -> torch.Tensor:
+        return self.markov_w2(markov_embed)
+```
+
+### get_draft_kv_cache_layer_names @ models\deepseek_v4\dspark.py
+```python
+    def get_draft_kv_cache_layer_names(self) -> list[str]:
+        return [layer.self_attn.dsa_attn.swa_cache_layer.prefix for layer in self.layers.values()]
+```
+
+### _project_shared_kv @ models\deepseek_v4\dspark.py (HTML标记11行/实际5行)
+```python
+    def _project_shared_kv(
+        self,
+        hidden_states: torch.Tensor,
+        positions: torch.Tensor,
+        attn: type[nn.Module] | None = None,
+```
+
+### _store_standard_swa_kv @ models\deepseek_v4\dspark.py (HTML标记24行/实际5行)
+```python
+    def _store_standard_swa_kv(
+        self,
+        shared_kv: torch.Tensor,
+        slot_mapping: torch.Tensor | None,
+        attn: type[nn.Module] | None = None,
+```
+
+### hc_head @ models\deepseek_v4\dspark.py
+```python
+    def hc_head(self, x: torch.Tensor, hc_fn: torch.Tensor, hc_scale: torch.Tensor, hc_base: torch.Tensor):
+        shape, dtype = x.size(), x.dtype
+        x = x.flatten(1).float()
+        rsqrt = torch.rsqrt(x.square().mean(-1, keepdim=True) + self.norm_eps)
+        mixes = torch.nn.functional.linear(x, hc_fn) * rsqrt
+        pre = torch.sigmoid(mixes * hc_scale + hc_base) + self.hc_eps
+        y = torch.sum(pre.unsqueeze(-1) * x.view(shape), dim=1)
+        return y.to(dtype)
+```
+
+### markov_embed @ models\deepseek_v4\dspark.py
+```python
+    def markov_embed(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self.markov_head.embed(token_ids)
+```
+
+### markov_bias @ models\deepseek_v4\dspark.py
+```python
+    def markov_bias(self, markov_embed: torch.Tensor) -> torch.Tensor:
+        return self.markov_head.bias(markov_embed)
+```
+
+### get_expert_mapping @ models\deepseek_v4\dspark.py
+```python
+    def get_expert_mapping(self) -> list[tuple[str, str, int, str]]:
+        return fused_moe_make_expert_params_mapping(
+            self,
+            ckpt_gate_proj_name="gate_proj",
+            ckpt_down_proj_name="down_proj",
+            ckpt_up_proj_name="up_proj",
+            num_experts=self.config.n_routed_experts,
+            num_redundant_experts=0,
+        )
+```
+
+### set_moe_parameters @ models\deepseek_v4\dspark.py
+```python
+    def set_moe_parameters(self) -> None:
+        self.expert_weights: typing.MutableSequence[typing.Sequence[torch.Tensor]] = []
+        self.num_expert_groups = getattr(self.config, "n_group", 1)
+        self.moe_layers: list[nn.Module] = []
+        self.moe_mlp_layers: list[DeepseekV4MoE] = []
+        example_moe = None
+        for layer in self.model.layers.values():
+            if isinstance(layer, PPMissingLayer):
+                continue
+
+            assert isinstance(layer, DeepseekV2DecoderLayer)
+            if isinstance(layer.mlp, DeepseekV4MoE):
+                # Pick last one layer since the first ones may be dense layers.
+                example_moe = layer.mlp
+                self.moe_mlp_layers.append(layer.mlp)
+                self.moe_layers.append(layer.mlp.experts)
+
+        self.extract_moe_parameters(example_moe)
+```
+
+### compute_draft_logits @ models\deepseek_v4\dspark.py
+```python
+    def compute_draft_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
+        # Full-vocab draft: base logits, no d2t scatter.
+        return self.compute_logits(hidden_states)
+```
+
+### map_draft_to_target @ models\deepseek_v4\dspark.py
+```python
+    def map_draft_to_target(self, draft_ids: torch.Tensor) -> torch.Tensor:
+        return draft_ids  # full-vocab: draft ids are target ids
+```
+
+### _remap_dspark_name @ models\deepseek_v4\dspark.py
+```python
+    def _remap_dspark_name(self, name: str) -> str | None:
+        m = re.match(r"mtp\.(\d+)\.(.*)", name)
+        if m is None:
+            return None
+        stage = int(m.group(1))
+        rest = m.group(2)
+
+        if stage == self.model.num_dspark_layers - 1 and rest.startswith("confidence_head."):
+            return f"model.{rest}"
+
+        if stage == 0 and rest == "embed.weight":
+            return "model.embed_tokens.weight"
+        if stage == self.model.num_dspark_layers - 1 and rest == "head.weight":
+            return "lm_head.weight"
+        if rest.startswith(("hc_head_fn", "hc_head_base", "hc_head_scale")):
+            return f"model.{rest}"
+
+        first_layer_idx = self.config.num_hidden_layers
+        last_layer_idx = first_layer_idx + self.model.num_dspark_layers - 1
+        if rest.startswith(("main_proj.", "main_norm.")):
+            layer_idx = first_layer_idx
+        elif rest.startswith(("norm.", "markov_head.")):
+            layer_idx = last_layer_idx
+        else:
+            layer_idx = first_layer_idx + stage
+        name = f"model.layers.{layer_idx}.{rest}"
+
+        replacements = (
+            (".attn.", ".self_attn."),
+            (".ffn_norm.", ".post_attention_layernorm."),
+            (".attn_norm.", ".input_layernorm."),
+            (".ffn.", ".mlp."),
+            (".w1.", ".gate_proj."),
+            (".w2.", ".down_proj."),
+            (".w3.", ".up_proj."),
+            (".mlp.gate.bias", ".mlp.gate.e_score_correction_bias"),
+        )
+        for checkpoint_name, param_name in replacements:
+            name = name.replace(checkpoint_name, param_name)
+        return name
+```
+
+### hadamard_linear @ models\deepseek_v4\indexer.py
+```python
+def hadamard_linear(x: torch.Tensor, hadamard: torch.Tensor) -> tuple[torch.Tensor, tuple[int, ...], int]:
+    x_shape = x.shape
+    dim = x.shape[-1]
+    x = x.reshape(-1, dim)
+    dim_padded = 2 ** math.ceil(math.log2(dim))
+    if dim != dim_padded:
+        x = F.pad(x, (0, dim_padded - dim))
+    return F.linear(x, hadamard), x_shape, dim
+```
+
+### rotate_activation @ models\deepseek_v4\indexer.py
+```python
+def rotate_activation(x: torch.Tensor, hadamard: torch.Tensor) -> torch.Tensor:
+    out, x_shape, dim = hadamard_linear(x, hadamard)
+    return (out * dim**-0.5)[..., :dim].reshape(*x_shape)
+```
+
+### get_kv_cache_spec @ models\deepseek_v4\indexer.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec:
+        if get_current_hardware_profile().supports(HardwareCapability.DSV4_COMPRESSED_CACHE):
+            self.dtype = torch.float8_e4m3fn
+            if not is_a5_bf16_kv_enabled(vllm_config):
+                vllm_config.cache_config.cache_dtype = "float8_e4m3fn"
+
+        from vllm_ascend.core.kv_cache_interface import AscendMLAAttentionSpec
+        from vllm_ascend.models.layer.attention.layer import DSV4_BLOCK_SIZES
+
+        storage_block_size = DSV4_BLOCK_SIZES[vllm_config.cache_config.block_size][0][0]
+        return AscendMLAAttentionSpec(
+            block_size=storage_block_size * self.compress_ratio,
+            num_kv_heads=1,
+            head_size=self.head_dim,
+            dtype=self.dtype,
+            model_version="deepseek_v4",
+            compress_ratio=self.compress_ratio,
+            cache_dtype_str=self.cache_config.cache_dtype,
+            scale_dim=1 if self.head_dim == 128 else 0,
+            scale_dtype=torch.float
+            if get_current_hardware_profile().supports(HardwareCapability.DSV4_COMPRESSED_CACHE)
+            else torch.float16,
+        )
+```
+
+### unpack_dsa_indexer_kv_cache @ models\deepseek_v4\indexer.py
+```python
+    def unpack_dsa_indexer_kv_cache(self, kv_cache: tuple[torch.Tensor, ...]):
+        return self.device_operator.unpack_dsa_indexer_kv_cache(kv_cache)
+```
+
+### quantize_query @ models\deepseek_v4\indexer.py
+```python
+    def quantize_query(self, query: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.device_operator.indexer_quantize_query(query)
+```
+
+### quantize_key_and_update_cache @ models\deepseek_v4\indexer.py (HTML标记13行/实际6行)
+```python
+    def quantize_key_and_update_cache(
+        self,
+        key: torch.Tensor,
+        key_cache: torch.Tensor,
+        full_cache: torch.Tensor | None,
+        slot_mapping: torch.Tensor,
+```
+
+### update_scale_cache @ models\deepseek_v4\indexer.py (HTML标记11行/实际5行)
+```python
+    def update_scale_cache(
+        self,
+        key_scale: torch.Tensor,
+        scale_cache: torch.Tensor,
+        slot_mapping: torch.Tensor,
+```
+
+### select_topk @ models\deepseek_v4\indexer.py (HTML标记31行/实际8行)
+```python
+    def select_topk(
+        self,
+        query: torch.Tensor,
+        weights: torch.Tensor,
+        query_scale: torch.Tensor,
+        key_cache: torch.Tensor,
+        scale_cache: torch.Tensor,
+        metadata: typing.Any,
+```
+
+### quantize_update_cache_and_select_topk @ models\deepseek_v4\indexer.py (HTML标记27行/实际10行)
+```python
+    def quantize_update_cache_and_select_topk(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor | None,
+        weights: torch.Tensor,
+        key_cache: torch.Tensor,
+        scale_cache: torch.Tensor,
+        full_cache: torch.Tensor | None,
+        slot_mapping: torch.Tensor,
+        metadata: typing.Any,
+```
+
+### _get_indexer_cache_metadata @ models\deepseek_v4\indexer.py (HTML标记9行/实际2行)
+```python
+    def _get_indexer_cache_metadata(
+        metadata: AscendIndexerMetadata,
+```
+
+### _get_cached_topk_indices @ models\deepseek_v4\indexer.py
+```python
+    def _get_cached_topk_indices(self, num_tokens: int, offset: int = 0) -> torch.Tensor:
+        if self.topk_indices_buffer is None:
+            raise RuntimeError("topk_indices_buffer is required to read cached TopK indices")
+        topk_indices = self.topk_indices_buffer[offset : offset + num_tokens]
+        if topk_indices.dim() == 2:
+            topk_indices = topk_indices.unsqueeze(1)
+        return topk_indices
+```
+
+### _update_cached_topk_indices @ models\deepseek_v4\indexer.py
+```python
+    def _update_cached_topk_indices(self, topk_indices: torch.Tensor, offset: int = 0) -> None:
+        if self.topk_indices_buffer is None:
+            return
+        num_tokens = topk_indices.shape[0]
+        topk_tokens = topk_indices.shape[-1]
+        topk_indices_to_cache = topk_indices
+        topk_indices_buffer = self.topk_indices_buffer[offset : offset + num_tokens, :topk_tokens]
+        if topk_indices_to_cache.dim() == 3 and topk_indices_buffer.dim() == 2:
+            if topk_indices_to_cache.shape[1] != 1:
+                raise ValueError("TopK indices must have a singleton head dimension")
+            topk_indices_to_cache = topk_indices_to_cache.squeeze(1)
+        topk_indices_buffer.copy_(topk_indices_to_cache)
+```
+
+### _indexer_qkv_prepare @ models\deepseek_v4\indexer.py (HTML标记66行/实际10行)
+```python
+    def _indexer_qkv_prepare(
+        self,
+        x: torch.Tensor,
+        qr: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        metadata: AscendIndexerMetadata,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        qr_pertoken_scale: torch.Tensor | None = None,
+        write_cache: bool = True,
+```
+
+### _select_topk_serial @ models\deepseek_v4\indexer.py (HTML标记45行/实际10行)
+```python
+    def _select_topk_serial(
+        self,
+        x: torch.Tensor,
+        qr: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        metadata: AscendIndexerMetadata,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        qr_pertoken_scale: torch.Tensor | None = None,
+        write_cache: bool = True,
+```
+
+### get_kv_cache_spec @ models\deepseek_v4\model.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec:
+        self.dtype = get_dsv4_attn_kv_dtype(vllm_config)
+        if self.dtype == torch.float8_e4m3fn:
+            vllm_config.cache_config.cache_dtype = "float8_e4m3fn"
+        cached_head_size = self.head_dim + 128 if self.dtype == torch.float8_e4m3fn else self.head_dim
+        return AscendSlidingWindowMLASpec(
+            block_size=self.block_size,
+            num_kv_heads=1,
+            head_size=cached_head_size,
+            dtype=self.dtype,
+            sliding_window=self.window_size,
+            cache_dtype_str=self.cache_config.cache_dtype,
+            model_version="deepseek_v4",
+            alignment=None,
+        )
+```
+
+### find_correction_dim @ models\deepseek_v4\model.py
+```python
+    def find_correction_dim(num_rotations, dim, base, max_seq_len):
+        return dim * math.log(max_seq_len / (num_rotations * 2 * math.pi)) / (2 * math.log(base))
+```
+
+### find_correction_range @ models\deepseek_v4\model.py
+```python
+    def find_correction_range(low_rot, high_rot, dim, base, max_seq_len):
+        low = math.floor(find_correction_dim(low_rot, dim, base, max_seq_len))
+        high = math.ceil(find_correction_dim(high_rot, dim, base, max_seq_len))
+        return max(low, 0), min(high, dim - 1)
+```
+
+### linear_ramp_factor @ models\deepseek_v4\model.py
+```python
+    def linear_ramp_factor(min, max, dim):
+        if min == max:
+            max += 0.001
+        linear_func = (torch.arange(dim, dtype=torch.float32) - min) / (max - min)
+        ramp_func = torch.clamp(linear_func, 0, 1)
+        return ramp_func
+```
+
+### get_spec_layer_idx_from_weight_name @ models\deepseek_v4\model.py
+```python
+def get_spec_layer_idx_from_weight_name(config: DeepseekV2Config | DeepseekV3Config, weight_name: str) -> int | None:
+    if weight_name.startswith("mtp."):
+        return 0
+    return None
+```
+
+### yarn_get_mscale @ models\deepseek_v4\model.py
+```python
+def yarn_get_mscale(scale: float = 1, mscale: float = 1) -> float:
+    import math
+
+    if scale <= 1:
+        return 1.0
+    return 0.1 * mscale * math.log(scale) + 1.0
+```
+
+### _get_llama_4_scaling @ models\deepseek_v4\model.py (HTML标记6行/实际2行)
+```python
+def _get_llama_4_scaling(
+    original_max_position_embeddings: int, scaling_beta: float, positions: torch.Tensor
+```
+
+### hc_pre @ models\deepseek_v4\model.py
+```python
+    def hc_pre(self, x: torch.Tensor, hc_fn: torch.Tensor, hc_scale: torch.Tensor, hc_base: torch.Tensor):
+        y = torch.ops._C_ascend.npu_hc_pre_v2(
+            x, hc_fn, hc_scale, hc_base, self.hc_mult, self.hc_sinkhorn_iters, self.norm_eps, self.hc_eps
+        )
+        return y
+```
+
+### hc_post @ models\deepseek_v4\model.py
+```python
+    def hc_post(self, x: torch.Tensor, residual: torch.Tensor, post: torch.Tensor, comb: torch.Tensor):
+        y = torch.ops._C_ascend.npu_hc_post(
+            x.unsqueeze(dim=0), residual.unsqueeze(dim=0), post.unsqueeze(dim=0), comb.unsqueeze(dim=0)
+        )
+        return y.squeeze(dim=0)
+```
+
+### make_empty_intermediate_tensors @ models\deepseek_v4\model.py (HTML标记14行/实际4行)
+```python
+        def make_empty_intermediate_tensors(
+            batch_size: int,
+            dtype: torch.dtype,
+            device: torch.device,
+```
+
+### hc_head @ models\deepseek_v4\model.py
+```python
+    def hc_head(self, x: torch.Tensor, hc_fn: torch.Tensor, hc_scale: torch.Tensor, hc_base: torch.Tensor):
+        shape, dtype = x.size(), x.dtype
+        x = x.flatten(1).float()
+        rsqrt = torch.rsqrt(x.square().mean(-1, keepdim=True) + self.norm_eps)
+        mixes = torch.nn.functional.linear(x, hc_fn) * rsqrt
+        pre = torch.sigmoid(mixes * hc_scale + hc_base) + self.hc_eps
+        y = torch.sum(pre.unsqueeze(-1) * x.view(shape), dim=1)
+        return y.to(dtype)
+```
+
+### extract_moe_parameters @ models\deepseek_v4\model.py
+```python
+    def extract_moe_parameters(self, example_moe: DeepseekV4MoE | None):
+        if example_moe is None:
+            self.num_moe_layers = 0
+            self.num_expert_groups = 0
+            self.num_logical_experts = 0
+            self.num_physical_experts = 0
+            self.num_local_physical_experts = 0
+            self.num_routed_experts = 0
+            self.num_shared_experts = 0
+            self.num_redundant_experts = 0
+        else:
+            self.num_logical_experts = example_moe.n_logical_experts
+            self.num_physical_experts = example_moe.n_physical_experts
+            self.num_local_physical_experts = example_moe.n_local_physical_experts
+            self.num_routed_experts = example_moe.n_routed_experts
+            self.num_shared_experts = example_moe.n_shared_experts
+            self.num_redundant_experts = example_moe.n_redundant_experts
+```
+
+### update_physical_experts_metadata @ models\deepseek_v4\model.py (HTML标记14行/实际4行)
+```python
+    def update_physical_experts_metadata(
+        self,
+        num_physical_experts: int,
+        num_local_physical_experts: int,
+```
+
+### set_moe_parameters @ models\deepseek_v4\model.py
+```python
+    def set_moe_parameters(self):
+        self.expert_weights = []
+
+        self.num_expert_groups = getattr(self.config, "n_group", 1)
+
+        self.moe_layers = []
+        self.moe_mlp_layers = []
+        example_moe = None
+        for layer in self.model.layers:
+            if isinstance(layer, PPMissingLayer):
+                continue
+
+            assert isinstance(layer, DeepseekV2DecoderLayer)
+            if isinstance(layer.mlp, DeepseekV4MoE):
+                # Pick last one layer since the first ones may be dense layers.
+                example_moe = layer.mlp
+                self.moe_mlp_layers.append(layer.mlp)
+                self.moe_layers.append(layer.mlp.experts)
+
+        self.extract_moe_parameters(example_moe)
+```
+
+### get_expert_mapping @ models\deepseek_v4\model.py
+```python
+    def get_expert_mapping(self) -> list[tuple[str, str, int, str]]:
+        # Params for weights, fp8 weight scales, fp8 activation scales
+        # (param_name, weight_name, expert_id, shard_id)
+        return fused_moe_make_expert_params_mapping(
+            self.model,
+            ckpt_gate_proj_name="gate_proj",
+            ckpt_down_proj_name="down_proj",
+            ckpt_up_proj_name="up_proj",
+            num_experts=self.config.n_routed_experts
+            + (self.config.n_shared_experts if getattr(get_ascend_config(), "mix_placement", False) else 0),
+            num_redundant_experts=0,
+        )
+```
+
+### set_aux_hidden_state_layers @ models\deepseek_v4\model.py
+```python
+    def set_aux_hidden_state_layers(self, layers: tuple[int, ...]) -> None:
+        self.model._set_aux_hidden_state_layers(layers)
+```
+
+### hc_head @ models\deepseek_v4\mtp.py
+```python
+    def hc_head(self, x: torch.Tensor, hc_fn: torch.Tensor, hc_scale: torch.Tensor, hc_base: torch.Tensor):
+        shape, dtype = x.size(), x.dtype
+        x = x.flatten(1).float()
+        rsqrt = torch.rsqrt(x.square().mean(-1, keepdim=True) + self.norm_eps)
+        mixes = torch.nn.functional.linear(x, hc_fn) * rsqrt
+        pre = torch.sigmoid(mixes * hc_scale + hc_base) + self.hc_eps
+        y = torch.sum(pre.unsqueeze(-1) * x.view(shape), dim=1)
+        return y.to(dtype)
+```
+
+### set_moe_parameters @ models\deepseek_v4\mtp.py
+```python
+    def set_moe_parameters(self):
+        self.expert_weights = []
+        self.num_expert_groups = getattr(self.config, "n_group", 1)
+
+        self.moe_layers = []
+        self.moe_mlp_layers = []
+        example_moe = None
+        for layer in self.model.layers.values():
+            if isinstance(layer, PPMissingLayer):
+                continue
+            assert isinstance(layer, DeepSeekMultiTokenPredictorLayer)
+            layer = layer.mtp_block
+            assert isinstance(layer, DeepseekV2DecoderLayer)
+            if isinstance(layer.mlp, DeepseekV4MoE):
+                # Pick last one layer since the first ones may be dense layers.
+                example_moe = layer.mlp
+                self.moe_mlp_layers.append(layer.mlp)
+                self.moe_layers.append(layer.mlp.experts)
+        self.extract_moe_parameters(example_moe)
+```
+
+### no_mtp_block_in_name @ models\deepseek_v4\mtp.py
+```python
+    def no_mtp_block_in_name(self, layer_name: str) -> bool:
+        names = [
+            ".hc_head_fn",
+            ".hc_head_base",
+            ".hc_head_scale",
+            ".e_proj.",
+            ".h_proj.",
+            ".enorm.",
+            ".hnorm.",
+            ".norm.",
+            ".head.",
+            ".emb.tok_emb.",
+        ]
+        return any(name in layer_name for name in names)
+```
+
+### get_dsv4_block_sizes @ models\layer\attention\layer.py
+```python
+def get_dsv4_block_sizes(use_a5_bf16_kv: bool = False):
+    # cache_config.block_size: [mla, swa, c4 state, c128 state], [page_size_padded_t1, page_size_padded_t2]
+    _DSV4_BLOCK_SIZES = {
+        128: [[128, 128, 8, 32], [16640, 131072]],
+        64: [[64, 64, 4, 16], [8320, 65536]],
+        32: [[32, 32, 2, 8], [4160, 32768]],
+    }
+    _DSV4_COMPRESSED_BLOCK_SIZES = {
+        128: [[128, 128, 8, 16], [16896, 81920]],
+        64: [[64, 64, 4, 8], [8448, 40960]],
+        32: [[32, 32, 2, 4], [4224, 20480]],
+    }
+    _DSV4_BLOCK_SIZES_A5_BF16 = {
+        128: [[128, 128, 8, 16], [16896, 131072]],
+        64: [[64, 64, 4, 8], [8448, 65536]],
+        32: [[32, 32, 2, 4], [4224, 32768]],
+    }
+    if get_current_hardware_profile().supports(HardwareCapability.DSV4_COMPRESSED_CACHE):
+        if use_a5_bf16_kv:
+            return _DSV4_BLOCK_SIZES_A5_BF16
+        return _DSV4_COMPRESSED_BLOCK_SIZES
+    return _DSV4_BLOCK_SIZES
+```
+
+### get_kv_cache_spec @ models\layer\attention\layer.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec:
+        if self.compress_ratio <= 1:  # SWA part. Allocated separately as DeepseekV4SWACache.
+            return None
+        kv_cache_dtype = kv_cache_dtype_str_to_dtype(self.kv_cache_dtype, vllm_config.model_config)
+        use_bf16_kv = is_a5_bf16_kv_enabled(vllm_config)
+        has_compressed_cache = get_current_hardware_profile().supports(HardwareCapability.DSV4_COMPRESSED_CACHE)
+        if use_bf16_kv:
+            kv_cache_dtype = torch.bfloat16
+        elif has_compressed_cache:
+            kv_cache_dtype = torch.float8_e4m3fn
+            vllm_config.cache_config.cache_dtype = "float8_e4m3fn"
+
+        cached_head_size = self.head_size + 128 if has_compressed_cache and not use_bf16_kv else self.head_size
+        storage_block_size = dsv4_block_sizes(vllm_config)[vllm_config.cache_config.block_size][0][0]
+        return AscendMLAAttentionSpec(
+            # The scheduler operates in raw-token units. Ascend kernels keep
+            # using the compressed page exposed by storage_block_size.
+            block_size=storage_block_size * self.compress_ratio,
+            num_kv_heads=1,
+            head_size=cached_head_size,
+            dtype=kv_cache_dtype,
+            model_version="deepseek_v4",
+            compress_ratio=self.compress_ratio,
+            cache_dtype_str=vllm_config.cache_config.cache_dtype,
+        )
+```
+
+### get_kv_cache_spec @ models\minimax_m3\minimax_m3.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec | None:
+        return FullAttentionSpec(
+            block_size=vllm_config.cache_config.block_size,
+            num_kv_heads=self.num_kv_heads,
+            head_size=self.head_dim,
+            head_size_v=self.head_dim,
+            dtype=self.kv_cache_torch_dtype,
+            kv_quant_mode=get_kv_quant_mode(self.kv_cache_dtype),
+        )
+```
+
+### _insert_kv @ models\minimax_m3\minimax_m3.py (HTML标记36行/实际5行)
+```python
+    def _insert_kv(
+        self,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        index_key: torch.Tensor,
+```
+
+### _sparse_prepare @ models\minimax_m3\minimax_m3.py (HTML标记53行/实际4行)
+```python
+    def _sparse_prepare(
+        self,
+        positions: torch.Tensor,
+        hidden_states: torch.Tensor,
+```
+
+### _qk_norm @ models\minimax_m3\minimax_m3.py
+```python
+    def _qk_norm(self, q: torch.Tensor, k: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        q_shape = q.shape
+        k_shape = k.shape
+        q = q.reshape(-1, self.head_dim).contiguous()
+        k = k.reshape(-1, self.head_dim).contiguous()
+        q = self.q_norm(q).reshape(q_shape)
+        k = self.k_norm(k).reshape(k_shape)
+        return q, k
+```
+
+### _index_qk_norm @ models\minimax_m3\minimax_m3.py
+```python
+    def _index_qk_norm(self, idx_q: torch.Tensor, idx_k: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        idx_q_shape = idx_q.shape
+        idx_k_shape = idx_k.shape
+        idx_q = idx_q.reshape(-1, self.idx_head_dim)
+        idx_k = idx_k.reshape(-1, self.idx_head_dim)
+        idx_q = self.index_q_norm(idx_q).reshape(idx_q_shape)
+        idx_k = self.index_k_norm(idx_k).reshape(idx_k_shape)
+        return idx_q, idx_k
+```
+
+### _sparse_attention_layer_ids @ models\minimax_m3\minimax_m3.py
+```python
+def _sparse_attention_layer_ids(config: PretrainedConfig) -> set[int]:
+    cfg = getattr(config, "sparse_attention_config", None)
+    if not cfg:
+        return set()
+    freq = cfg.get("sparse_attention_freq")
+    if freq is None:
+        return set()
+    return {i for i, f in enumerate(freq) if f != 0}
+```
+
+### _get_text_config @ models\minimax_m3\minimax_m3.py
+```python
+def _get_text_config(vllm_config: VllmConfig) -> PretrainedConfig:
+    return vllm_config.model_config.hf_text_config
+```
+
+### _get_max_position_embeddings @ models\minimax_m3\minimax_m3.py
+```python
+def _get_max_position_embeddings(config: PretrainedConfig) -> int:
+    max_position_embeddings = getattr(config, "max_position_embeddings", 8192)
+    max_model_len = getattr(config, "max_model_len", None)
+    if isinstance(max_model_len, int):
+        max_position_embeddings = max(max_position_embeddings, max_model_len)
+    return max_position_embeddings
+```
+
+### _get_rope_parameters @ models\minimax_m3\minimax_m3.py
+```python
+def _get_rope_parameters(config: PretrainedConfig) -> dict[str, Any] | None:
+    rope_parameters = getattr(config, "rope_parameters", None)
+    if rope_parameters is not None:
+        rope_parameters = dict(rope_parameters)
+    else:
+        rope_parameters = {
+            "rope_theta": getattr(config, "rope_theta", 10000),
+            "partial_rotary_factor": getattr(config, "partial_rotary_factor", 1.0),
+        }
+    return rope_parameters
+```
+
+### _is_w8a8_mxfp8_linear @ models\minimax_m3\minimax_m3.py
+```python
+def _is_w8a8_mxfp8_linear(layer: nn.Module) -> bool:
+    quant_method = getattr(layer, "quant_method", None)
+    quant_scheme = getattr(quant_method, "quant_method", quant_method)
+    return quant_scheme is not None and quant_scheme.__class__.__name__ == "AscendW8A8MXFP8DynamicLinearMethod"
+```
+
+### ebias_weight_loader @ models\minimax_m3\minimax_m3.py
+```python
+    def ebias_weight_loader(param: nn.Parameter, loaded_weight: torch.Tensor) -> None:
+        assert param.size() == loaded_weight.size()
+        param.data.copy_(loaded_weight.to(torch.float32))
+```
+
+### _set_aux_hidden_state_layers @ models\minimax_m3\minimax_m3.py
+```python
+    def _set_aux_hidden_state_layers(self, layers: tuple[int, ...]) -> None:
+        if self._enable_eagle3_aux_hidden_states:
+            EagleModelMixin._set_aux_hidden_state_layers(self, layers)
+        else:
+            EagleModelMixin._set_aux_hidden_state_layers(self, ())
+```
+
+### set_aux_hidden_state_layers @ models\minimax_m3\minimax_m3.py
+```python
+    def set_aux_hidden_state_layers(self, layers: tuple[int, ...]) -> None:
+        self._set_aux_hidden_state_layers(layers)
+```
+
+### get_expert_mapping @ models\minimax_m3\minimax_m3.py (HTML标记2行/实际8行)
+```python
+    def get_expert_mapping(self) -> list[tuple[str, str, int, str]]:
+        return fused_moe_make_expert_params_mapping(
+            self,
+            ckpt_gate_proj_name="w1",
+            ckpt_down_proj_name="w2",
+            ckpt_up_proj_name="w3",
+            num_experts=self.config.num_local_experts,
+        )
+```
+
+### mark_loaded @ models\minimax_m3\minimax_m3.py
+```python
+        def mark_loaded(param_name: str) -> None:
+            nonlocal loaded_tensors
+            loaded_params.add(param_name)
+            loaded_tensors += 1
+```
+
+### mark_skipped @ models\minimax_m3\minimax_m3.py
+```python
+        def mark_skipped(reason: str) -> None:
+            nonlocal skipped_tensors
+            skipped_tensors += 1
+            skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
+```
+
+### get_eagle3_default_aux_hidden_state_layers @ models\minimax_m3\minimax_m3.py
+```python
+    def get_eagle3_default_aux_hidden_state_layers(self) -> tuple[int, ...]:
+        num_layers = len(self.model.layers)
+        return (2, num_layers // 2, num_layers - 3)
+```
+
+### _set_moe_parameters @ models\minimax_m3\minimax_m3.py
+```python
+    def _set_moe_parameters(self) -> None:
+        self.expert_weights: MutableSequence[Sequence[torch.Tensor]] = []
+        self.num_expert_groups = 1
+        self.moe_layers = []
+        self.moe_mlp_layers: list[MiniMaxM3MoE] = []
+
+        example_moe = None
+        for layer in self.model.layers:
+            if isinstance(layer, PPMissingLayer):
+                continue
+            assert isinstance(layer, MiniMaxM3DecoderLayer)
+            if layer.is_layer_sparse:
+                example_moe = layer.block_sparse_moe
+                self.moe_mlp_layers.append(example_moe)
+                self.moe_layers.append(example_moe.experts)
+
+        self.num_moe_layers = len(self.moe_layers)
+        if example_moe is None:
+            self.num_logical_experts = 0
+            self.num_physical_experts = 0
+            self.num_local_physical_experts = 0
+            self.num_routed_experts = 0
+            self.num_shared_experts = 0
+            self.num_redundant_experts = 0
+            return
+
+        self.num_logical_experts = example_moe.n_logical_experts
+        self.num_physical_experts = example_moe.n_physical_experts
+        self.num_local_physical_experts = example_moe.n_local_physical_experts
+        self.num_routed_experts = example_moe.n_routed_experts
+        self.num_shared_experts = example_moe.n_shared_experts
+        self.num_redundant_experts = example_moe.n_redundant_experts
+```
+
+### update_physical_experts_metadata @ models\minimax_m3\minimax_m3.py (HTML标记16行/实际4行)
+```python
+    def update_physical_experts_metadata(
+        self,
+        num_physical_experts: int,
+        num_local_physical_experts: int,
+```
+
+### text_weights @ models\minimax_m3\minimax_m3.py
+```python
+        def text_weights() -> Iterable[tuple[str, torch.Tensor]]:
+            nonlocal raw_tensors, text_tensors, skipped_multimodal_tensors
+            for name, weight in weights:
+                raw_tensors += 1
+                if "vision_tower" in name or "multi_modal_projector" in name or "patch_merge_mlp" in name:
+                    skipped_multimodal_tensors += 1
+                    continue
+                text_tensors += 1
+                yield name, weight
+```
+
+### get_spec_layer_idx_from_weight_name @ models\minimax_m3\minimax_m3.py
+```python
+def get_spec_layer_idx_from_weight_name(config: PretrainedConfig, weight_name: str) -> int | None:
+    if hasattr(config, "num_mtp_modules") and (config.num_mtp_modules > 0):
+        layer_idx = config.num_hidden_layers
+        for i in range(config.num_mtp_modules):
+            if weight_name.startswith(f"model.layers.{layer_idx + i}."):
+                return layer_idx + i
+    return None
+```
+
+### _load_vllm_minimax_m3_common_module @ models\minimax_m3\minimax_m3_vl.py
+```python
+def _load_vllm_minimax_m3_common_module(module_name: str):
+    if vllm.__file__ is None:
+        raise ImportError("Unable to locate the installed vLLM package.")
+
+    module_path = Path(vllm.__file__).resolve().parent / "models" / "minimax_m3" / "common" / f"{module_name}.py"
+    if not module_path.is_file():
+        raise ImportError(
+            "The vLLM MiniMax M3 common source was not found at "
+            f"{module_path}. This vllm-ascend adapter requires a vLLM version "
+            "with MiniMax M3 common modules."
+        )
+
+    # Import the hardware-neutral common module directly. Importing
+    # vllm.models.minimax_m3 first would execute its NVIDIA/AMD platform
+    # dispatcher, while Ascend only needs the shared VL helpers here.
+    return import_from_path(
+        f"vllm_ascend.models._vllm_minimax_m3_common_{module_name}",
+        module_path,
+    )
+```
+
+### fused_allreduce_gemma_rms_norm @ models\minimax_m3\minimax_m3_vl.py (HTML标记22行/实际4行)
+```python
+    def fused_allreduce_gemma_rms_norm(
+        hidden_states: torch.Tensor,
+        residual: torch.Tensor,
+        norm: GemmaRMSNorm,
+```
+
+### get_placeholder_str @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def get_placeholder_str(cls, modality: str, i: int) -> str | None:
+        if modality == "image":
+            return "]<]image[>["
+        if modality == "video":
+            return "]<]video[>["
+        raise ValueError(f"Unsupported modality: {modality!r}")
+```
+
+### _sync_moe_parameters @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _sync_moe_parameters(self) -> None:
+        language_model = self.language_model
+        self.expert_weights = language_model.expert_weights
+        self.num_expert_groups = language_model.num_expert_groups
+        self.moe_layers = language_model.moe_layers
+        self.moe_mlp_layers = language_model.moe_mlp_layers
+        self.num_moe_layers = language_model.num_moe_layers
+        self.num_logical_experts = language_model.num_logical_experts
+        self.num_physical_experts = language_model.num_physical_experts
+        self.num_local_physical_experts = language_model.num_local_physical_experts
+        self.num_routed_experts = language_model.num_routed_experts
+        self.num_shared_experts = language_model.num_shared_experts
+        self.num_redundant_experts = language_model.num_redundant_experts
+```
+
+### update_physical_experts_metadata @ models\minimax_m3\minimax_m3_vl.py (HTML标记10行/实际4行)
+```python
+    def update_physical_experts_metadata(
+        self,
+        num_physical_experts: int,
+        num_local_physical_experts: int,
+```
+
+### lm_head @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def lm_head(self) -> nn.Module:
+        return self.language_model.lm_head
+```
+
+### _parse_and_validate_image_input @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _parse_and_validate_image_input(self, **kwargs: object) -> dict | None:
+        pixel_values = kwargs.pop("pixel_values", None)
+        image_grid_thw = kwargs.pop("image_grid_thw", None)
+        image_embeds = kwargs.pop("image_embeds", None)
+        if pixel_values is None and image_embeds is None:
+            return None
+        if pixel_values is not None:
+            return {
+                "type": "pixel_values",
+                "pixel_values": pixel_values,
+                "image_grid_thw": image_grid_thw,
+            }
+        return {
+            "type": "image_embeds",
+            "image_embeds": image_embeds,
+            "image_grid_thw": image_grid_thw,
+        }
+```
+
+### _parse_and_validate_video_input @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _parse_and_validate_video_input(self, **kwargs: object) -> dict | None:
+        pixel_values_videos = kwargs.pop("pixel_values_videos", None)
+        video_grid_thw = kwargs.pop("video_grid_thw", None)
+        video_embeds = kwargs.pop("video_embeds", None)
+        if pixel_values_videos is None and video_embeds is None:
+            return None
+        if pixel_values_videos is not None:
+            return {
+                "type": "pixel_values_videos",
+                "pixel_values_videos": pixel_values_videos,
+                "video_grid_thw": video_grid_thw,
+            }
+        return {
+            "type": "video_embeds",
+            "video_embeds": video_embeds,
+            "video_grid_thw": video_grid_thw,
+        }
+```
+
+### _process_image_input @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _process_image_input(self, image_input: dict) -> tuple[torch.Tensor, ...]:
+        grid_thw = image_input["image_grid_thw"]
+        assert grid_thw is not None and grid_thw.ndim == 2
+        grid_thw_list = grid_thw.tolist()
+
+        if image_input["type"] == "image_embeds":
+            image_embeds = image_input["image_embeds"].type(self.vision_tower.dtype)
+        else:
+            pixel_values = image_input["pixel_values"].type(self.vision_tower.dtype)
+            if self.use_data_parallel:
+                return run_dp_sharded_mrope_vision_model(
+                    self.vision_tower,
+                    pixel_values,
+                    grid_thw_list,
+                    rope_type="rope_3d",
+                )
+            image_embeds = self.vision_tower(
+                pixel_values=pixel_values,
+                grid_thw=grid_thw_list,
+            )
+
+        merge_size = self.vision_tower.spatial_merge_size
+        sizes = (grid_thw.prod(-1) // (merge_size * merge_size)).tolist()
+        return image_embeds.split(sizes)
+```
+
+### _process_video_input @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _process_video_input(self, video_input: dict) -> tuple[torch.Tensor, ...]:
+        grid_thw = video_input["video_grid_thw"]
+        assert grid_thw is not None and grid_thw.ndim == 2
+        grid_thw_list = grid_thw.tolist()
+
+        if video_input["type"] == "video_embeds":
+            video_embeds = video_input["video_embeds"].type(self.vision_tower.dtype)
+        else:
+            pixel_values = video_input["pixel_values_videos"].type(self.vision_tower.dtype)
+            if self.use_data_parallel:
+                return run_dp_sharded_mrope_vision_model(
+                    self.vision_tower,
+                    pixel_values,
+                    grid_thw_list,
+                    rope_type="rope_3d",
+                )
+            video_embeds = self.vision_tower(
+                pixel_values=pixel_values,
+                grid_thw=grid_thw_list,
+            )
+
+        merge_size = self.vision_tower.spatial_merge_size
+        sizes = (grid_thw.prod(-1) // (merge_size * merge_size)).tolist()
+        return video_embeds.split(sizes)
+```
+
+### _parse_and_validate_multimodal_inputs @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def _parse_and_validate_multimodal_inputs(self, **kwargs: object) -> dict[str, dict]:
+        mm_input_by_modality: dict[str, dict] = {}
+        for input_key in kwargs:
+            if input_key in ("pixel_values", "image_embeds") and "image" not in mm_input_by_modality:
+                image_input = self._parse_and_validate_image_input(**kwargs)
+                if image_input is not None:
+                    mm_input_by_modality["image"] = image_input
+            if input_key in ("pixel_values_videos", "video_embeds") and "video" not in mm_input_by_modality:
+                video_input = self._parse_and_validate_video_input(**kwargs)
+                if video_input is not None:
+                    mm_input_by_modality["video"] = video_input
+        return mm_input_by_modality
+```
+
+### embed_multimodal @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def embed_multimodal(self, **kwargs: object) -> MultiModalEmbeddings:
+        mm_input_by_modality = self._parse_and_validate_multimodal_inputs(**kwargs)
+        if not mm_input_by_modality:
+            return []
+
+        multimodal_embeddings: list[torch.Tensor] = []
+        for modality, multimodal_input in mm_input_by_modality.items():
+            if modality == "image":
+                multimodal_embeddings.extend(self._process_image_input(multimodal_input))
+            elif modality == "video":
+                multimodal_embeddings.extend(self._process_video_input(multimodal_input))
+        return tuple(multimodal_embeddings)
+```
+
+### set_aux_hidden_state_layers @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def set_aux_hidden_state_layers(self, layers: tuple[int, ...]) -> None:
+        self.language_model.set_aux_hidden_state_layers(layers)
+```
+
+### get_eagle3_default_aux_hidden_state_layers @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def get_eagle3_default_aux_hidden_state_layers(self) -> tuple[int, ...]:
+        return self.language_model.get_eagle3_default_aux_hidden_state_layers()
+```
+
+### get_expert_mapping @ models\minimax_m3\minimax_m3_vl.py
+```python
+    def get_expert_mapping(self) -> list[tuple[str, str, int, str]]:
+        return self.language_model.get_expert_mapping()
+```
+
+### counted_weights @ models\minimax_m3\minimax_m3_vl.py
+```python
+        def counted_weights() -> Iterable[tuple[str, torch.Tensor]]:
+            nonlocal raw_tensors
+            for name, weight in weights:
+                raw_tensors += 1
+                if name.startswith("language_model."):
+                    bucket = "language_model"
+                elif name.startswith("vision_tower."):
+                    bucket = "vision_tower"
+                elif name.startswith("multi_modal_projector."):
+                    bucket = "multi_modal_projector"
+                elif name.startswith("patch_merge_mlp."):
+                    bucket = "patch_merge_mlp"
+                else:
+                    bucket = name.split(".", 1)[0]
+                prefix_counts[bucket] = prefix_counts.get(bucket, 0) + 1
+                yield name, weight
+```
+
+### _should_use_tp_sharded_index_decode @ models\minimax_m3\msa_m3.py
+```python
+def _should_use_tp_sharded_index_decode(tp_size: int, num_prefills: int) -> bool:
+    # The A5 Triton decode kernel operates on the complete, replicated index-K
+    # cache on every TP rank. Keep the mainline block-sharded optimization for
+    # the other device families only.
+    return get_ascend_device_type() != AscendDeviceType.A5 and tp_size > 1 and num_prefills == 0
+```
+
+### is_sparse @ models\minimax_m3\msa_m3.py
+```python
+    def is_sparse(cls) -> bool:
+        return True
+```
+
+### get_kv_cache_stride_order @ models\minimax_m3\msa_m3.py (HTML标记6行/实际2行)
+```python
+    def get_kv_cache_stride_order(
+        include_num_layers_dimension: bool = False,
+```
+
+### get_kv_cache_spec @ models\minimax_m3\msa_m3.py
+```python
+    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec:
+        return AscendSFAIndexerCacheSpec(
+            block_size=vllm_config.cache_config.block_size,
+            num_kv_heads=1,
+            head_size=self.head_dim,
+            dtype=self.dtype,
+        )
+```
+
+### _decode_topk_tp_sharded @ models\minimax_m3\msa_m3.py (HTML标记55行/实际11行)
+```python
+    def _decode_topk_tp_sharded(
+        self,
+        idx_q: torch.Tensor,
+        index_kv_cache: torch.Tensor,
+        block_table: torch.Tensor,
+        seq_lens: torch.Tensor,
+        max_seq_len: int,
+        decode_query_len: int,
+        tp_group: Any,
+        tp_size: int,
+        tp_rank: int,
+```
+
+### index_cache @ models\minimax_m3\msa_m3.py
+```python
+    def index_cache(self) -> AscendMiniMaxM3IndexerCache:
+        return self.impl.index_cache
+```
+
+### validate_shard_id @ models\minimax_m3\msa_m3.py (HTML标记7行/实际9行)
+```python
+    def validate_shard_id(self, loaded_shard_id: str | None) -> None:
+        if loaded_shard_id is None:
+            return
+        if loaded_shard_id not in ("q", "k", "v", "index_q", "index_k"):
+            raise ValueError(
+                "Shard id for AscendMiniMaxM3QKVParallelLinearWithIndexer must be "
+                "one of 'q', 'k', 'v', 'index_q', 'index_k'; got "
+                f"{loaded_shard_id}."
+            )
+```
+
+### _get_shard_offset_mapping @ models\minimax_m3\msa_m3.py (HTML标记5行/实际10行)
+```python
+    def _get_shard_offset_mapping(self, loaded_shard_id: str) -> int | None:
+        h = self.head_size
+        nq, nkv, nidx = self.num_heads, self.num_kv_heads, self.num_index_heads
+        return {
+            "q": 0,
+            "k": nq * h,
+            "v": (nq + nkv) * h,
+            "index_q": (nq + 2 * nkv) * h,
+            "index_k": (nq + 2 * nkv + nidx) * h,
+        }.get(loaded_shard_id)
+```
+
+### _get_shard_size_mapping @ models\minimax_m3\msa_m3.py (HTML标记5行/实际9行)
+```python
+    def _get_shard_size_mapping(self, loaded_shard_id: str) -> int | None:
+        h = self.head_size
+        return {
+            "q": self.num_heads * h,
+            "k": self.num_kv_heads * h,
+            "v": self.num_kv_heads * h,
+            "index_q": self.num_index_heads * h,
+            "index_k": self.index_head_size,
+        }.get(loaded_shard_id)
+```
+
+### weight_loader_v2 @ models\minimax_m3\msa_m3.py (HTML标记25行/实际5行)
+```python
+    def weight_loader_v2(
+        self,
+        param: BasevLLMParameter,
+        loaded_weight,
+        loaded_shard_id: str | None = None,
+```
+
+### weight_loader @ models\minimax_m3\msa_m3.py (HTML标记27行/实际5行)
+```python
+    def weight_loader(
+        self,
+        param: Parameter,
+        loaded_weight,
+        loaded_shard_id: str | None = None,
+```
+
+### _quant_description_value @ models\minimax_m3\msa_m3.py (HTML标记8行/实际3行)
+```python
+def _quant_description_value(
+    quant_config: QuantizationConfig | None,
+    key: str,
+```
+
+### _sparse_proj_quant_type @ models\minimax_m3\msa_m3.py (HTML标记19行/实际4行)
+```python
+def _sparse_proj_quant_type(
+    quant_config: QuantizationConfig | None,
+    prefix: str,
+    proj_name: str,
+```
+
+### _use_fused_qkv_indexer @ models\minimax_m3\msa_m3.py (HTML标记22行/实际3行)
+```python
+def _use_fused_qkv_indexer(
+    quant_config: QuantizationConfig | None,
+    prefix: str,
+```
+
+### _register_m3_sparse_packed_modules @ models\minimax_m3\msa_m3.py (HTML标记12行/实际3行)
+```python
+def _register_m3_sparse_packed_modules(
+    quant_config: QuantizationConfig | None,
+    fused_qkv_indexer: bool,
+```
+
+### minimax_m3_sparse_forward @ models\minimax_m3\msa_m3.py (HTML标记18行/实际8行)
+```python
+def minimax_m3_sparse_forward(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    index_query: torch.Tensor,
+    index_key: torch.Tensor,
+    attn_output: torch.Tensor,
+    layer_name: str,
+```
+
+### minimax_m3_sparse_forward_fake @ models\minimax_m3\msa_m3.py (HTML标记10行/实际8行)
+```python
+def minimax_m3_sparse_forward_fake(
+    query: torch.Tensor,
+    key: torch.Tensor,
+    value: torch.Tensor,
+    index_query: torch.Tensor,
+    index_key: torch.Tensor,
+    attn_output: torch.Tensor,
+    layer_name: str,
+```
+
+### _split_main_kv_cache @ models\minimax_m3\ops\msa_m3_npu.py (HTML标记19行/实际2行)
+```python
+def _split_main_kv_cache(
+    kv_cache: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+```
+
+### _select_num_idx_from_topk @ models\minimax_m3\ops\msa_m3_npu.py
+```python
+def _select_num_idx_from_topk(topk_idx: torch.Tensor) -> torch.Tensor:
+    return (topk_idx >= 0).sum(dim=-1).to(dtype=torch.int32)
+```
+
+### _minimax_m3_sparse_attn_a3 @ models\minimax_m3\ops\msa_m3_npu.py (HTML标记30行/实际11行)
+```python
+def _minimax_m3_sparse_attn_a3(
+    q: torch.Tensor,
+    kv_cache: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+    topk_idx: torch.Tensor,
+    block_table: torch.Tensor,
+    cu_seqlens_q: torch.Tensor,
+    seq_lens: torch.Tensor,
+    num_kv_heads: int,
+    sm_scale: float,
+    output: torch.Tensor,
+    block_size: int,
+```
+
+### _minimax_m3_sparse_attn_a5 @ models\minimax_m3\ops\msa_m3_npu.py (HTML标记45行/实际11行)
+```python
+def _minimax_m3_sparse_attn_a5(
+    q: torch.Tensor,
+    kv_cache: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+    topk_idx: torch.Tensor,
+    block_table: torch.Tensor,
+    cu_seqlens_q: torch.Tensor,
+    seq_lens: torch.Tensor,
+    num_kv_heads: int,
+    sm_scale: float,
+    output: torch.Tensor,
+    block_size: int,
+```
+
+### minimax_m3_sparse_attn @ models\minimax_m3\ops\msa_m3_npu.py (HTML标记30行/实际13行)
+```python
+def minimax_m3_sparse_attn(
+    q: torch.Tensor,
+    kv_cache: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+    topk_idx: torch.Tensor,
+    block_table: torch.Tensor,
+    cu_seqlens_q: torch.Tensor,
+    seq_lens: torch.Tensor,
+    prefix_lens: torch.Tensor,
+    max_query_len: int,
+    num_kv_heads: int,
+    sm_scale: float,
+    output: torch.Tensor,
+    block_size: int = 128,
+```
+
+### _split_triton_main_kv_cache @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记19行/实际2行)
+```python
+def _split_triton_main_kv_cache(
+    kv_cache: torch.Tensor | tuple[torch.Tensor, ...] | list[torch.Tensor],
+```
+
+### _is_arch_support_pdl @ models\minimax_m3\ops\msa_m3_triton.py
+```python
+def _is_arch_support_pdl() -> bool:
+    if current_platform.device_name == "npu":
+        return False
+    is_supported = getattr(current_platform, "is_arch_support_pdl", None)
+    return bool(is_supported()) if callable(is_supported) else False
+```
+
+### _decode_index_score_kernel @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记150行/实际26行)
+```python
+def _decode_index_score_kernel(
+    q_ptr,  # idx_q: [total_q, num_idx_heads, head_dim]
+    ik_cache_ptr,  # index-K cache: [num_blocks, 128, head_dim]
+    score_ptr,  # [num_idx_heads, total_q, score_block_stride]
+    block_table_ptr,  # [num_reqs, local_max_blocks]
+    seq_lens,  # local sequence lengths inside this block shard, [num_reqs]
+    global_seq_lens,  # full sequence lengths, [num_reqs]
+    num_idx_heads: tl.constexpr,
+    head_dim: tl.constexpr,
+    block_offset,
+    decode_query_len,
+    init_blocks: tl.constexpr,
+    local_blocks: tl.constexpr,
+    stride_q_n,
+    stride_q_h,
+    stride_q_d,
+    stride_ik_blk,
+    stride_ik_pos,
+    stride_ik_d,
+    stride_s_h,
+    stride_s_n,
+    stride_s_k,
+    stride_bt_b,
+    BLOCK_SIZE_K: tl.constexpr,
+    SCORE_BLOCK_COUNT: tl.constexpr,
+    NUM_CHUNKS: tl.constexpr,
+```
+
+### _mask_decode_topk_indices_kernel @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记34行/实际12行)
+```python
+def _mask_decode_topk_indices_kernel(
+    ti_ptr,  # [num_idx_heads, total_q, topk] int32 in/out
+    seq_lens,  # local sequence lengths inside this block shard, [num_reqs]
+    global_seq_lens,  # full sequence lengths, [num_reqs]
+    block_size: tl.constexpr,  # sparse block size (128)
+    block_offset,
+    topk: tl.constexpr,
+    decode_query_len,
+    stride_ti_h,
+    stride_ti_b,
+    stride_ti_t,
+    BLOCK_SIZE_T: tl.constexpr,
+```
+
+### _gqa_sparse_fwd_kernel @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记151行/实际41行)
+```python
+def _gqa_sparse_fwd_kernel(
+    q_ptr,  # [total_q, num_heads, head_dim]
+    k_cache_ptr,  # [num_blocks, 128, num_kv_heads, head_dim]
+    v_cache_ptr,  # [num_blocks, 128, num_kv_heads, head_dim]
+    t_ptr,  # topk_idx: [num_kv_heads, total_q, topk]
+    o_ptr,  # [total_q, num_heads, head_dim]
+    block_table_ptr,  # [num_reqs, max_blocks]
+    cu_seqlens_q,
+    cu_seqblocks_q,
+    seq_lens,
+    prefix_lens,
+    gqa_group_size,
+    head_dim,
+    max_topk,
+    num_q_loop,
+    sm_scale,
+    stride_qn,
+    stride_qh,
+    stride_qd,
+    stride_k_blk,
+    stride_k_pos,
+    stride_k_h,
+    stride_k_d,
+    stride_v_blk,
+    stride_v_pos,
+    stride_v_h,
+    stride_v_d,
+    stride_th,
+    stride_tn,
+    stride_tk,
+    stride_on,
+    stride_oh,
+    stride_od,
+    stride_bt_b,
+    BLOCK_SIZE_Q: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr,  # == SPARSE_BLOCK_SIZE (128)
+    BLOCK_SIZE_D: tl.constexpr,
+    BLOCK_SIZE_H: tl.constexpr,
+    BLOCK_SIZE_T: tl.constexpr,
+    BLOCK_SIZE_QH: tl.constexpr,
+    USE_FP8: tl.constexpr,  # fp8 KV cache: dequantize K/V to q.dtype on load
+```
+
+### _gqa_sparse_decode_kernel @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记189行/实际45行)
+```python
+def _gqa_sparse_decode_kernel(
+    q_ptr,  # [total_q, num_heads, head_dim]
+    k_cache_ptr,  # [num_blocks, 128, num_kv_heads, head_dim]
+    v_cache_ptr,  # [num_blocks, 128, num_kv_heads, head_dim]
+    t_ptr,  # topk_idx: [num_kv_heads, total_q, topk]
+    o_ptr,  # partial out: [NUM_TOPK_CHUNKS, total_q, num_heads, head_dim]
+    lse_ptr,  # partial lse (log2): [NUM_TOPK_CHUNKS, total_q, num_heads]
+    block_table_ptr,  # [num_reqs, max_blocks]
+    seq_lens,  # [num_reqs]
+    max_blocks,
+    total_q,
+    gqa_group_size,
+    head_dim,
+    max_topk,
+    sm_scale,
+    decode_query_len,
+    stride_qn,
+    stride_qh,
+    stride_qd,
+    stride_k_blk,
+    stride_k_pos,
+    stride_k_h,
+    stride_k_d,
+    stride_v_blk,
+    stride_v_pos,
+    stride_v_h,
+    stride_v_d,
+    stride_th,
+    stride_tn,
+    stride_tk,
+    stride_o_c,
+    stride_o_b,
+    stride_o_h,
+    stride_o_d,
+    stride_l_c,
+    stride_l_b,
+    stride_l_h,
+    stride_bt_b,
+    BLOCK_SIZE_K: tl.constexpr,  # == SPARSE_BLOCK_SIZE (128)
+    NUM_TOPK_CHUNKS: tl.constexpr,
+    BLOCK_SIZE_H: tl.constexpr,
+    BLOCK_SIZE_D: tl.constexpr,
+    BLOCK_SIZE_T: tl.constexpr,
+    USE_FP8: tl.constexpr,  # fp8 KV cache: dequantize K/V to q.dtype on load
+    USE_PDL: tl.constexpr,
+```
+
+### _merge_topk_attn_out_kernel @ models\minimax_m3\ops\msa_m3_triton.py (HTML标记46行/实际18行)
+```python
+def _merge_topk_attn_out_kernel(
+    o_ptr,  # partials: [NUM_TOPK_CHUNKS, total_q, num_heads, head_dim]
+    lse_ptr,  # partials (log2): [NUM_TOPK_CHUNKS, total_q, num_heads]
+    out_ptr,  # merged out: [total_q, num_heads, head_dim]
+    head_dim,
+    stride_o_c,
+    stride_o_b,
+    stride_o_h,
+    stride_o_d,
+    stride_l_c,
+    stride_l_b,
+    stride_l_h,
+    stride_out_n,
+    stride_out_h,
+    stride_out_d,
+    NUM_TOPK_CHUNKS: tl.constexpr,
+    BLOCK_SIZE_D: tl.constexpr,
+    USE_PDL: tl.constexpr,
+```
+
+### _as_triton_main_kv_cache @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记12行/实际2行)
+```python
+def _as_triton_main_kv_cache(
+    kv_cache: torch.Tensor | tuple[torch.Tensor, torch.Tensor],
+```
+
+### _is_arch_support_pdl @ models\minimax_m3\ops\msa_m3_triton_a5.py
+```python
+def _is_arch_support_pdl() -> bool:
+    if current_platform.device_name == "npu":
+        return False
+    is_supported = getattr(current_platform, "is_arch_support_pdl", None)
+    return bool(is_supported()) if callable(is_supported) else False
+```
+
+### _decode_qk_score_target_programs @ models\minimax_m3\ops\msa_m3_triton_a5.py
+```python
+def _decode_qk_score_target_programs() -> int:
+    if get_aicore_num is None or init_device_properties_triton is None:
+        return _DECODE_QK_SCORE_MIN_PROGRAMS
+
+    try:
+        aicore_count = int(get_aicore_num())
+    except AssertionError:
+        init_device_properties_triton()
+        aicore_count = int(get_aicore_num())
+    except Exception:
+        return _DECODE_QK_SCORE_MIN_PROGRAMS
+
+    return max(_DECODE_QK_SCORE_MIN_PROGRAMS, aicore_count)
+```
+
+### _prune_decode_index_score_configs @ models\minimax_m3\ops\msa_m3_triton_a5.py
+```python
+def _prune_decode_index_score_configs(configs, nargs, **kwargs):
+    num_reqs = max(1, nargs["num_reqs"])
+    max_chunks = max(1, _DECODE_INDEX_SCORE_MAX_GRID // num_reqs)
+    max_chunks = 1 << (max_chunks.bit_length() - 1)
+    pruned = [c for c in configs if c.kwargs["num_kv_chunks"] <= max_chunks]
+    return pruned or configs[:1]
+```
+
+### _index_block_score_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记101行/实际24行)
+```python
+def _index_block_score_kernel(
+    q_ptr,
+    ik_cache_ptr,
+    score_ptr,
+    block_table_ptr,
+    cu_seqlens,
+    seq_lens,
+    prefix_lens,
+    num_idx_heads: tl.constexpr,
+    head_dim: tl.constexpr,  # 128
+    sm_scale,
+    stride_q_n,
+    stride_q_h,
+    stride_q_d,
+    stride_ik_blk,
+    stride_ik_pos,
+    stride_ik_d,
+    stride_s_h,
+    stride_s_n,
+    stride_s_k,
+    stride_bt_b,
+    BLOCK_SIZE_Q: tl.constexpr,  # 64
+    BLOCK_SIZE_K: tl.constexpr,  # 128
+    # CUBE_N: tl.constexpr,
+```
+
+### _decode_index_score_pad_tail_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记36行/实际11行)
+```python
+def _decode_index_score_pad_tail_kernel(
+    score_ptr,  # [num_idx_heads, total_q, score_block_stride] fp32
+    seq_lens,  # [num_reqs]
+    block_size: tl.constexpr,  # sparse block size (128)
+    max_block,
+    decode_query_len,
+    chunk_blocks,  # max_block split count per chunk (shape-constant)
+    stride_s_h,
+    stride_s_b,
+    stride_s_k,
+    BLOCK_SIZE_K: tl.constexpr,
+```
+
+### _topk_index_mask_invalid_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记31行/实际10行)
+```python
+def _topk_index_mask_invalid_kernel(
+    ti_ptr,  # [num_idx_heads, total_q, topk] int32 in/out
+    seq_lens,  # [num_reqs]
+    block_size: tl.constexpr,  # sparse block size (128)
+    topk: tl.constexpr,
+    decode_query_len,
+    stride_ti_h,
+    stride_ti_b,
+    stride_ti_t,
+    BLOCK_SIZE_T: tl.constexpr,
+```
+
+### _prefill_index_score_prepare_for_topk_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记44行/实际14行)
+```python
+def _prefill_index_score_prepare_for_topk_kernel(
+    score_ptr,  # [num_idx_heads, total_q, score_block_stride] fp32 in/out
+    cu_seqlens,  # [batch+1]
+    prefix_lens,  # [batch]
+    init_blocks: tl.constexpr,
+    local_blocks: tl.constexpr,
+    max_block,
+    chunk_blocks,
+    num_prep_chunks,
+    stride_s_h,
+    stride_s_n,
+    stride_s_k,
+    block_size: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr,
+```
+
+### _topk_index_mask_invalid_prefill_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记30行/实际10行)
+```python
+def _topk_index_mask_invalid_prefill_kernel(
+    ti_ptr,  # [num_idx_heads, total_q, topk] int32 in/out
+    cu_seqlens,  # [batch+1]
+    prefix_lens,  # [batch]
+    block_size: tl.constexpr,  # sparse block size (128)
+    topk: tl.constexpr,
+    stride_ti_h,
+    stride_ti_n,
+    stride_ti_t,
+    BLOCK_SIZE_T: tl.constexpr,
+```
+
+### _decode_index_score_masks_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记49行/实际13行)
+```python
+def _decode_index_score_masks_kernel(
+    init_mask_ptr,  # [total_q, score_block_stride] bool out
+    local_mask_ptr,  # [total_q, score_block_stride] bool out
+    seq_lens,  # [num_reqs] int32
+    block_size: tl.constexpr,  # sparse block size (128)
+    max_block,
+    decode_query_len,
+    chunk_blocks,
+    init_blocks: tl.constexpr,
+    local_blocks: tl.constexpr,
+    stride_mask_q,
+    stride_mask_k,
+    BLOCK_SIZE_K: tl.constexpr,
+```
+
+### _gqa_sparse_fwd_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记137行/实际38行)
+```python
+def _gqa_sparse_fwd_kernel(
+    q_ptr,  # [total_q, num_heads, head_dim]
+    kv_cache_ptr,  # main cache: [num_blocks, 2, 128, num_kv_heads, head_dim]
+    t_ptr,  # topk_idx: [num_kv_heads, total_q, topk]
+    o_ptr,  # [total_q, num_heads, head_dim]
+    block_table_ptr,  # [num_reqs, max_blocks]
+    cu_seqlens_q,
+    cu_seqblocks_q,
+    seq_lens,
+    prefix_lens,
+    num_kv_heads,
+    gqa_group_size,
+    head_dim,
+    max_topk,
+    num_q_loop,
+    sm_scale,
+    stride_qn,
+    stride_qh,
+    stride_qd,
+    stride_kv_blk,
+    stride_kv_kv,
+    stride_kv_pos,
+    stride_kv_h,
+    stride_kv_d,
+    stride_th,
+    stride_tn,
+    stride_tk,
+    stride_on,
+    stride_oh,
+    stride_od,
+    stride_bt_b,
+    BLOCK_SIZE_Q: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr,  # == SPARSE_BLOCK_SIZE (128)
+    BLOCK_SIZE_D: tl.constexpr,
+    BLOCK_SIZE_H: tl.constexpr,
+    BLOCK_SIZE_T: tl.constexpr,
+    BLOCK_SIZE_QH: tl.constexpr,
+    USE_FP8: tl.constexpr,  # fp8 KV cache: dequantize K/V to q.dtype on load
+```
+
+### _gqa_sparse_decode_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记155行/实际40行)
+```python
+def _gqa_sparse_decode_kernel(
+    q_ptr,  # [total_q, num_heads, head_dim]
+    kv_cache_ptr,  # main cache: [num_blocks, 2, 128, num_kv_heads, head_dim]
+    t_ptr,  # topk_idx: [num_kv_heads, total_q, topk]
+    o_ptr,  # partial out: [NUM_TOPK_CHUNKS, total_q, num_heads, head_dim]
+    lse_ptr,  # partial lse (log2): [NUM_TOPK_CHUNKS, total_q, num_heads]
+    block_table_ptr,  # [num_reqs, max_blocks]
+    seq_lens,  # [num_reqs]
+    total_q,
+    gqa_group_size,
+    head_dim,
+    max_topk,
+    sm_scale,
+    decode_query_len,
+    stride_qn,
+    stride_qh,
+    stride_qd,
+    stride_kv_blk,
+    stride_kv_kv,
+    stride_kv_pos,
+    stride_kv_h,
+    stride_kv_d,
+    stride_th,
+    stride_tn,
+    stride_tk,
+    stride_o_c,
+    stride_o_b,
+    stride_o_h,
+    stride_o_d,
+    stride_l_c,
+    stride_l_b,
+    stride_l_h,
+    stride_bt_b,
+    BLOCK_SIZE_K: tl.constexpr,  # == SPARSE_BLOCK_SIZE (128)
+    NUM_TOPK_CHUNKS: tl.constexpr,
+    BLOCK_SIZE_H: tl.constexpr,
+    BLOCK_SIZE_D: tl.constexpr,
+    BLOCK_SIZE_T: tl.constexpr,
+    USE_FP8: tl.constexpr,  # fp8 KV cache: dequantize K/V to q.dtype on load
+    USE_PDL: tl.constexpr,
+```
+
+### _merge_topk_attn_out_kernel @ models\minimax_m3\ops\msa_m3_triton_a5.py (HTML标记45行/实际18行)
+```python
+def _merge_topk_attn_out_kernel(
+    o_ptr,  # partials: [NUM_TOPK_CHUNKS, total_q, num_heads, head_dim]
+    lse_ptr,  # partials (log2): [NUM_TOPK_CHUNKS, total_q, num_heads]
+    out_ptr,  # merged out: [total_q, num_heads, head_dim]
+    head_dim,
+    stride_o_c,
+    stride_o_b,
+    stride_o_h,
+    stride_o_d,
+    stride_l_c,
+    stride_l_b,
+    stride_l_h,
+    stride_out_n,
+    stride_out_h,
+    stride_out_d,
+    NUM_TOPK_CHUNKS: tl.constexpr,
+    BLOCK_SIZE_D: tl.constexpr,
+    USE_PDL: tl.constexpr,
+```

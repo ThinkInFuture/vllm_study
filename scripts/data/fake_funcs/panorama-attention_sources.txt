@@ -1,0 +1,2059 @@
+### do_kv_cache_update @ attention\attention_v1.py (HTML标记21行/实际7行)
+```python
+    def do_kv_cache_update(
+        self,
+        layer: torch.nn.Module,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: list[torch.Tensor],
+        slot_mapping: torch.Tensor,
+```
+
+### reshape_and_cache @ attention\attention_v1.py (HTML标记31行/实际8行)
+```python
+    def reshape_and_cache(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: AscendMetadata,
+        output: torch.Tensor,
+```
+
+### _reshape_and_cache_pcp @ attention\attention_v1.py (HTML标记38行/实际8行)
+```python
+    def _reshape_and_cache_pcp(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: AscendMetadata,
+        output: torch.Tensor,
+```
+
+### _shard_and_reshape @ attention\attention_v1.py
+```python
+        def _shard_and_reshape(raw: torch.Tensor) -> torch.Tensor:
+            if raw.numel() == 1:
+                return raw.to(device=device)
+            expected = self.num_kv_heads * self.head_size
+            if raw.numel() != expected:
+                total_kv_heads = raw.numel() // self.head_size
+                tp_rank = get_tensor_model_parallel_rank()
+                tp_size = get_tensor_model_parallel_world_size()
+                kv_head_start = tp_rank * total_kv_heads // tp_size
+                raw = raw.view(total_kv_heads, self.head_size)[
+                    kv_head_start : kv_head_start + self.num_kv_heads
+                ].contiguous()
+            return raw.view(1, self.num_kv_heads, self.head_size).to(device=device)
+```
+
+### _reshape_and_cache @ attention\attention_v1.py (HTML标记36行/实际8行)
+```python
+    def _reshape_and_cache(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: AscendMetadata,
+        output: torch.Tensor,
+```
+
+### get_dsa_sparse_attn_metadata_kwargs @ attention\dsa_attn_kv_plan.py
+```python
+    def get_dsa_sparse_attn_metadata_kwargs(self, device) -> dict[str, Any]:
+        kwargs = dict(self.sparse_attn_metadata_kwargs)
+        if self.include_metadata_device:
+            kwargs["device"] = str(device)
+        return kwargs
+```
+
+### get_dsa_sparse_attn_base_kwargs @ attention\dsa_attn_kv_plan.py
+```python
+    def get_dsa_sparse_attn_base_kwargs(self) -> dict[str, Any]:
+        return dict(self.sparse_attn_base_kwargs)
+```
+
+### add_dsa_sparse_attn_extra_kwargs @ attention\dsa_attn_kv_plan.py
+```python
+    def add_dsa_sparse_attn_extra_kwargs(self, extra_kwargs: dict[str, Any], **kwargs_to_add) -> None:
+        if self.applies_sparse_attn_runtime_kwargs:
+            extra_kwargs.update(kwargs_to_add)
+```
+
+### get_dsa_compressor_slot_mapping_format @ attention\dsa_attn_kv_plan.py
+```python
+    def get_dsa_compressor_slot_mapping_format(self) -> int:
+        return self.compressor_slot_mapping_format
+```
+
+### format_dsa_slot_mapping @ attention\dsa_attn_kv_plan.py
+```python
+    def format_dsa_slot_mapping(self, slot_mapping: torch.Tensor, block_size: int) -> torch.Tensor:
+        if not self.requires_block_offset_slots:
+            return slot_mapping
+        valid = slot_mapping >= 0
+        invalid = torch.full_like(slot_mapping, -1)
+        block_idx = torch.where(valid, torch.div(slot_mapping, block_size, rounding_mode="floor"), invalid)
+        offset = torch.where(valid, slot_mapping % block_size, invalid)
+        return torch.stack([block_idx, offset], dim=-1).to(torch.int32)
+```
+
+### dsa_kv_compress_scatter @ attention\dsa_attn_kv_plan.py
+```python
+    def dsa_kv_compress_scatter(self, cache: torch.Tensor, x: torch.Tensor | None, slot_mapping: torch.Tensor) -> None:
+        if x is None:
+            return
+        if self.uses_sparse_flash_mla:
+            if slot_mapping.ndim != 2 or slot_mapping.shape[-1] != 2:
+                raise ValueError(f"BF16 DSA slot_mapping must be [num_tokens, 2], got {tuple(slot_mapping.shape)}.")
+            # Keep fixed [T, 2] shape under ACLGraph. SparseFlashMla's
+            # scatter path receives padded [-1, -1] rows directly; do not
+            # introduce a data-dependent Nonzero/gather operation here.
+            indices = slot_mapping.to(torch.int64).contiguous()
+            updates = x.reshape((slot_mapping.shape[0],) + tuple(cache.shape[2:])).contiguous()
+            torch_npu.npu_scatter_nd_update_(cache, indices, updates)
+            return
+        if not self.uses_kv_compress_epilog:
+            torch.ops._C_ascend.npu_scatter_nd_update_v2(cache, slot_mapping, x)
+            return
+        torch.ops._C_ascend.kv_compress_epilog(
+            kv_compress_cache=cache.view(-1, 1, cache.shape[-1]),
+            x=x.view(-1, x.shape[-1]),
+            slot_mapping=slot_mapping,
+            quant_group_size=64,
+            quant_mode=2,
+            round_scale_flag=True,
+            layout=1,
+        )
+```
+
+### _num_compressor_metadata_rows @ attention\dsa_v1.py
+```python
+    def _num_compressor_metadata_rows(self, num_reqs: int) -> int:
+        assert self.num_actual_tokens is not None
+        num_tokens = self.num_actual_tokens
+        return min(num_tokens, num_tokens // self.compressor_ratio + num_reqs)
+```
+
+### _build_sas_metadata @ attention\dsa_v1.py (HTML标记54行/实际10行)
+```python
+    def _build_sas_metadata(
+        self,
+        metadata_cache: dict,
+        layer_name: str,
+        query_start_loc: torch.Tensor,
+        seq_lens: torch.Tensor,
+        max_seqlen_q: int | torch.Tensor,
+        max_seqlen_kv: int | torch.Tensor,
+        cu_seqlens_ori_kv: torch.Tensor | None,
+        cu_seqlens_cmp_kv: torch.Tensor | None,
+```
+
+### _build_qli_metadata @ attention\dsa_v1.py (HTML标记34行/实际7行)
+```python
+    def _build_qli_metadata(
+        self,
+        metadata_cache: dict,
+        query_start_loc: torch.Tensor,
+        seq_lens: torch.Tensor,
+        max_seqlen_q: int,
+        max_seqlen_kv: int,
+```
+
+### build_req_metadata @ attention\dsa_v1.py (HTML标记113行/实际7行)
+```python
+    def build_req_metadata(
+        self,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+        seq_lens_cpu: torch.Tensor,
+        num_actual_reqs: int | None,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+```
+
+### build_req_metadata_for_drafting @ attention\dsa_v1.py (HTML标记110行/实际6行)
+```python
+    def build_req_metadata_for_drafting(
+        self,
+        draft_index: int,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+        cos,
+        sin,
+```
+
+### _get_layer_metadata @ attention\dsa_v1.py (HTML标记35行/实际4行)
+```python
+    def _get_layer_metadata(
+        self,
+        attn_layer_name: str,
+        attn_metadata: DSAMetadataDict,
+```
+
+### _forward_o_proj @ attention\dsa_v1.py
+```python
+    def _forward_o_proj(self, o_proj_input: torch.Tensor, output: torch.Tensor) -> torch.Tensor:
+        num_tokens = o_proj_input.shape[0]
+        group_hidden_dim = o_proj_input.shape[1] * o_proj_input.shape[2] // self.n_local_groups
+        o_proj_input = o_proj_input.view(num_tokens, self.n_local_groups, group_hidden_dim)
+        # A5 (Ascend950) uses an FP8-quantized o_proj path (dynamic MX quant
+        # + quantized batch matmul). Preserve it as-is: it predates and is
+        # orthogonal to the OTP / olora_tp paths below, so it must win first.
+        use_a5_quant_o_proj = self.support_fp8_attention and _has_weight_scale(self.wo_a)
+        if use_a5_quant_o_proj:
+            o = o_proj_input
+            o, swiglu_out_scale = torch_npu.npu_dynamic_mx_quant(o, dst_type=torch.float8_e4m3fn)
+            o = torch_npu.npu_transpose_quant_batchmatmul(
+                o,
+                self.wo_a.weight,
+                dtype=torch.bfloat16,
+                bias=None,
+                group_sizes=(0, 0, 32),
+                x1_scale=swiglu_out_scale.view(torch.float8_e8m0fnu),
+                x2_scale=self.wo_a.weight_scale.view(torch.float8_e8m0fnu),
+                perm_x1=(1, 0, 2),
+                perm_x2=(0, 1, 2),
+                perm_y=(1, 0, 2),
+            )
+            o = o.reshape(num_tokens, -1)
+            output[...] = self.wo_b(o)
+        elif oproj_tp_enable():
+            oproj_group = get_otp_group()
+            oproj_tp_size = oproj_group.world_size
+            if self.n_local_groups % oproj_tp_size != 0:
+                raise ValueError(
+                    "n_local_groups must be divisible by "
+                    f"oproj_tensor_parallel_size, got {self.n_local_groups} "
+                    f"and {oproj_tp_size}."
+                )
+
+            groups_per_rank = self.n_local_groups // oproj_tp_size
+
+            o_proj_input = o_proj_input.view(num_tokens, oproj_tp_size, groups_per_rank, group_hidden_dim)
+            # Pad to a static exchange size so the all_to_all / reduce_scatter
+            # shapes are identical across all ACL graph buckets — variable
+            # shapes desync the HCCL communicator during graph replay.
+            # potential_max_tokens is computed once in the model runner __init__,
+            # so reading it here is a cheap global lookup.
+            exchange_num_tokens = get_potential_max_tokens()
+            if exchange_num_tokens < num_tokens:
+                raise ValueError(
+                    "oproj static exchange capacity must cover local tokens, "
+                    f"got {exchange_num_tokens} and {num_tokens}."
+                )
+            # Lazily allocate static send/recv buffers on first call. The
+            # profiling run hits this path before ACL graph capture, so the
+            # buffers exist and keep a stable device address across all later
+            # capture/replay cycles (graph replay requires the same address
+            # that was recorded at capture; new_zeros per call would desync
+            # the HCCL operator).
+            if not hasattr(self, "_oproj_send_buf"):
+                buf_shape = (oproj_tp_size, exchange_num_tokens, groups_per_rank, group_hidden_dim)
+                self._oproj_send_buf = torch.zeros(buf_shape, dtype=o_proj_input.dtype, device=o_proj_input.device)
+                self._oproj_recv_buf = torch.empty_like(self._oproj_send_buf)
+            send = self._oproj_send_buf
+```
+
+### _get_o_proj_input_shape @ attention\dsa_v1.py (HTML标记9行/实际3行)
+```python
+    def _get_o_proj_input_shape(
+        self,
+        attn_metadata: DSAMetadataDict | None,
+```
+
+### compute_attention_compressed_kv @ attention\dsa_v1.py
+```python
+            def compute_attention_compressed_kv() -> tuple[torch.Tensor, torch.Tensor]:
+                return compressor(
+                    hidden_states=hidden_states,
+                    state_cache=state_cache,
+                    metadata=layer_metadata.compressor,
+                )
+```
+
+### scatter_attention_compressed_kv @ attention\dsa_v1.py (HTML标记10行/实际3行)
+```python
+            def scatter_attention_compressed_kv(
+                compressed_kv: torch.Tensor,
+                compress_slot_mapping: torch.Tensor,
+```
+
+### _forward_attention @ attention\dsa_v1.py (HTML标记115行/实际7行)
+```python
+    def _forward_attention(
+        self,
+        layer_name,
+        hidden_states: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        layer_metadata: AscendDSALayerMetadata,
+        cache_is_prepared: bool = False,
+```
+
+### _v_up_proj @ attention\mla_v1.py
+```python
+    def _v_up_proj(self, x):
+        # Convert from (N, B, L)/(N, B, 1, L) to (N, B, L)
+        x = x.view(self.num_heads, -1, self.kv_lora_rank)
+        # Multiply (N, B, L) x (N, L, V) -> (B, N, V)
+        x = torch_npu.npu_transpose_batchmatmul(x, self.W_UV, perm_y=(1, 0, 2))
+        # Convert from (B, N, V) to (B, N * V)
+        x = x.reshape(-1, self.num_heads * self.v_head_dim)
+        return x
+```
+
+### _q_proj_and_k_up_proj @ attention\mla_v1.py
+```python
+    def _q_proj_and_k_up_proj(self, x):
+        q_nope, q_pe = (
+            self.q_proj(x)[0]
+            .view(-1, self.num_heads, self.qk_head_dim)
+            .split([self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1)
+        )
+
+        # Convert from (B, N, P) to (N, B, P)
+        q_nope = q_nope.transpose(0, 1)
+        # Multiply (N, B, P) x (N, P, L) -> (N, B, L)
+        ql_nope = torch.bmm(q_nope, self.W_UK_T)
+        # Convert from (N, B, L) to (B, N, L)
+        return ql_nope.transpose(0, 1), q_pe
+```
+
+### _load_fa_quant_scales @ attention\mla_v1.py
+```python
+    def _load_fa_quant_scales(self):
+        layer = self.vllm_config.compilation_config.static_forward_context[self.layer_name]
+        self.quant_kscale = layer.quant_kscale
+        self.fak_descale_float = layer.fak_descale_float
+        self.fak_descale_reciprocal = layer.fak_descale_reciprocal
+```
+
+### _process_weights_for_fused @ attention\mla_v1.py
+```python
+    def _process_weights_for_fused(self, act_dtype: torch.dtype):
+        if self.fa_quant_layer:
+            self._load_fa_quant_scales()
+
+        assert self.q_proj is not None
+        assert self.fused_qkv_a_proj is not None
+
+        is_native = self._mlapo_uses_native_weights
+        fused_weight = self.fused_qkv_a_proj.weight.data
+        weight_uq_qr = self.q_proj.weight.data
+        if is_native:
+            # Native Linear stores [out_features, in_features], while the
+            # prolog consumes [in_features, out_features].
+            fused_weight = fused_weight.T
+            weight_uq_qr = weight_uq_qr.T.contiguous()
+            if self.head_padding > 0:
+                weight_uq_qr = weight_uq_qr.view(
+                    self.q_lora_rank,
+                    self.num_heads,
+                    self.qk_head_dim,
+                )
+                weight_uq_qr = F.pad(weight_uq_qr, (0, 0, 0, self.head_padding))
+                weight_uq_qr = weight_uq_qr.view(
+                    self.q_lora_rank,
+                    self.num_heads_padded * self.qk_head_dim,
+                )
+
+        self.weight_dq = fused_weight[..., : self.q_lora_rank].contiguous()
+        self.weight_dkv_kr = fused_weight[..., self.q_lora_rank :].contiguous()
+        self.weight_uq_qr = weight_uq_qr.contiguous()
+        self.weight_dq = torch_npu.npu_format_cast(self.weight_dq, ACL_FORMAT_FRACTAL_NZ)
+        self.weight_uq_qr = torch_npu.npu_format_cast(self.weight_uq_qr, ACL_FORMAT_FRACTAL_NZ)
+        self.weight_dkv_kr = torch_npu.npu_format_cast(self.weight_dkv_kr, ACL_FORMAT_FRACTAL_NZ)
+
+        self.mlapo_weight_quant_mode = 0 if is_native else 3
+        if is_native:
+            self.mlapo_num_heads = self.num_heads_padded
+            if self.head_padding > 0:
+                self.mlapo_W_UK_T = F.pad(self.W_UK_T, (0, 0, 0, 0, 0, self.head_padding))
+        elif get_current_hardware_profile().supports(HardwareCapability.FP8_ATTENTION):
+            self.dequant_scale_w_uq_qr = self.q_proj.weight_scale.data.transpose(0, 1).flatten(1)
+            weight_scale = self.fused_qkv_a_proj.weight_scale.transpose(0, 1).flatten(1)
+            self.dequant_scale_w_dq = weight_scale[: self.q_lora_rank, ...]
+            self.dequant_scale_w_dkv_kr = weight_scale[self.q_lora_rank :, ...]
+        else:
+            self.dequant_scale_w_uq_qr = self.q_proj.weight_scale.data.to(torch.float).unsqueeze(0)
+            weight_scale = self.fused_qkv_a_proj.weight_scale  # type: ignore[union-attr]
+            self.dequant_scale_w_dq = weight_scale[: self.q_lora_rank].to(torch.float).unsqueeze(0)
+            self.dequant_scale_w_dkv_kr = weight_scale[self.q_lora_rank :].to(torch.float).unsqueeze(0)
+
+        # On KV consumers (decode-only) MLAPO uses the transformed weights built above;
+        # the original fused_qkv_a_proj/q_proj weights and quant params are no longer
+        # referenced by the MLAPO decode fast path, so drop them to save NPU memory.
+        # However, D nodes have normal local-prefill paths (recompute / fallback /
+        # preempt) that dereference these weights, and freeing them crashes the
+        # worker with UndefinedTensorImpl (issue #11882). When
+        # mlapo_keep_prefill_weights is enabled, skip the free to trade NPU
+        # memory for stability.
+        ascend_config = get_ascend_config()
+        if (
+```
+
+### get_context_seq_len_npu @ attention\mla_v1.py
+```python
+    def get_context_seq_len_npu(self, index: int, attn_metadata: AscendMLAMetadata):
+        prefill_metadata = attn_metadata.prefill
+        assert prefill_metadata is not None
+        assert prefill_metadata.chunked_context is not None
+        assert prefill_metadata.chunked_context.chunk_seq_lens_npu is not None
+        iters = len(prefill_metadata.chunked_context.seq_tot)
+        assert 0 <= index < iters
+        return prefill_metadata.chunked_context.chunk_seq_lens_npu[index]
+```
+
+### _reorg_kvcache @ attention\mla_v1.py (HTML标记9行/实际7行)
+```python
+    def _reorg_kvcache(
+        self,
+        kv_c_normed: torch.Tensor,
+        k_pe: torch.Tensor,
+        chunked_context: ChunkedContextMetadata,
+        chunk_idx: int,
+        toks: int,
+```
+
+### _compute_prefill_context @ attention\mla_v1.py (HTML标记108行/实际9行)
+```python
+    def _compute_prefill_context(
+        self,
+        q_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        kv_c_and_k_pe_cache: tuple[torch.Tensor],
+        rope_dim: int,
+        attn_metadata: AscendMLAMetadata,
+        prefix_output: torch.Tensor,
+        prefix_lse: torch.Tensor,
+```
+
+### _forward_prefill @ attention\mla_v1.py (HTML标记71行/实际9行)
+```python
+    def _forward_prefill(
+        self,
+        q_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        k_nope: torch.Tensor,
+        k_pe: torch.Tensor,
+        value: torch.Tensor,
+        kv_c_and_k_pe_cache: tuple[torch.Tensor],
+        attn_metadata: AscendMLAMetadata,
+```
+
+### exec_kv_decode @ attention\mla_v1.py (HTML标记35行/实际7行)
+```python
+    def exec_kv_decode(
+        self,
+        kv_no_split: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        kv_cache: tuple,
+        slots: torch.Tensor,
+```
+
+### exec_kv_prefill @ attention\mla_v1.py (HTML标记51行/实际9行)
+```python
+    def exec_kv_prefill(
+        self,
+        kv_no_split: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        kv_cache: tuple,
+        slots: torch.Tensor,
+        *,
+        attn_metadata: AscendMLAMetadata | None = None,
+```
+
+### rope_single @ attention\mla_v1.py (HTML标记13行/实际5行)
+```python
+    def rope_single(
+        self,
+        x: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+```
+
+### _forward_decode @ attention\mla_v1.py (HTML标记212行/实际9行)
+```python
+    def _forward_decode(
+        self,
+        q_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        k_nope: torch.Tensor,
+        k_pe: torch.Tensor,
+        block_size: int,
+        attn_metadata: AscendMLAMetadata,
+        dequant_scale_q_nope=None,
+```
+
+### reorg_decode_q @ attention\mla_v1.py
+```python
+    def reorg_decode_q(self, decode_q_nope, decode_q_pe):
+        if self.mlapo_num_heads > self.num_heads:
+            decode_q_nope = decode_q_nope[:, : self.num_heads]
+            decode_q_pe = decode_q_pe[:, : self.num_heads]
+        return decode_q_nope, decode_q_pe
+```
+
+### mla_preprocess_only_decode @ attention\mla_v1.py
+```python
+    def mla_preprocess_only_decode(self, hidden_states, kv_cache, attn_metadata):
+        bsz = attn_metadata.num_decode_tokens
+        cache_index = attn_metadata.slot_mapping[:bsz].to(torch.int64)
+        decode_k_nope, decode_k_pe = kv_cache[0], kv_cache[1]
+        hidden_states = hidden_states[:bsz]
+
+        if self.support_fp8_attention:
+            if self.mlapo_weight_quant_mode == 0:
+                quantized_x = hidden_states
+                dequant_scale_x = None
+                dequant_scale_w_dq = None
+                dequant_scale_w_uq_qr = None
+                dequant_scale_w_dkv_kr = None
+            else:
+                hidden_states = hidden_states.unsqueeze(1)
+                quantized_x, dynamic_scale = torch_npu.npu_dynamic_mx_quant(hidden_states, dst_type=torch.float8_e4m3fn)
+                dequant_scale_x = dynamic_scale.reshape(quantized_x.shape[0] * quantized_x.shape[1], -1).view(
+                    torch.float8_e8m0fnu
+                )
+                dequant_scale_w_dq = self.dequant_scale_w_dq.view(torch.float8_e8m0fnu)
+                dequant_scale_w_uq_qr = self.dequant_scale_w_uq_qr.view(torch.float8_e8m0fnu)
+                dequant_scale_w_dkv_kr = self.dequant_scale_w_dkv_kr.view(torch.float8_e8m0fnu)
+            if self.use_mla_rope:
+                cos_shape = attn_metadata.decode.cos.shape
+                rope_shape = (
+                    (cos_shape[0], 1, cos_shape[-1]) if quantized_x.dim() == 3 else (cos_shape[0], cos_shape[-1])
+                )
+                cos = attn_metadata.decode.cos.view(rope_shape)
+                sin = attn_metadata.decode.sin.view(rope_shape)
+                prolog_op = torch_npu.npu_mla_prolog_v3
+            else:
+                cos = None
+                sin = None
+                prolog_op = _npu_mla_prolog_v3_no_rope
+            cache_index = cache_index.view(bsz, -1) if quantized_x.dim() == 3 else cache_index.view(-1)
+            cache_mode = "PA_BSND"
+            weight_quant_mode = self.mlapo_weight_quant_mode
+            quant_scale_ckv = self.fak_descale_reciprocal if self.fa_quant_layer else None
+        else:
+            cos_shape = attn_metadata.decode.cos.shape
+            quantized_x, dynamic_scale = torch_npu.npu_dynamic_quant(hidden_states)
+            dequant_scale_x = dynamic_scale.view(-1, 1)
+            dequant_scale_w_dq = self.dequant_scale_w_dq
+            dequant_scale_w_uq_qr = self.dequant_scale_w_uq_qr
+            dequant_scale_w_dkv_kr = self.dequant_scale_w_dkv_kr
+            cos = attn_metadata.decode.cos.view(cos_shape[0], cos_shape[-1])
+            sin = attn_metadata.decode.sin.view(cos_shape[0], cos_shape[-1])
+            prolog_op = torch_npu.npu_mla_prolog_v3
+            cache_mode = "PA_NZ" if (self.fa_quant_layer or self.enable_kv_nz) else "PA_BSND"
+            weight_quant_mode = 2
+            # v3 full-quant uses a per-tensor kv scale; quant_kscale is one scalar
+            # broadcast to (1, Hckv), so slice out the single per-tensor value.
+            quant_scale_ckv = self.quant_kscale[:, :1] if self.fa_quant_layer else None
+
+        decode_q_nope, decode_q_pe, dequant_scale_q_nope, _, _ = prolog_op(
+            kv_cache=decode_k_nope,
+            kr_cache=decode_k_pe,
+            token_x=quantized_x,
+            weight_dq=self.weight_dq,
+            weight_uq_qr=self.weight_uq_qr,
+```
+
+### _get_num_prefill_kv_tokens @ attention\mla_v1.py (HTML标记10行/实际3行)
+```python
+    def _get_num_prefill_kv_tokens(
+        self,
+        attn_metadata: AscendMLAMetadata,
+```
+
+### mla_preprocess_prefill @ attention\mla_v1.py
+```python
+    def mla_preprocess_prefill(self, q_c, kv_no_split, kv_cache, attn_metadata):
+        num_decode_tokens = attn_metadata.num_decode_tokens
+        num_actual_tokens = attn_metadata.num_actual_tokens
+        num_actual_prefill_tokens = num_actual_tokens - num_decode_tokens
+        num_prefill_kv_tokens = self._get_num_prefill_kv_tokens(attn_metadata)
+        prefill_kv_no_split = kv_no_split[num_decode_tokens : num_decode_tokens + num_prefill_kv_tokens]
+        prefill_q_c = q_c[num_decode_tokens:num_actual_tokens]
+        prefill_q = self.q_proj(prefill_q_c)[0].view(-1, self.num_heads, self.qk_head_dim)
+        prefill_q_pe = prefill_q[..., self.qk_nope_head_dim :]
+        prefill_q_nope = prefill_q[..., : self.qk_nope_head_dim]
+        cos = attn_metadata.prefill.cos
+        sin = attn_metadata.prefill.sin
+        prefill_slots = attn_metadata.slot_mapping[num_decode_tokens:num_actual_tokens]
+        prefill_q_pe = self.rope_single(
+            prefill_q_pe,
+            cos[:num_actual_prefill_tokens] if cos is not None else None,
+            sin[:num_actual_prefill_tokens] if sin is not None else None,
+        )
+        prefill_k_pe, prefill_k_c_normed = self.exec_kv_prefill(
+            prefill_kv_no_split,
+            cos[:num_prefill_kv_tokens] if cos is not None else None,
+            sin[:num_prefill_kv_tokens] if sin is not None else None,
+            kv_cache,
+            prefill_slots,
+            attn_metadata=attn_metadata,
+        )
+        prefill_k_nope, prefill_value = (
+            self.kv_b_proj(prefill_k_c_normed)[0]
+            .view(-1, self.num_heads, self.qk_nope_head_dim + self.v_head_dim)
+            .split([self.qk_nope_head_dim, self.v_head_dim], dim=-1)
+        )
+        prefill_k_pe = prefill_k_pe.view(prefill_q_c.shape[0], self.num_kv_heads, -1)
+        prefill_k_pe = prefill_k_pe.expand((*prefill_k_nope.shape[:-1], -1))
+        return PrefillMLAPreprocessResult(prefill_q_nope, prefill_q_pe, prefill_k_nope, prefill_k_pe, prefill_value)
+```
+
+### mla_preprocess_decode @ attention\mla_v1.py
+```python
+    def mla_preprocess_decode(self, q_c, kv_no_split, kv_cache, attn_metadata):
+        num_decode_tokens = attn_metadata.num_decode_tokens
+        decode_q_c = q_c[:num_decode_tokens]
+        cos = attn_metadata.decode.cos
+        sin = attn_metadata.decode.sin
+        decode_ql_nope, decode_q_pe = self._q_proj_and_k_up_proj(decode_q_c)
+        decode_ql_nope, decode_q_pe = self.reorg_decode_q(
+            decode_ql_nope,
+            decode_q_pe,
+        )
+        decode_q_pe = self.rope_single(decode_q_pe, cos, sin)
+        dequant_scale_q_nope = None
+        if self.fa_quant_layer and self.support_fp8_attention:
+            decode_ql_nope, dequant_scale_q_nope = torch_npu.npu_dynamic_quant(
+                decode_ql_nope, dst_type=torch.float8_e4m3fn
+            )
+            decode_q_pe = (decode_q_pe / dequant_scale_q_nope.unsqueeze(-1) / self.fak_descale_float).to(torch.bfloat16)
+        decode_slots = attn_metadata.slot_mapping[:num_decode_tokens:1]
+        decode_kv_no_split = kv_no_split[:num_decode_tokens]
+        decode_k_pe, decode_k_nope = self.exec_kv_decode(decode_kv_no_split, cos, sin, kv_cache, decode_slots)
+        return DecodeMLAPreprocessResult(
+            decode_ql_nope, decode_q_pe, decode_k_nope, decode_k_pe, dequant_scale_q_nope=dequant_scale_q_nope
+        )
+```
+
+### _mla_preprocess @ attention\mla_v1.py
+```python
+    def _mla_preprocess(self, layer_name, hidden_states, kv_cache, attn_metadata):
+        # MLA Preprocess:
+        # 1. Perform fused_qkv_a_proj and q_a_layernorm to obtain q_c and kv_no_split
+        # or
+        #    Perform kv_a_proj_with_mqa to obtain kv_no_split
+        # 2. Preprocess decode tokens, write kv cache and get:
+        # decode_ql_nope, decode_q_pe, decode_k_pe, decode_k_nope
+        # 3. Preprocess prefill tokens, write kv cache and get:
+        # prefill_q_nope, prefill_q_pe, prefill_k_nope, prefill_k_pe, prefill_value
+        has_decode = attn_metadata.num_decodes > 0
+        has_prefill = attn_metadata.num_prefills > 0
+        if self.fused_qkv_a_proj is not None:
+            qkv_lora = self.fused_qkv_a_proj(hidden_states)[0]
+            q_c, kv_no_split = qkv_lora.split(
+                [self.q_lora_rank, self.kv_lora_rank + self.qk_rope_head_dim],
+                dim=-1,
+            )
+            q_c = self.q_a_layernorm(q_c)  # type: ignore[misc]
+            kv_no_split = kv_no_split.contiguous()
+        else:
+            q_c = hidden_states
+            kv_no_split = self.kv_a_proj_with_mqa(hidden_states)[0]  # type: ignore[misc]
+
+        decode_preprocess_res = None
+        prefill_preprocess_res = None
+        if has_prefill:
+            wait_for_kv_layer_from_connector(layer_name)
+        # Preprocess for decode tokens
+        if has_decode:
+            decode_preprocess_res = self.mla_preprocess_decode(q_c, kv_no_split, kv_cache, attn_metadata)
+        # Preprocess for prefill tokens
+        if has_prefill:
+            prefill_preprocess_res = self.mla_preprocess_prefill(q_c, kv_no_split, kv_cache, attn_metadata)
+        # Let the connector record any sync primitive it needs once the paged KV
+        # cache for this layer has been written. No-op for connectors that don't
+        # implement on_kv_cache_written; the decision to actually transfer is made
+        # by the connector/scheduler, not here.
+        notify_kv_cache_written(layer_name)
+        return decode_preprocess_res, prefill_preprocess_res
+```
+
+### get_num_actual_tokens @ attention\mla_v1.py
+```python
+    def get_num_actual_tokens(self, attn_metadata: M):
+        return attn_metadata.num_actual_tokens
+```
+
+### forward_mha @ attention\mla_v1.py (HTML标记9行/实际7行)
+```python
+    def forward_mha(
+        self,
+        layer_name: str,
+        hidden_states: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: M,
+        output: torch.Tensor | None = None,
+```
+
+### forward_mqa @ attention\mla_v1.py (HTML标记9行/实际7行)
+```python
+    def forward_mqa(
+        self,
+        layer_name: str,
+        hidden_states: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: M,
+        output: torch.Tensor | None = None,
+```
+
+### _populate_offload_metadata @ attention\sfa_kv_offload.py (HTML标记21行/实际4行)
+```python
+    def _populate_offload_metadata(
+        self,
+        metadata: AscendSFAMetadata,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+```
+
+### _resolve_preprocess_type @ attention\sfa_kv_offload.py
+```python
+    def _resolve_preprocess_type(self, act_dtype: torch.dtype) -> PreprocessType:
+        logger.warning_once(
+            "Sparse KV offload requires the native SFA preprocessing path; sfa_prolog_v3/mlapo is disabled."
+        )
+        return PreprocessType.NATIVE
+```
+
+### _cpu_cache_pair @ attention\sfa_kv_offload.py
+```python
+    def _cpu_cache_pair(manager, layer_name: str):
+        layer_id = manager._get_offload_layer_id(layer_name)
+        if manager.tp_rank != 0:
+            return None, None
+        return manager.k_caches_cpu[layer_id], manager.v_caches_cpu[layer_id]
+```
+
+### _resident_views @ attention\sfa_kv_offload.py
+```python
+    def _resident_views(manager, layer_name: str, rows: int):
+        layer_id = manager._get_offload_layer_id(layer_name)
+        buffer_k = manager.topk_buffers_k[layer_id]
+        buffer_v = manager.topk_buffers_v[layer_id]
+        pages_per_row = manager.topk_buffer_size // manager.block_size
+        resident_pages = rows * pages_per_row
+        resident_k = buffer_k[:rows].view(
+            resident_pages,
+            manager.block_size,
+            buffer_k.shape[-2],
+            buffer_k.shape[-1],
+        )
+        resident_v = buffer_v[:rows].view(
+            resident_pages,
+            manager.block_size,
+            buffer_v.shape[-2],
+            buffer_v.shape[-1],
+        )
+        return (
+            resident_k,
+            resident_v,
+            manager.current_slots_npu[:rows],
+            manager.resident_block_table_npu[:rows],
+            manager.resident_query_lens_npu[:rows],
+            manager.resident_seq_lens_npu[:rows],
+        )
+```
+
+### _offload_layer_name @ attention\sfa_kv_offload.py
+```python
+    def _offload_layer_name(self) -> str:
+        layer_name = self.layer_name or self._current_layer_name
+        if layer_name is None:
+            raise RuntimeError("Sparse KV offload requires a bound attention layer name")
+        return layer_name
+```
+
+### _is_decode_only @ attention\sfa_kv_offload.py
+```python
+    def _is_decode_only(attn_metadata: M) -> bool:
+        return (
+            attn_metadata.attn_state in (AscendAttentionState.DecodeOnly, AscendAttentionState.SpecDecoding)
+            and int(getattr(attn_metadata, "num_prefills", 0) or 0) == 0
+            and int(getattr(attn_metadata, "num_decodes", 0) or 0) > 0
+        )
+```
+
+### _pad_to_input_tokens @ attention\sfa_kv_offload.py (HTML标记9行/实际3行)
+```python
+    def _pad_to_input_tokens(
+        attn_output: torch.Tensor,
+        num_input_tokens: int,
+```
+
+### _in_graph_runtime @ attention\sfa_kv_offload.py
+```python
+    def _in_graph_runtime() -> bool:
+        if not is_forward_context_available():
+            return False
+        forward_context = get_forward_context()
+        runtime_mode = getattr(
+            forward_context,
+            "cudagraph_runtime_mode",
+            CUDAGraphMode.NONE,
+        )
+        return forward_context.capturing or runtime_mode not in (
+            None,
+            CUDAGraphMode.NONE,
+        )
+```
+
+### _execute_sparse_flash_attention_process @ attention\sfa_kv_offload.py (HTML标记126行/实际10行)
+```python
+    def _execute_sparse_flash_attention_process(
+        self,
+        ql_nope,
+        q_pe,
+        kv_cache,
+        topk_indices,
+        attn_metadata,
+        actual_seq_lengths_query,
+        actual_seq_lengths_key,
+        block_table=None,
+```
+
+### _get_layer_quant_method @ attention\sfa_v1.py
+```python
+    def _get_layer_quant_method(layer: torch.nn.Module | None):
+        return getattr(getattr(layer, "quant_method", None), "quant_method", None)
+```
+
+### _resolve_preprocess_type @ attention\sfa_v1.py
+```python
+    def _resolve_preprocess_type(self, act_dtype: torch.dtype) -> PreprocessType:
+        quant_method = self._get_layer_quant_method(self.fused_qkv_a_proj)
+        self._quant_type = type(quant_method) if quant_method is not None else None
+        qt = self._quant_type
+
+        if self.is_kv_consumer and (
+            (qt is AscendW8A8DynamicLinearMethod and self.enable_sparse_sfa_c8)
+            or qt is AscendW8A8MXFP8DynamicLinearMethod
+            or qt is None
+        ):
+            if self._try_enable_type(PreprocessType.PROLOG_V3, act_dtype):
+                return PreprocessType.PROLOG_V3
+
+        if qt is AscendW8A8LinearMethod and self.enable_mlapo:
+            if self._try_enable_type(PreprocessType.MLAPO, act_dtype):
+                return PreprocessType.MLAPO
+
+        return PreprocessType.NATIVE
+```
+
+### _try_enable_type @ attention\sfa_v1.py
+```python
+    def _try_enable_type(self, pp_type: PreprocessType, act_dtype: torch.dtype) -> bool:
+        reasons = self._get_fused_type_unsupported_reasons(pp_type)
+        if reasons:
+            for msg in reasons:
+                logger.warning_once(msg)
+            return False
+        if pp_type is PreprocessType.PROLOG_V3:
+            self._process_weights_for_fused_prolog_v3()
+        else:
+            self._process_weights_for_fused_mlapo(act_dtype)
+        return True
+```
+
+### _get_fused_type_unsupported_reasons @ attention\sfa_v1.py
+```python
+    def _get_fused_type_unsupported_reasons(self, pp_type: PreprocessType) -> list[str]:
+        reasons = []
+        if self.kv_a_layernorm is None or self.q_a_layernorm is None:
+            reasons.append("Fused preprocessing requires q_a_layernorm and kv_a_layernorm.")
+        if self.fused_qkv_a_proj is None:
+            reasons.append("fused_qkv_a_proj is None, mlapo is disabled.")
+
+        if pp_type is PreprocessType.PROLOG_V3:
+            if self.is_kv_producer:
+                reasons.append("PROLOG_V3 is disabled on KV producer workers.")
+            if self._quant_type is None and self.enable_sparse_sfa_c8:
+                reasons.append("PROLOG_V3: C8 sparse requires quantized MLAPO.")
+            if getattr(self.q_proj, "_chunk_size", 0):
+                reasons.append("PROLOG_V3 does not support chunked q_proj weights yet.")
+        elif pp_type is PreprocessType.MLAPO:
+            if self.enable_sparse_sfa_c8:
+                reasons.append("MLAPO does not support sparse C8; use PROLOG_V3 instead.")
+
+        return reasons
+```
+
+### _process_weights_for_fused_prolog_v3 @ attention\sfa_v1.py
+```python
+    def _process_weights_for_fused_prolog_v3(self) -> None:
+        assert self.fused_qkv_a_proj is not None
+        assert self.q_proj is not None
+
+        qt = self._quant_type
+
+        if qt is None:
+            self.fused_qkv_a_proj.weight.data = self.fused_qkv_a_proj.weight.data.T
+
+        fused_weight = self.fused_qkv_a_proj.weight.data
+        weight_dq = fused_weight[..., : self.q_lora_rank].contiguous()
+        weight_dkv_kr = fused_weight[..., self.q_lora_rank :].contiguous()
+        if qt is not None:
+            weight_uq_qr = self.q_proj.weight.data.contiguous()
+        else:
+            weight_uq_qr = self.q_proj.weight.data.T.contiguous()
+
+        self.weight_dq = torch_npu.npu_format_cast(weight_dq, ACL_FORMAT_FRACTAL_NZ)
+        self.weight_dkv_kr = torch_npu.npu_format_cast(weight_dkv_kr, ACL_FORMAT_FRACTAL_NZ)
+        self.weight_uq_qr = torch_npu.npu_format_cast(weight_uq_qr, ACL_FORMAT_FRACTAL_NZ)
+
+        if qt is AscendW8A8DynamicLinearMethod:
+            q_scl = self.fused_qkv_a_proj.weight_scale[: self.q_lora_rank].contiguous()
+            kv_scl = self.fused_qkv_a_proj.weight_scale[self.q_lora_rank :].contiguous()
+            self.dequant_scale_w_dq = q_scl.view(1, -1).to(torch.float)
+            self.dequant_scale_w_dkv_kr = kv_scl.view(1, -1).to(torch.float)
+            self.dequant_scale_w_uq_qr = self.q_proj.weight_scale.data.view(1, -1).to(torch.float)
+            if self.enable_sparse_sfa_c8:
+                self.sfa_qsfa_k_nope_clip_alpha = torch.ones(
+                    1,
+                    dtype=torch.float32,
+                    device=self.weight_dq.device,
+                )
+        elif qt is AscendW8A8MXFP8DynamicLinearMethod:
+            w_scale = self.fused_qkv_a_proj.weight_scale
+            w_scale = w_scale.transpose(0, 1)
+            w_scale = w_scale.reshape(-1, w_scale.shape[1] * w_scale.shape[2])
+            self.weight_dq_scale = w_scale[: self.q_lora_rank, ...]
+            self.weight_dkv_kr_scale = w_scale[self.q_lora_rank :, ...]
+
+            uq_scale = self.q_proj.weight_scale.data.transpose(0, 1)
+            self.weight_uq_qr_scale = uq_scale.reshape(-1, uq_scale.shape[1] * uq_scale.shape[2])
+
+        if self.is_kv_consumer:
+            dispose_layer(self.fused_qkv_a_proj)
+            dispose_layer(self.q_proj)
+            torch.npu.empty_cache()
+```
+
+### _process_weights_for_fused_mlapo @ attention\sfa_v1.py
+```python
+    def _process_weights_for_fused_mlapo(self, act_dtype: torch.dtype):
+        assert self.kv_a_proj_with_mqa is None
+        assert self.fused_qkv_a_proj is not None
+
+        kv_a_proj_wt = self.fused_qkv_a_proj.weight.data[..., self.q_lora_rank :].contiguous()
+        q_a_proj_wt = self.fused_qkv_a_proj.weight.data[..., : self.q_lora_rank].contiguous()
+
+        kv_a_proj_wt = kv_a_proj_wt.t().contiguous()
+        kv_a_proj_wt = trans_rope_weight(kv_a_proj_wt, self.qk_rope_head_dim)
+        kv_a_proj_wt = kv_a_proj_wt.t().contiguous()
+        wd_qkv = torch.cat((kv_a_proj_wt, q_a_proj_wt), dim=-1)
+        wd_qkv = wd_qkv.t().contiguous()
+        wd_qkv = transdata(wd_qkv, block_size=(16, 32)).unsqueeze(0).contiguous()
+        self.wd_qkv = torch_npu.npu_format_cast(wd_qkv, ACL_FORMAT_FRACTAL_NZ)
+
+        kv_a_proj_deq_scl = self.fused_qkv_a_proj.deq_scale[self.q_lora_rank :].contiguous()
+        q_a_proj_deq_scl = self.fused_qkv_a_proj.deq_scale[: self.q_lora_rank].contiguous()
+        kv_a_proj_deq_scl = kv_a_proj_deq_scl.reshape(self.kv_lora_rank + self.qk_rope_head_dim, -1).contiguous()
+        kv_a_proj_deq_scl = trans_rope_weight(kv_a_proj_deq_scl, self.qk_rope_head_dim)
+        kv_a_proj_deq_scl = kv_a_proj_deq_scl.view(self.kv_lora_rank + self.qk_rope_head_dim).contiguous()
+        self.deq_scale_qkv = torch.cat((kv_a_proj_deq_scl, q_a_proj_deq_scl), dim=-1).contiguous()
+
+        kv_a_proj_qt_bias = self.fused_qkv_a_proj.quant_bias[self.q_lora_rank :].contiguous()
+        q_a_proj_qt_bias = self.fused_qkv_a_proj.quant_bias[: self.q_lora_rank].contiguous()
+
+        kv_a_proj_qt_bias = kv_a_proj_qt_bias.reshape(self.kv_lora_rank + self.qk_rope_head_dim, -1).contiguous()
+        kv_a_proj_qt_bias = trans_rope_weight(kv_a_proj_qt_bias, self.qk_rope_head_dim)
+        kv_a_proj_qt_bias = kv_a_proj_qt_bias.view(self.kv_lora_rank + self.qk_rope_head_dim).contiguous()
+        self.quant_bias_qkv = torch.cat((kv_a_proj_qt_bias, q_a_proj_qt_bias), dim=-1).contiguous()
+
+        wu_q = self.q_proj.weight.data
+        wu_q = wu_q.t().reshape(self.num_heads, self.qk_nope_head_dim + self.qk_rope_head_dim, -1)
+        wu_q = trans_rope_weight(wu_q, self.qk_rope_head_dim)
+        wu_q = wu_q.reshape(self.num_heads * (self.qk_nope_head_dim + self.qk_rope_head_dim), -1)
+        wu_q = transdata(wu_q, block_size=(16, 32)).unsqueeze(0).contiguous()
+        self.wu_q = torch_npu.npu_format_cast(wu_q, ACL_FORMAT_FRACTAL_NZ)
+
+        qb_deq_scl = self.q_proj.deq_scale.data
+        qb_deq_scl = qb_deq_scl.reshape(self.num_heads, self.qk_nope_head_dim + self.qk_rope_head_dim, -1)
+        qb_deq_scl = trans_rope_weight(qb_deq_scl, self.qk_rope_head_dim)
+        self.qb_deq_scl = qb_deq_scl.reshape(self.num_heads * (self.qk_nope_head_dim + self.qk_rope_head_dim))
+
+        qb_qt_bias = self.q_proj.quant_bias.data
+        qb_qt_bias = qb_qt_bias.reshape(self.num_heads, self.qk_nope_head_dim + self.qk_rope_head_dim, -1)
+        qb_qt_bias = trans_rope_weight(qb_qt_bias, self.qk_rope_head_dim)
+        self.qb_qt_bias = qb_qt_bias.reshape(self.num_heads * (self.qk_nope_head_dim + self.qk_rope_head_dim))
+
+        device = self.q_proj.weight.device
+        self.gamma1 = self.q_a_layernorm.weight.data  # type: ignore[union-attr]
+        self.beta1 = self.q_a_layernorm.bias.data  # type: ignore[union-attr]
+        self.gamma2 = self.kv_a_layernorm.weight.data  # type: ignore[union-attr]
+        self.quant_scale0 = self.fused_qkv_a_proj.input_scale.data
+        self.quant_offset0 = self.fused_qkv_a_proj.input_offset.data
+        self.quant_scale1 = self.q_proj.input_scale.data
+        self.quant_offset1 = self.q_proj.input_offset.data
+        self.ctkv_scale = torch.tensor([1], dtype=act_dtype, device=device)
+        self.q_nope_scale = torch.tensor([1], dtype=act_dtype, device=device)
+
+        # On KV consumers (decode-only) MLAPO uses the transformed weights built above;
+        # the original fused_qkv_a_proj/q_proj weights and quant params are no longer
+```
+
+### forward_mha @ attention\sfa_v1.py (HTML标记11行/实际9行)
+```python
+    def forward_mha(
+        self,
+        q: torch.Tensor,
+        kv_c_normed: torch.Tensor,
+        k_pe: torch.Tensor,
+        kv_c_and_k_pe_cache: torch.Tensor,
+        attn_metadata: M,
+        k_scale: torch.Tensor,
+        output: torch.Tensor,
+```
+
+### forward_mqa @ attention\sfa_v1.py (HTML标记8行/实际6行)
+```python
+    def forward_mqa(
+        self,
+        q: torch.Tensor | tuple[torch.Tensor, torch.Tensor],
+        kv_c_and_k_pe_cache: torch.Tensor,
+        attn_metadata: M,
+        layer,
+```
+
+### rope_single @ attention\sfa_v1.py (HTML标记11行/实际5行)
+```python
+    def rope_single(
+        self,
+        x: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+```
+
+### _q_proj_and_k_up_proj @ attention\sfa_v1.py
+```python
+    def _q_proj_and_k_up_proj(self, x):
+        q_nope, q_pe = (
+            self.q_proj(x)[0]
+            .view(-1, self.local_num_heads, self.qk_head_dim)
+            .split([self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1)
+        )
+
+        # Convert from (B, N, P) to (N, B, P)
+        q_nope = q_nope.transpose(0, 1)
+        # Multiply (N, B, P) x (N, P, L) -> (N, B, L)
+        ql_nope = torch.bmm(q_nope, self.W_UK_T)
+        # Convert from (N, B, L) to (B, N, L)
+        return ql_nope.transpose(0, 1), q_pe
+```
+
+### _v_up_proj @ attention\sfa_v1.py
+```python
+    def _v_up_proj(self, x):
+        num_input_tokens, _, _ = x.shape
+        if (
+            x.dtype in [torch.float16, torch.bfloat16]
+            and hasattr(torch.ops._C_ascend, "batch_matmul_transpose")
+            and num_input_tokens <= BMM_TRANS_MAX_SUPPORTED_TOKENS
+        ):
+            x = x.view(-1, self.local_num_heads, self.kv_lora_rank)
+            res = torch.empty((num_input_tokens, self.local_num_heads, self.v_head_dim), dtype=x.dtype, device=x.device)
+            torch.ops._C_ascend.batch_matmul_transpose(x, self.W_UV, res)
+            x = res.reshape(-1, self.local_num_heads * self.v_head_dim)
+        elif hasattr(torch_npu, "npu_transpose_batchmatmul"):
+            # Convert from (N, B, L)/(N, B, 1, L) to (N, B, L)
+            x = x.view(-1, self.local_num_heads, self.kv_lora_rank)
+            # Multiply (N, B, L) x (N, L, V) -> (B, N, V)
+            x = torch_npu.npu_transpose_batchmatmul(x, self.W_UV, perm_x1=(1, 0, 2), perm_y=(1, 0, 2))
+            # Convert from (N, B, V) to (B, N * V)
+            x = x.reshape(-1, self.local_num_heads * self.v_head_dim)
+        else:
+            # Convert from (B, N, L) to (N, B, L)
+            x = x.view(-1, self.local_num_heads, self.kv_lora_rank).transpose(0, 1)
+            # # Multiply (N, B, L) x (N, L, V) -> (N, B, V)
+            x = torch.bmm(x, self.W_UV)
+            # # Convert from (N, B, V) to (B, N * V)
+            x = x.transpose(0, 1).reshape(-1, self.local_num_heads * self.v_head_dim)
+        return x
+```
+
+### _sfa_preprocess_prolog_v3 @ attention\sfa_v1.py (HTML标记113行/实际7行)
+```python
+    def _sfa_preprocess_prolog_v3(
+        self,
+        hidden_states: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        slot_mapping: torch.Tensor,
+```
+
+### indexer_select_pre_process @ attention\sfa_v1.py (HTML标记48行/实际5行)
+```python
+    def indexer_select_pre_process(
+        self,
+        x: torch.Tensor,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+```
+
+### indexer_select_post_process @ attention\sfa_v1.py (HTML标记83行/实际10行)
+```python
+    def indexer_select_post_process(
+        self,
+        x: torch.Tensor,
+        q_c: torch.Tensor | tuple[torch.Tensor, torch.Tensor],
+        kv_cache: tuple[torch.Tensor, ...],
+        attn_metadata: M,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        actual_seq_lengths_query: torch.Tensor,
+        actual_seq_lengths_key: torch.Tensor,
+```
+
+### _get_indexcache_topk_indices @ attention\sfa_v1.py
+```python
+    def _get_indexcache_topk_indices(self, num_tokens: int) -> torch.Tensor:
+        if self.topk_indices_buffer is None:
+            raise RuntimeError("IndexCache requires topk_indices_buffer when skip_topk is enabled.")
+        topk_indices = self.topk_indices_buffer[:num_tokens]
+        if topk_indices.dim() == 2:
+            topk_indices = topk_indices.unsqueeze(1)
+        return topk_indices
+```
+
+### _update_indexcache_topk_indices @ attention\sfa_v1.py
+```python
+    def _update_indexcache_topk_indices(self, topk_indices: torch.Tensor) -> None:
+        if self.topk_indices_buffer is None:
+            return
+        num_tokens = topk_indices.shape[0]
+        topk_tokens = topk_indices.shape[-1]
+        topk_indices_to_cache = topk_indices
+        topk_indices_buffer = self.topk_indices_buffer[:num_tokens, :topk_tokens]
+        if topk_indices_to_cache.dim() == 3 and topk_indices_buffer.dim() == 2:
+            assert topk_indices_to_cache.shape[1] == 1
+            topk_indices_to_cache = topk_indices_to_cache.squeeze(1)
+        topk_indices_buffer.copy_(topk_indices_to_cache)
+```
+
+### _execute_sparse_flash_attention_process @ attention\sfa_v1.py (HTML标记22行/实际10行)
+```python
+    def _execute_sparse_flash_attention_process(
+        self,
+        ql_nope,
+        q_pe,
+        kv_cache,
+        topk_indices,
+        attn_metadata,
+        actual_seq_lengths_query,
+        actual_seq_lengths_key,
+        block_table=None,
+```
+
+### _record_query_gather_context @ attention\sfa_v1.py (HTML标记7行/实际5行)
+```python
+    def _record_query_gather_context(
+        self,
+        ql_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        attn_metadata: M,
+```
+
+### _get_parallel_forward_context @ attention\sfa_v1.py (HTML标记12行/实际5行)
+```python
+    def _get_parallel_forward_context(
+        self,
+        attn_metadata: M,
+        num_input_tokens: int,
+        hidden_states: torch.Tensor,
+```
+
+### _prepare_native_hidden_states @ attention\sfa_v1.py (HTML标记6行/实际4行)
+```python
+    def _prepare_native_hidden_states(
+        self,
+        hidden_states: torch.Tensor,
+        attn_metadata: M,
+```
+
+### _finalize_o_proj @ attention\sfa_v1.py (HTML标记8行/实际5行)
+```python
+    def _finalize_o_proj(
+        self,
+        attn_output: torch.Tensor,
+        output: torch.Tensor,
+        gather_full_o_proj: bool,
+```
+
+### _get_sfa_kv_slot_mapping @ attention\sfa_v1.py (HTML标记5行/实际3行)
+```python
+    def _get_sfa_kv_slot_mapping(
+        self,
+        attn_metadata: M,
+```
+
+### _write_indexer_cache @ attention\sfa_v1.py (HTML标记45行/实际7行)
+```python
+    def _write_indexer_cache(
+        self,
+        k_li: torch.Tensor,
+        k_li_scale: torch.Tensor | None,
+        slot_mapping: torch.Tensor,
+        kv_cache: tuple,
+        attn_metadata: M,
+```
+
+### custom_kv_rmsnorm_rope @ attention\sfa_v1.py (HTML标记37行/实际11行)
+```python
+def custom_kv_rmsnorm_rope(
+    kv: torch.Tensor,
+    gamma: torch.Tensor,
+    cos: torch.Tensor,
+    sin: torch.Tensor,
+    kv_lora_rank: int,
+    qk_rope_head_dim: int,
+    *,
+    epsilon: float = 1e-5,
+    dst_type: torch.dtype | int = torch.float8_e4m3fn,
+    tile_size: int = SFA_QSFA_TILE_SIZE,
+```
+
+### transdata @ attention\utils.py
+```python
+def transdata(nd_mat, block_size: tuple = (16, 16)):
+    r = round_up(nd_mat.shape[0], block_size[0])
+    c = round_up(nd_mat.shape[1], block_size[1])
+    r_pad = r - nd_mat.shape[0]
+    c_pad = c - nd_mat.shape[1]
+    nd_mat = F.pad(nd_mat, (0, r_pad, 0, c_pad))
+    nz_mat = torch.permute(
+        torch.reshape(
+            nd_mat,
+            (r // block_size[0], block_size[0], c // block_size[1], block_size[1]),
+        ),
+        [2, 0, 1, 3],
+    )
+    nz_mat = torch.reshape(nz_mat, (nz_mat.shape[0], nz_mat.shape[1] * nz_mat.shape[2], nz_mat.shape[3]))
+    return nz_mat
+```
+
+### enabling_mlapo @ attention\utils.py
+```python
+def enabling_mlapo(vllm_config: VllmConfig) -> bool:
+    config_val = get_ascend_config().enable_mlapo
+    if get_current_hardware_profile().supports(HardwareCapability.UNRESTRICTED_MLAPO):
+        return bool(config_val)
+
+    is_decode_instance = (
+        vllm_config.kv_transfer_config is not None
+        and vllm_config.kv_transfer_config.is_kv_consumer
+        and not vllm_config.kv_transfer_config.is_kv_producer
+    )
+    return bool(config_val and is_decode_instance)
+```
+
+### _get_chunked_req_mask @ attention\context_parallel\attention_cp.py
+```python
+    def _get_chunked_req_mask(local_context_lens_allranks) -> list[bool]:
+        if len(local_context_lens_allranks) == 0:
+            return []
+        return [(req.sum() > 0).item() for req in local_context_lens_allranks if req is not None]
+```
+
+### _forward_decode_dcp @ attention\context_parallel\attention_cp.py (HTML标记116行/实际4行)
+```python
+    def _forward_decode_dcp(
+        self,
+        query: torch.Tensor,
+        attn_metadata: AscendAttentionDCPMetadata,
+```
+
+### _update_chunk_attn_out_lse_with_current_attn_out_lse @ attention\context_parallel\attention_cp.py (HTML标记29行/实际8行)
+```python
+    def _update_chunk_attn_out_lse_with_current_attn_out_lse(
+        self,
+        current_attn_output_prefill,
+        current_attn_lse_prefill,
+        attn_output_full_chunk,
+        attn_lse_full_chunk,
+        prefill_query,
+        attn_metadata,
+```
+
+### _prefill_query_all_gather @ attention\context_parallel\attention_cp.py
+```python
+    def _prefill_query_all_gather(self, attn_metadata, prefill_query):
+        return self._dcp_all_gather(prefill_query, 1)
+```
+
+### _compute_prefill_context @ attention\context_parallel\attention_cp.py (HTML标记50行/实际5行)
+```python
+    def _compute_prefill_context(
+        self,
+        query: torch.Tensor,
+        kv_cache: tuple[torch.Tensor],
+        attn_metadata: AscendAttentionDCPMetadata,
+```
+
+### _load_kv_for_chunk @ attention\context_parallel\attention_cp.py
+```python
+    def _load_kv_for_chunk(self, attn_metadata, kv_cache, local_chunked_kv_lens_rank, query, total_toks):
+        cache_key = kv_cache[0]
+        cache_value = kv_cache[1]
+        num_heads = cache_key.size(2)
+        head_size = kv_cache[0].size(-1)
+
+        key = torch.empty(total_toks, num_heads, head_size, dtype=query.dtype, device=query.device)
+        value = torch.empty(total_toks, num_heads, head_size, dtype=query.dtype, device=query.device)
+        if total_toks > 0:
+            DeviceOperator.kv_cache_load(
+                cache_key,
+                cache_value,
+                attn_metadata.prefill.block_tables,
+                local_chunked_kv_lens_rank,
+                # slot offsets of current chunk in current iteration
+                attn_metadata.prefill.chunked_context.starts,
+                key=key,
+                value=value,
+            )
+        return key, value
+```
+
+### _gather_global_context_output @ attention\context_parallel\attention_cp.py
+```python
+    def _gather_global_context_output(self, local_context_attn_output):
+        if self.dcp_size > 1:
+            dcp_context_attn_output = torch.empty_like(local_context_attn_output)
+            dist.all_to_all_single(
+                dcp_context_attn_output,
+                local_context_attn_output,
+                group=self.dcp_device_group,
+            )
+        else:
+            dcp_context_attn_output = local_context_attn_output
+
+        return dcp_context_attn_output
+```
+
+### _update_global_context_output @ attention\context_parallel\attention_cp.py
+```python
+    def _update_global_context_output(self, global_context_output):
+        B_total, H_total, D_plus_1 = global_context_output.shape
+        S = B_total
+        H = H_total // self.dcp_size
+        D = self.head_size
+        assert D_plus_1 == D + 1
+        x = global_context_output.view(S, self.dcp_size, H, D_plus_1)
+        x = x.permute(1, 0, 2, 3).contiguous()
+        # Split out lse
+        attn_out_allgather, attn_lse_allgather = torch.split(x, [D, 1], dim=-1)  # [N, S, H, D], [N, S, H, 1]
+        context_output, context_lse = _update_out_and_lse(attn_out_allgather, attn_lse_allgather)
+        return context_output, context_lse
+```
+
+### _require_dcp_metadata @ attention\context_parallel\common_cp.py (HTML标记7行/实际2行)
+```python
+    def _require_dcp_metadata(
+        common_attn_metadata: Any,
+```
+
+### _get_dcp_context_lens @ attention\context_parallel\common_cp.py (HTML标记15行/实际7行)
+```python
+    def _get_dcp_context_lens(
+        self,
+        common_attn_metadata: Any,
+        *,
+        start: int = 0,
+        end: int | None = None,
+        device: torch.device | None = None,
+```
+
+### _get_dcp_rank_context_lens @ attention\context_parallel\common_cp.py (HTML标记14行/实际7行)
+```python
+    def _get_dcp_rank_context_lens(
+        self,
+        common_attn_metadata: Any,
+        *,
+        start: int = 0,
+        end: int | None = None,
+        device: torch.device | None = None,
+```
+
+### _dcp_all_gather @ attention\context_parallel\common_cp.py (HTML标记8行/实际4行)
+```python
+    def _dcp_all_gather(
+        self,
+        tensor: torch.Tensor,
+        dim: int,
+```
+
+### _dcp_all_gather_fragments @ attention\context_parallel\common_cp.py (HTML标记13行/实际4行)
+```python
+    def _dcp_all_gather_fragments(
+        self,
+        *tensors: torch.Tensor,
+        dim: int,
+```
+
+### _merge_dcp_attention_output @ attention\context_parallel\common_cp.py (HTML标记16行/实际5行)
+```python
+    def _merge_dcp_attention_output(
+        self,
+        attn_output: torch.Tensor,
+        softmax_lse: torch.Tensor,
+        head_size: int,
+```
+
+### _process_attn_out_lse @ attention\context_parallel\common_cp.py (HTML标记27行/实际6行)
+```python
+def _process_attn_out_lse(
+    attn_output: torch.Tensor,
+    softmax_lse: torch.Tensor,
+    *,
+    dcp_size: int | None = None,
+    dcp_device_group=None,
+```
+
+### _npu_attention_update @ attention\context_parallel\common_cp.py (HTML标记28行/实际5行)
+```python
+def _npu_attention_update(
+    head_size,
+    attn_out_lse: torch.Tensor,
+    *,
+    dcp_size: int | None = None,
+```
+
+### _npu_attn_out_lse_update @ attention\context_parallel\common_cp.py
+```python
+def _npu_attn_out_lse_update(attn_lse_mask, attn_lse_nomask, attn_out_mask, attn_out_nomask):
+    T = attn_out_mask.shape[0]
+    N = attn_out_mask.shape[1]
+    D = attn_out_mask.shape[2]
+    attn_out_mask, attn_lse_mask = _out_lse_reshape(attn_out_mask, attn_lse_mask)
+    attn_out_nomask, attn_lse_nomask = _out_lse_reshape(attn_out_nomask, attn_lse_nomask)
+    attn_out_mask = attn_out_mask.to(torch.float32)
+    attn_out_nomask = attn_out_nomask.to(torch.float32)
+    attn_lse_mask = attn_lse_mask.to(torch.float32)
+    attn_lse_nomask = attn_lse_nomask.to(torch.float32)
+    attn_output = [attn_out_nomask, attn_out_mask]
+    attn_lse = [attn_lse_nomask, attn_lse_mask]
+    update_type = 0
+    output, _ = torch_npu.npu_attention_update(attn_lse, attn_output, update_type)
+    output = output.view(T, N, D)
+    return output
+```
+
+### _out_lse_reshape @ attention\context_parallel\common_cp.py
+```python
+def _out_lse_reshape(attn_out: torch.Tensor, attn_lse: torch.Tensor) -> torch.Tensor:
+    attn_out = attn_out.contiguous().view(attn_out.shape[0] * attn_out.shape[1], attn_out.shape[2])
+    attn_lse = attn_lse.contiguous().view(attn_lse.shape[0] * attn_lse.shape[1] * attn_lse.shape[2])
+    return attn_out, attn_lse
+```
+
+### hadamard_transform_ref @ attention\context_parallel\dsa_cp.py (HTML标记15行/实际4行)
+```python
+def hadamard_transform_ref(
+    x: torch.Tensor,
+    hadamard: torch.Tensor,
+    scale: float = 1.0,  # type: ignore[assignment]
+```
+
+### rotate_activation @ attention\context_parallel\dsa_cp.py
+```python
+def rotate_activation(x: torch.Tensor, hadamard: torch.Tensor) -> torch.Tensor:
+    hidden_size = x.size(-1)
+    return hadamard_transform_ref(x, hadamard=hadamard, scale=hidden_size**-0.5)
+```
+
+### _num_compressor_metadata_rows @ attention\context_parallel\dsa_cp.py (HTML标记7行/实际3行)
+```python
+    def _num_compressor_metadata_rows(
+        self,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+```
+
+### _get_cmp_seqlens_for_metadata @ attention\context_parallel\dsa_cp.py
+```python
+    def _get_cmp_seqlens_for_metadata(self, has_prefill):
+        if self.compressor_ratio <= 1:
+            return None
+        if has_prefill:
+            return None
+        return DeviceOperator.get_dsa_decode_cu_seqlens_cmp_kv(self.cu_seqlens_cmp_kv)
+```
+
+### _build_sas_metadata @ attention\context_parallel\dsa_cp.py (HTML标记73行/实际12行)
+```python
+    def _build_sas_metadata(
+        self,
+        num_heads,
+        query_start_loc,
+        seq_lens,
+        seq_lens_q,
+        max_query_len,
+        max_seq_lens,
+        index_topk,
+        num_reqs,
+        has_prefill,
+        cu_cmp_seqlen_list,
+```
+
+### _build_qli_metadata @ attention\context_parallel\dsa_cp.py
+```python
+    def _build_qli_metadata(self, query_start_loc, seq_lens, seq_lens_q, num_reqs):
+        if self.compressor_ratio != 4:
+            return None
+
+        cache_key = "cp_qli"
+        metadata = self.common_ratio_to_sas_metadata.get(cache_key)
+
+        if metadata is None:
+            max_seqlen_q = max(1, int(seq_lens_q.max().item()))
+            max_seqlen_k = max(1, int(seq_lens.max().item()))
+            metadata = torch.ops._C_ascend.npu_vllm_quant_lightning_indexer_metadata(
+                actual_seq_lengths_query=query_start_loc[1:].clone(),
+                actual_seq_lengths_key=seq_lens.clone(),
+                num_heads_q=self.model_config.hf_config.index_n_heads,
+                num_heads_k=1,
+                head_dim=self.model_config.hf_config.index_head_dim,
+                query_quant_mode=0,
+                key_quant_mode=0,
+                batch_size=num_reqs,
+                max_seqlen_q=max_seqlen_q,
+                max_seqlen_k=max_seqlen_k,
+                layout_query="TND",
+                layout_key="PA_BSND",
+                sparse_count=self.model_config.hf_config.index_topk,
+                sparse_mode=3,
+                pre_tokens=(1 << 63) - 1,
+                next_tokens=(1 << 63) - 1,
+                cmp_ratio=4,
+                device=str(self.seqused_q.device),
+            )
+        self.common_ratio_to_sas_metadata[cache_key] = metadata
+        self.req_qli_metadata[:1024] = metadata
+        return self.req_qli_metadata[:1024]
+```
+
+### _get_layer_metadata @ attention\context_parallel\dsa_cp.py (HTML标记29行/实际4行)
+```python
+    def _get_layer_metadata(
+        self,
+        attn_layer_name: str,
+        attn_metadata: DSACPMetadataDict,
+```
+
+### _compute_compressor_metadata @ attention\context_parallel\dsa_cp.py (HTML标记29行/实际3行)
+```python
+    def _compute_compressor_metadata(
+        self,
+        metadata: AscendDSAReqMetadata,
+```
+
+### _get_tp_weight_switch_method @ attention\context_parallel\dsa_cp.py
+```python
+    def _get_tp_weight_switch_method(layer: torch.nn.Module) -> TPWeightSwitchMixin:
+        quant_method = layer.quant_method
+        linear_method = getattr(quant_method, "quant_method", quant_method)
+        if not isinstance(linear_method, TPWeightSwitchMixin) or not linear_method.supports_tp_weight_switch:
+            raise RuntimeError(
+                "DSA-CP o_proj TP full-weight switching requires a TP weight-switch capable method, "
+                f"got {type(linear_method).__name__}."
+            )
+        return linear_method
+```
+
+### _enable_linear_tp_weight_switch @ attention\context_parallel\dsa_cp.py (HTML标记14行/实际4行)
+```python
+    def _enable_linear_tp_weight_switch(
+        self,
+        layer: torch.nn.Module,
+        name: str,
+```
+
+### _maybe_all_gather_o_proj_full_weight @ attention\context_parallel\dsa_cp.py (HTML标记15行/实际3行)
+```python
+    def _maybe_all_gather_o_proj_full_weight(
+        self,
+        enabled: bool,
+```
+
+### _switch_o_proj_to_full_weight @ attention\context_parallel\dsa_cp.py
+```python
+    def _switch_o_proj_to_full_weight(self) -> None:
+        self.wo_a_tp_weight_method.wait_tp_weight_all_gather(self.wo_a_tp_weight_state)
+        self.wo_b_tp_weight_method.wait_tp_weight_all_gather(self.wo_b_tp_weight_state)
+        self.wo_a_tp_weight_method.switch_tp_weight(
+            self.wo_a,
+            self.wo_a_tp_weight_state,
+            use_full_weight=True,
+        )
+        self.wo_b_tp_weight_method.switch_tp_weight(
+            self.wo_b,
+            self.wo_b_tp_weight_state,
+            use_full_weight=True,
+        )
+```
+
+### _switch_o_proj_to_tp_weight @ attention\context_parallel\dsa_cp.py
+```python
+    def _switch_o_proj_to_tp_weight(self) -> None:
+        self.wo_a_tp_weight_method.switch_tp_weight(
+            self.wo_a,
+            self.wo_a_tp_weight_state,
+            use_full_weight=False,
+        )
+        self.wo_b_tp_weight_method.switch_tp_weight(
+            self.wo_b,
+            self.wo_b_tp_weight_state,
+            use_full_weight=False,
+        )
+```
+
+### _apply_wo_b @ attention\context_parallel\dsa_cp.py (HTML标记8行/实际4行)
+```python
+    def _apply_wo_b(
+        self,
+        o_proj_input: torch.Tensor,
+        full_weight: bool,
+```
+
+### _restore_tp_head_layout @ attention\context_parallel\dsa_cp.py (HTML标记31行/实际6行)
+```python
+    def _restore_tp_head_layout(
+        self,
+        local_attn_output: torch.Tensor,
+        layer_name: str,
+        attn_metadata: AscendDSAMetadata,
+        skip_all_to_all: bool = False,
+```
+
+### _update_indexer_cache @ attention\context_parallel\dsa_cp.py (HTML标记59行/实际6行)
+```python
+    def _update_indexer_cache(
+        self,
+        x: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        metadata: AscendDSACPLayerMetadata,
+        actual_seq_lengths_query: torch.Tensor,
+```
+
+### _indexer_select_topk @ attention\context_parallel\dsa_cp.py (HTML标记70行/实际11行)
+```python
+    def _indexer_select_topk(
+        self,
+        x: torch.Tensor,
+        qr: torch.Tensor,
+        kv_cache: tuple[torch.Tensor, ...],
+        metadata: AscendDSACPLayerMetadata,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        actual_seq_lengths_query: torch.Tensor,
+        actual_seq_lengths_key: torch.Tensor,
+        qr_pertoken_scale: torch.Tensor = None,
+```
+
+### from_local_metadata @ attention\context_parallel\dsa_cp.py (HTML标记21行/实际6行)
+```python
+    def from_local_metadata(
+        cls,
+        local_metadata: dsa_v1.AscendDSAMetadata,
+        local_num_tokens_after_padding: int,
+        hidden_restore_idx: torch.Tensor,
+        global_dsa_metadata: dsa_v1.AscendDSAMetadata,
+```
+
+### _build_global_common_attn_metadata @ attention\context_parallel\dsa_cp.py (HTML标记27行/实际4行)
+```python
+    def _build_global_common_attn_metadata(
+        pcp_context: "AscendPCPAttentionContext",
+        cache_group_idx: int,
+        local_common_attn_metadata: AscendCommonAttentionMetadata,
+```
+
+### _build_local_common_attn_metadata @ attention\context_parallel\dsa_cp.py (HTML标记15行/实际4行)
+```python
+    def _build_local_common_attn_metadata(
+        self,
+        pcp_context: "AscendPCPAttentionContext",
+        common_attn_metadata: AscendCommonAttentionMetadata,
+```
+
+### _build_local_dsa_metadata @ attention\context_parallel\dsa_cp.py (HTML标记29行/实际6行)
+```python
+    def _build_local_dsa_metadata(
+        self,
+        common_prefix_len: int,
+        local_common_attn_metadata: AscendCommonAttentionMetadata,
+        fast_build: bool,
+        **kwargs,
+```
+
+### _build_global_dsa_metadata @ attention\context_parallel\dsa_cp.py (HTML标记18行/实际6行)
+```python
+    def _build_global_dsa_metadata(
+        self,
+        common_prefix_len: int,
+        global_common_attn_metadata: AscendCommonAttentionMetadata,
+        fast_build: bool,
+        **kwargs,
+```
+
+### _get_o_proj_input_shape @ attention\context_parallel\dsa_cp.py (HTML标记13行/实际3行)
+```python
+    def _get_o_proj_input_shape(
+        self,
+        attn_metadata: dsa_v1.DSAMetadataDict | None,
+```
+
+### get_context_seq_len_npu @ attention\context_parallel\mla_cp.py
+```python
+    def get_context_seq_len_npu(self, index: int, attn_metadata: AscendMLAMetadata):
+        prefill_metadata = attn_metadata.prefill
+        assert prefill_metadata is not None
+        assert prefill_metadata.chunked_context is not None
+        assert isinstance(prefill_metadata.chunked_context, DCPChunkedContextMetadata)
+        assert prefill_metadata.chunked_context.padded_chunk_seq_lens_npu is not None
+        iters = len(prefill_metadata.chunked_context.seq_tot)
+        assert 0 <= index < iters
+        return prefill_metadata.chunked_context.padded_chunk_seq_lens_npu[index]
+```
+
+### reorg_decode_q @ attention\context_parallel\mla_cp.py
+```python
+    def reorg_decode_q(self, decode_q_nope, decode_q_pe):
+        return self._dcp_all_gather_fragments(
+            decode_q_nope,
+            decode_q_pe,
+            dim=1,
+        )
+```
+
+### _forward_decode @ attention\context_parallel\mla_cp.py (HTML标记161行/实际9行)
+```python
+    def _forward_decode(
+        self,
+        q_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        k_nope: torch.Tensor,
+        k_pe: torch.Tensor,
+        block_size: int,
+        attn_metadata: AscendMLAMetadata,
+        dequant_scale_q_nope=None,
+```
+
+### _get_sfa_kv_slot_mapping @ attention\context_parallel\sfa_cp.py (HTML标记7行/实际3行)
+```python
+    def _get_sfa_kv_slot_mapping(
+        self,
+        attn_metadata: M,
+```
+
+### _write_indexer_cache @ attention\context_parallel\sfa_cp.py (HTML标记25行/实际7行)
+```python
+    def _write_indexer_cache(
+        self,
+        k_li: torch.Tensor,
+        k_li_scale: torch.Tensor | None,
+        slot_mapping: torch.Tensor,
+        kv_cache: tuple,
+        attn_metadata: M,
+```
+
+### _prepare_parallel_metadata @ attention\context_parallel\sfa_cp.py (HTML标记81行/实际9行)
+```python
+    def _prepare_parallel_metadata(
+        self,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+        cos: torch.Tensor,
+        sin: torch.Tensor,
+        slot_mapping: torch.Tensor,
+        cum_query_lens: torch.Tensor,
+        seq_lens: torch.Tensor,
+        draft_index: int | None,
+```
+
+### _update_parallel_slot_mapping @ attention\context_parallel\sfa_cp.py (HTML标记20行/实际5行)
+```python
+    def _update_parallel_slot_mapping(
+        self,
+        metadata: AscendSFAMetadata,
+        slot_mapping: torch.Tensor,
+        num_input_tokens: int,
+```
+
+### _get_fused_type_unsupported_reasons @ attention\context_parallel\sfa_cp.py
+```python
+    def _get_fused_type_unsupported_reasons(self, pp_type):
+        reasons = super()._get_fused_type_unsupported_reasons(pp_type)
+        reasons.insert(0, "Fused preprocessing does not support DSA-CP.")
+        return reasons
+```
+
+### _parallel_query_gather_dim @ attention\context_parallel\sfa_cp.py
+```python
+    def _parallel_query_gather_dim(self) -> int:
+        return 0
+```
+
+### _prepare_native_hidden_states @ attention\context_parallel\sfa_cp.py (HTML标记16行/实际4行)
+```python
+    def _prepare_native_hidden_states(
+        self,
+        hidden_states: torch.Tensor,
+        attn_metadata: M,
+```
+
+### _get_parallel_forward_context @ attention\context_parallel\sfa_cp.py (HTML标记24行/实际5行)
+```python
+    def _get_parallel_forward_context(
+        self,
+        attn_metadata: M,
+        num_input_tokens: int,
+        hidden_states: torch.Tensor,
+```
+
+### _prepare_kv_for_parallel @ attention\context_parallel\sfa_cp.py (HTML标记38行/实际8行)
+```python
+    def _prepare_kv_for_parallel(
+        self,
+        k_pe,
+        k_nope,
+        knope_scale,
+        k_li,
+        k_li_scale,
+        full_gather_o_proj_enabled,
+```
+
+### _store_parallel_kv @ attention\context_parallel\sfa_cp.py (HTML标记34行/实际12行)
+```python
+    def _store_parallel_kv(
+        self,
+        k_pe,
+        k_nope,
+        knope_scale,
+        k_li,
+        fused_kv_no_split,
+        kv_ag_handles,
+        kv_cache,
+        slot_mapping_sfa,
+        attn_metadata,
+        full_gather_o_proj_enabled,
+```
+
+### _enable_o_proj_tp_full_weight_switch @ attention\context_parallel\sfa_cp.py
+```python
+    def _enable_o_proj_tp_full_weight_switch(self) -> None:
+        if self._o_proj_tp_weight_switch_enabled:
+            return
+
+        linear_method = self._get_o_proj_linear_method()
+        if not isinstance(linear_method, TPWeightSwitchMixin) or not linear_method.supports_tp_weight_switch:
+            raise RuntimeError(
+                "SFA DSA-CP o_proj full-weight switching requires a TP weight-switch capable method, "
+                f"got {type(linear_method).__name__}."
+            )
+        self.o_proj_tp_weight_state = linear_method.enable_tp_weight_switch(
+            self.o_proj,
+            self.tp_size,
+            pool=AscendSFADSACPImpl.o_proj_full_pools,
+            pool_key_prefix=(type(linear_method).__qualname__, "sfa_o_proj"),
+        )
+        self._o_proj_tp_weight_switch_enabled = True
+```
+
+### _get_o_proj_linear_method @ attention\context_parallel\sfa_cp.py
+```python
+    def _get_o_proj_linear_method(self):
+        quant_method = self.o_proj.quant_method
+        return getattr(quant_method, "quant_method", quant_method)
+```
+
+### _apply_o_proj_full_weight @ attention\context_parallel\sfa_cp.py
+```python
+    def _apply_o_proj_full_weight(self, attn_output: torch.Tensor) -> torch.Tensor:
+        return self._get_o_proj_linear_method().apply(self.o_proj, attn_output)
+```
+
+### _finalize_o_proj @ attention\context_parallel\sfa_cp.py (HTML标记56行/实际5行)
+```python
+    def _finalize_o_proj(
+        self,
+        attn_output,
+        output,
+        gather_full_o_proj,
+```
+
+### _get_dcp_local_seq_lens @ attention\context_parallel\sfa_cp.py
+```python
+    def _get_dcp_local_seq_lens(self, seq_lens: torch.Tensor) -> torch.Tensor:
+        return get_dcp_local_seq_lens(
+            seq_lens,
+            self.dcp_size,
+            self.cp_kv_cache_interleave_size,
+        )[:, self.dcp_rank]
+```
+
+### _get_dcp_local_block_table @ attention\context_parallel\sfa_cp.py
+```python
+    def _get_dcp_local_block_table(self, block_table: torch.Tensor, num_reqs: int) -> torch.Tensor:
+        local_cols = min(block_table.shape[1], self.max_local_block_table_cols)
+        return block_table[:num_reqs, :local_cols]
+```
+
+### _ensure_replicated_view_buffers @ attention\context_parallel\sfa_cp.py (HTML标记27行/实际5行)
+```python
+    def _ensure_replicated_view_buffers(
+        self,
+        num_reqs: int,
+        num_input_tokens: int,
+        local_block_table_cols: int,
+```
+
+### _build_block_table_replicated_view @ attention\context_parallel\sfa_cp.py (HTML标记35行/实际4行)
+```python
+    def _build_block_table_replicated_view(
+        self,
+        dcp_block_table: torch.Tensor,
+        seq_lens: torch.Tensor,
+```
+
+### _build_slot_mapping_replicated_view @ attention\context_parallel\sfa_cp.py (HTML标记43行/实际4行)
+```python
+    def _build_slot_mapping_replicated_view(
+        self,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+        block_table_replicated_view: torch.Tensor,
+```
+
+### _build_with_metadata_view @ attention\context_parallel\sfa_cp.py (HTML标记60行/实际4行)
+```python
+    def _build_with_metadata_view(
+        self,
+        common_attn_metadata: AscendCommonAttentionMetadata,
+        build_metadata: Callable[[], AscendSFAMetadata],
+```
+
+### _has_prefill @ attention\context_parallel\sfa_cp.py
+```python
+    def _has_prefill(attn_metadata: M) -> bool:
+        return attn_metadata.num_prefills > 0
+```
+
+### _start_dcp_gather @ attention\context_parallel\sfa_cp.py (HTML标记13行/实际5行)
+```python
+    def _start_dcp_gather(
+        self,
+        x: torch.Tensor,
+        dim: int,
+        split_sizes: tuple[int, ...],
+```
+
+### _finish_dcp_gather @ attention\context_parallel\sfa_cp.py (HTML标记9行/实际2行)
+```python
+    def _finish_dcp_gather(
+        context: DCPGatherContext,
+```
+
+### _all_gather_dim_async @ attention\context_parallel\sfa_cp.py (HTML标记14行/实际4行)
+```python
+    def _all_gather_dim_async(
+        self,
+        x: torch.Tensor,
+        dim: int,
+```
+
+### _remap_sparse_indices @ attention\context_parallel\sfa_cp.py
+```python
+    def _remap_sparse_indices(self, topk_indices: torch.Tensor) -> torch.Tensor:
+        if self.dcp_size <= 1:
+            return topk_indices
+
+        topk_count = topk_indices.shape[-1]
+        if topk_count > self._dcp_index_topk:
+            raise RuntimeError(
+                f"topk_indices last dimension ({topk_count}) exceeds configured index_topk ({self._dcp_index_topk})."
+            )
+        if topk_indices.numel() == 0:
+            return topk_indices
+
+        if HAS_TRITON and topk_indices.is_npu:
+            from vllm_ascend.ops.triton.sparse_index_remap import remap_sparse_indices_triton
+
+            return remap_sparse_indices_triton(
+                topk_indices,
+                self.dcp_size,
+                self.dcp_rank,
+                self._dcp_interleave_size,
+            )
+
+        # Fallback for environments without Triton: remap the topk indices from
+        # the replicated view to the DCP-local KV cache view. We use float32 for
+        # better performance on Ascend.
+        topk_indices_fp32 = topk_indices.to(torch.float32)
+        interleave_size = self._dcp_interleave_size
+        local_block_indices = torch.floor(topk_indices_fp32 / interleave_size)
+        local_owner_base = torch.floor(local_block_indices / self.dcp_size) * self.dcp_size
+        local_owner = local_block_indices - local_owner_base
+        local_owner_mask = (topk_indices_fp32 >= 0) & (local_owner == self.dcp_rank)
+        if interleave_size == 1:
+            remapped_indices_fp32 = torch.floor(topk_indices_fp32 / self.dcp_size)
+        else:
+            local_offsets = topk_indices_fp32 - local_block_indices * interleave_size
+            remapped_indices_fp32 = torch.floor(topk_indices_fp32 / (self.dcp_size * interleave_size))
+            remapped_indices_fp32 = remapped_indices_fp32 * interleave_size + local_offsets
+        remapped_indices = torch.where(
+            local_owner_mask,
+            remapped_indices_fp32,
+            self._remap_invalid_index,
+        ).to(topk_indices.dtype)
+
+        # Compact local indices to the front without changing their top-k order.
+        original_order = self._remap_order[:topk_count].expand_as(topk_indices)
+        pack_keys = original_order + (~local_owner_mask).to(torch.float32) * topk_count
+        _, pack_order = torch.sort(pack_keys, dim=-1)
+        return torch.gather(remapped_indices, dim=-1, index=pack_order.to(torch.int32))
+```
+
+### _merge_dcp_outputs @ attention\context_parallel\sfa_cp.py (HTML标记40行/实际5行)
+```python
+    def _merge_dcp_outputs(
+        self,
+        sfa_output: torch.Tensor,
+        softmax_lse: torch.Tensor,
+        dsa_cp_context: DSACPContext | None = None,
+```
+
+### _start_dcp_query_gather @ attention\context_parallel\sfa_cp.py (HTML标记24行/实际4行)
+```python
+    def _start_dcp_query_gather(
+        self,
+        ql_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+```
+
+### _record_query_gather_context @ attention\context_parallel\sfa_cp.py (HTML标记14行/实际5行)
+```python
+    def _record_query_gather_context(
+        self,
+        ql_nope: torch.Tensor,
+        q_pe: torch.Tensor,
+        attn_metadata: M,
+```
+
+### _execute_sparse_flash_attention_process @ attention\context_parallel\sfa_cp.py (HTML标记88行/实际10行)
+```python
+    def _execute_sparse_flash_attention_process(
+        self,
+        ql_nope,
+        q_pe,
+        kv_cache,
+        topk_indices,
+        attn_metadata,
+        actual_seq_lengths_query,
+        actual_seq_lengths_key,
+        block_table=None,
+```

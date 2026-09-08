@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>源码查看 - vLLM Ascend</title>
+<link rel="stylesheet" href="assets/highlight/github.min.css">
+<script src="assets/highlight/highlight.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,'Microsoft YaHei',sans-serif;background:#f5f7fa;color:#333;line-height:1.6;padding:20px;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+.topbar{background:#fff;border-radius:12px;padding:14px 24px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.crumb{font-size:0.9rem;color:#666;word-break:break-all;}
+.crumb .root{color:#667eea;font-weight:bold;text-decoration:none;}
+.crumb .sep{margin:0 6px;color:#bbb;}
+.meta{font-size:0.8rem;color:#999;}
+.btn{display:inline-block;background:#667eea;color:#fff;text-decoration:none;padding:6px 16px;border-radius:8px;font-size:0.85rem;font-weight:bold;border:none;cursor:pointer;}
+.btn:hover{background:#5568d8;}
+.codecard{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);overflow:hidden;}
+.codehead{padding:10px 20px;border-bottom:1px solid #eef0f4;font-family:Consolas,monospace;font-size:0.85rem;color:#667eea;font-weight:bold;background:#fafbfe;}
+.codewrap{display:flex;align-items:flex-start;font-family:Consolas,'Courier New',monospace;font-size:0.85rem;}
+.linenos{flex:0 0 64px;text-align:right;padding:14px 10px 14px 0;color:#b0b8c4;background:#fafbfc;border-right:1px solid #eef0f4;user-select:none;line-height:1.5;}
+.codebody{flex:1;overflow-x:auto;padding:14px 18px 14px 14px;min-width:0;}
+.codebody pre{margin:0;line-height:1.5;}
+.codebody code.hljs{background:transparent;padding:0;}
+.linenos span{display:block;}
+.errorbox{background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.errorbox h2{color:#d9534f;margin-bottom:10px;}
+.errorbox p{color:#666;margin-bottom:18px;}
+.loading{text-align:center;color:#999;padding:60px 0;font-size:0.95rem;}
+footer{text-align:center;color:#999;padding:24px;font-size:0.82rem;}
+</style>
+</head>
+<body>
+<div class="topbar">
+    <div>
+        <div class="crumb" id="crumb"><span class="root">vllm_ascend</span></div>
+        <div class="meta" id="meta"></div>
+    </div>
+    <button class="btn" id="backBtn">← 返回</button>
+</div>
+<div class="codecard" id="codecard" style="display:none;">
+    <div class="codehead" id="codehead"></div>
+    <div class="codewrap">
+        <div class="linenos" id="linenos"></div>
+        <div class="codebody"><pre class="hljs"><code id="code" class="language-python"></code></pre></div>
+    </div>
+</div>
+<div class="loading" id="loading">正在加载源码…</div>
+<div class="errorbox" id="errorbox" style="display:none;">
+    <h2>无法加载源码</h2>
+    <p id="errmsg"></p>
+    <a class="btn" href="panorama/panorama.html">去全景源码导航</a>
+</div>
+<footer>vLLM Ascend 源码查看器 · 高亮由 highlight.js 提供 · <a href="panorama/panorama.html" style="color:#667eea;">返回全景导航</a></footer>
+<script>
+(function () {
+    window.__SRC_SET = function (p, s) {
+        (window.__SRC__ = window.__SRC__ || {})[p] = s;
+    };
+    var params = new URLSearchParams(location.search);
+    var file = (params.get('file') || '').replace(/\\/g, '/');
+    var card = document.getElementById('codecard');
+    var loading = document.getElementById('loading');
+    var errbox = document.getElementById('errorbox');
+    var errmsg = document.getElementById('errmsg');
+
+    document.getElementById('backBtn').addEventListener('click', function () {
+        if (document.referrer && document.referrer.indexOf('file:') === 0) { history.back(); }
+        else { location.href = 'panorama/panorama.html'; }
+    });
+
+    function fail(msg) {
+        loading.style.display = 'none';
+        card.style.display = 'none';
+        errbox.style.display = 'block';
+        errmsg.textContent = msg;
+    }
+
+    if (!file) { fail('缺少 file 参数，请从文档页的「查看源码」进入。'); return; }
+    if (!/^[A-Za-z0-9_\-\.\/]+$/.test(file) || file.indexOf('..') !== -1) {
+        fail('非法的文件参数：' + file); return;
+    }
+    if (file.slice(-3) !== '.py') { fail('仅支持 .py 文件：' + file); return; }
+
+    document.title = file.split('/').pop() + ' - vLLM Ascend 源码';
+
+    // 面包屑
+    var parts = file.split('/');
+    var crumb = document.getElementById('crumb');
+    var html = '<span class="root">vllm_ascend</span>';
+    for (var i = 0; i < parts.length; i++) {
+        html += '<span class="sep">/</span>' + parts[i];
+    }
+    crumb.innerHTML = html;
+
+    var script = document.createElement('script');
+    script.src = 'src/' + file + '.js';
+    script.onload = function () {
+        var code = window.__SRC__ && window.__SRC__[file];
+        if (typeof code !== 'string') { fail('数据文件不含内容：' + file); return; }
+        var lines = code.split('\n');
+        document.getElementById('codehead').textContent = 'vllm_ascend/' + file + '  ·  ' + lines.length + ' 行';
+        document.getElementById('meta').textContent = lines.length + ' 行 · ' + (code.length / 1024).toFixed(1) + ' KB';
+        // 行号
+        var lnHtml = [];
+        for (var n = 1; n <= lines.length; n++) { lnHtml.push('<span>' + n + '</span>'); }
+        document.getElementById('linenos').innerHTML = lnHtml.join('');
+        // 高亮
+        var codeEl = document.getElementById('code');
+        try {
+            var result = hljs.highlight(code, { language: 'python', ignoreIllegals: true });
+            codeEl.innerHTML = result.value;
+        } catch (e) {
+            codeEl.textContent = code;
+        }
+        loading.style.display = 'none';
+        card.style.display = 'block';
+    };
+    script.onerror = function () {
+        fail('找不到数据文件 src/' + file + '.js（源码可能未随包发布，请重新打包）。');
+    };
+    document.head.appendChild(script);
+})();
+</script>
+</body>
+</html>

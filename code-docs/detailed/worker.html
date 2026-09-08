@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作节点 - vLLM Ascend</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.2rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar-nav { display: flex; gap: 12px; list-style: none; flex-wrap: wrap; }
+        .navbar-nav a { color: #666; text-decoration: none; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
+        .navbar-nav a:hover, .navbar-nav a.active { background: #667eea; color: white; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #333; margin-bottom: 8px; }
+        .page-header p { color: #666; }
+        .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section h2 { color: #333; font-size: 1.4rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .section h3 { color: #667eea; font-size: 1.15rem; margin: 25px 0 12px 0; }
+        .section p { color: #555; margin-bottom: 12px; }
+        .mermaid-box { background: #fafbfc; border: 1px solid #e8ecf0; border-radius: 10px; padding: 20px; margin: 20px 0; }
+        .mermaid-box .chart-label { color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 15px; text-align: center; }
+        .mermaid-box .chart-content { text-align: center; overflow-x: auto; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; padding: 18px; margin: 15px 0; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; }
+        .code-block .filename { color: #667eea; font-size: 0.85rem; margin-bottom: 8px; display: block; }
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .code-block .cls { color: #4ec9b0; }
+        .note { background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 15px 0; }
+        .note h4 { color: #667eea; margin-bottom: 6px; font-size: 0.95rem; }
+        .note p { color: #555; margin: 0; font-size: 0.9rem; }
+        .file-tree { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.8; overflow-x: auto; white-space: pre; }
+        .file-tree .dir { color: #667eea; font-weight: bold; }
+        .file-tree .file { color: #555; }
+        .worker-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .worker-card { background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #667eea; }
+        .worker-card h4 { color: #667eea; margin-bottom: 10px; font-size: 1.05rem; }
+        .worker-card p { color: #666; font-size: 0.9rem; margin-bottom: 10px; }
+        .worker-card ul { list-style: none; padding: 0; }
+        .worker-card li { color: #555; font-size: 0.85rem; padding: 3px 0; }
+        .worker-card li::before { content: "→ "; color: #667eea; }
+        .func-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .func-table th { background: #667eea; color: white; padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+        .func-table td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #555; }
+        .func-table tr:hover { background: #f0f4ff; }
+        .func-table .fn-name { color: #dcdcaa; font-family: 'Consolas', monospace; }
+        .func-table .cls-name { color: #4ec9b0; font-family: 'Consolas', monospace; }
+        .func-table .file-path { color: #6a9955; font-family: 'Consolas', monospace; font-size: 0.8rem; }
+        footer { text-align: center; color: #999; padding: 30px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="upstream.html">上下游衔接</a></li>
+            <li><a href="../panorama/panorama.html">全景图</a></li>
+            <li><a href="core.html">核心模块</a></li>
+            <li><a href="models.html">模型定义</a></li>
+            <li><a href="attention.html">注意力</a></li>
+            <li><a href="ops.html">算子</a></li>
+            <li><a href="worker.html" class="active">执行器</a></li>
+            <li><a href="distributed.html">分布式</a></li>
+            <li><a href="quantization.html">量化</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>工作节点 (worker/)</h1>
+        <p>模型执行和分布式推理的核心组件 · V1/V2双架构 · 40+文件</p>
+    </header>
+
+    <!-- 1. 模块概述 -->
+    <div class="section">
+        <h2>一、模块概述</h2>
+        <p>worker目录包含模型执行的核心组件，负责模型加载、推理执行和分布式协调。包含V1和V2两代ModelRunner实现，以及完整的子模块体系。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图1：Worker架构</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[NPUWorker] --> B[ModelRunner]
+    A --> C[NPUInputBatch]
+    A --> D[BlockTable]
+    A --> E[DCPManager]
+    
+    B --> F[模型前向传播]
+    B --> G[ACL图捕获]
+    
+    C --> H[批次构建]
+    C --> I[序列管理]
+    
+    D --> J[KV缓存管理]
+    
+    F --> K[NPU执行]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 文件结构 -->
+    <div class="section">
+        <h2>二、文件结构</h2>
+        
+        <pre class="file-tree"><span class="dir">worker/</span>
+├── <span class="file">__init__.py</span>
+├── <span class="file">worker.py</span>                 # NPUWorker主入口
+├── <span class="file">model_runner_v1.py</span>        # V1 NPUModelRunner
+├── <span class="file">npu_input_batch.py</span>        # NPUInputBatch输入批处理
+├── <span class="file">block_table.py</span>            # BlockTable, MultiGroupBlockTable
+├── <span class="file">encoder_acl_graph.py</span>      # EncoderAclGraphManager
+├── <span class="file">dcp_utils.py</span>              # DCPManager（分解计算工具）
+├── <span class="file">utils.py</span>                  # AscendKVBlockZeroer
+├── <span class="dir">v2/</span>                       # V2架构（全新设计）
+│   ├── <span class="file">model_runner.py</span>      # V2 NPUModelRunner
+│   ├── <span class="file">input_batch.py</span>       # AscendInputBatch, AscendInputBuffers
+│   ├── <span class="file">block_table.py</span>       # AscendBlockTables
+│   ├── <span class="file">aclgraph_utils.py</span>    # ModelAclGraphManager
+│   ├── <span class="file">states.py</span>            # AscendRequestState
+│   ├── <span class="file">attn_utils.py</span>        # get_kv_cache_spec(), build_attn_metadata()
+│   ├── <span class="file">eplb.py</span>              # AscendEPLBController
+│   ├── <span class="file">pcp_manager.py</span>       # AscendPCPManager
+│   ├── <span class="file">pp_utils.py</span>          # SpecPPSupport
+│   ├── <span class="dir">spec_decode/</span>          # V2投机解码
+│   ├── <span class="dir">sample/</span>               # V2 NPU采样
+│   └── <span class="dir">model_states/</span>         # 模型状态管理</pre>
+    </div>
+
+    <!-- 3. V1 vs V2对比 -->
+    <div class="section">
+        <h2>三、V1 vs V2架构对比</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图2：V1与V2架构对比</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    subgraph V1架构
+    A1[NPUWorker] --> B1[ModelRunner V1]
+    B1 --> C1[GPUModelRunner继承]
+    B1 --> D1[NPUInputBatch]
+    B1 --> E1[BlockTable]
+    end
+    
+    subgraph V2架构
+    A2[NPUWorker] --> B2[ModelRunner V2]
+    B2 --> C2[全新实现]
+    B2 --> D2[AscendInputBatch]
+    B2 --> E2[AscendBlockTables]
+    B2 --> F2[AscendEPLBController]
+    B2 --> G2[AscendPCPManager]
+    end
+                </pre>
+            </div>
+        </div>
+
+        <div class="note">
+            <h4>V1 vs V2区别</h4>
+            <p>1. <strong>V1</strong>：继承自vLLM的GPUModelRunner，适配NPU实现</p>
+            <p>2. <strong>V2</strong>：全新架构设计，不继承GPU实现，直接针对NPU优化</p>
+            <p>3. <strong>V2优势</strong>：更好的扩展性，支持EPLB、PCP等高级特性</p>
+        </div>
+    </div>
+
+    <!-- 4. 核心组件详解 -->
+    <div class="section">
+        <h2>四、核心组件详解</h2>
+        
+        <table class="func-table">
+            <tr><th>文件</th><th>关键类/函数</th><th>功能说明</th></tr>
+            <tr><td class="file-path">worker.py</td><td><span class="cls-name">NPUWorker</span>, <span class="fn-name">parse_text_output()</span></td><td>NPU Worker主入口，管理Worker生命周期，协调ModelRunner和输入管理</td></tr>
+            <tr><td class="file-path">model_runner_v1.py</td><td><span class="cls-name">NPUModelRunner</span>, <span class="cls-name">GraphCaptureContext</span>, <span class="fn-name">graph_capture()</span>, <span class="cls-name">ExecuteModelState</span></td><td>V1模型运行器，继承GPUModelRunner，支持ACL图捕获优化</td></tr>
+            <tr><td class="file-path">npu_input_batch.py</td><td><span class="cls-name">NPUInputBatch</span></td><td>NPU输入批处理管理，优化批次构建和序列管理</td></tr>
+            <tr><td class="file-path">block_table.py</td><td><span class="cls-name">BlockTable</span>, <span class="cls-name">MultiGroupBlockTable</span></td><td>KV缓存块表管理，支持多组块表（不同量化级别）</td></tr>
+            <tr><td class="file-path">encoder_acl_graph.py</td><td><span class="cls-name">EncoderAclGraphManager</span>, <span class="cls-name">EncoderGraphParams</span>, <span class="cls-name">EncoderForwardContext</span></td><td>编码器ACL图优化，提升编码器推理性能</td></tr>
+            <tr><td class="file-path">dcp_utils.py</td><td><span class="cls-name">DCPManager</span>, <span class="cls-name">DCPSpecDecodeMTPInputs</span></td><td>分解计算管理器，支持PD分离架构</td></tr>
+            <tr><td class="file-path">v2/model_runner.py</td><td><span class="cls-name">NPUModelRunner</span> (V2)</td><td>V2模型运行器，全新架构，更好的性能和扩展性</td></tr>
+            <tr><td class="file-path">v2/input_batch.py</td><td><span class="cls-name">AscendInputBatch</span>, <span class="cls-name">AscendInputBuffers</span></td><td>V2输入批处理，更高效的内存管理</td></tr>
+            <tr><td class="file-path">v2/block_table.py</td><td><span class="cls-name">AscendBlockTables</span></td><td>V2块表管理，支持更多块表类型</td></tr>
+            <tr><td class="file-path">v2/eplb.py</td><td><span class="cls-name">AscendEPLBController</span></td><td>V2专家并行负载均衡控制器</td></tr>
+            <tr><td class="file-path">v2/pcp_manager.py</td><td><span class="cls-name">AscendPCPManager</span>, <span class="cls-name">AscendPCPAttentionContext</span></td><td>V2流水线上下文并行管理器</td></tr>
+        </table>
+    </div>
+
+    <!-- 5. Worker初始化流程 -->
+    <div class="section">
+        <h2>五、Worker初始化流程</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图3：Worker初始化流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 上游vLLM
+    participant W as NPUWorker
+    participant MR as ModelRunner
+    participant A as Attention Backend
+    participant O as Ops
+    
+    U->>W: 创建Worker
+    W->>MR: 初始化ModelRunner
+    MR->>A: 选择注意力后端
+    MR->>O: 初始化自定义算子
+    W->>W: 加载模型权重
+    W->>W: 分配KV缓存
+    W-->>U: Worker就绪
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 推理执行流程 -->
+    <div class="section">
+        <h2>六、推理执行流程</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图4：单次推理执行流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 上游vLLM
+    participant W as NPUWorker
+    participant MR as ModelRunner
+    participant A as Attention
+    participant O as Ops
+    participant N as NPU
+    
+    U->>W: execute_model()
+    W->>MR: execute()
+    MR->>O: RMSNorm归一化
+    O->>N: NPU执行
+    N-->>O: 归一化结果
+    MR->>A: 计算注意力
+    A->>N: NPU执行
+    N-->>A: 注意力输出
+    MR->>O: FFN前馈网络
+    O->>N: NPU执行
+    N-->>O: FFN输出
+    MR-->>W: logits
+    W-->>U: 返回结果
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/worker/model_runner_v1.py（简化）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">NPUModelRunner</span>(GPUModelRunner):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vllm_config: VllmConfig):
+        <span class="kw">super</span>().__init__(vllm_config)
+        <span class="kw">self</span>.device = torch.device(<span class="str">"npu"</span>)
+
+    <span class="kw">def</span> <span class="fn">execute_model</span>(self, ...):
+        <span class="cmt"># 1. 预处理输入</span>
+        input_ids = self._prepare_input_ids(...)
+        
+        <span class="cmt"># 2. 构建注意力元数据</span>
+        attn_metadata = self._build_attn_metadata(...)
+        
+        <span class="cmt"># 3. 模型前向传播</span>
+        hidden_states = self.model(input_ids)
+        
+        <span class="cmt"># 4. 调用attention和ops模块</span>
+        <span class="kw">for</span> layer <span class="kw">in</span> self.model.layers:
+            hidden_states = layer.attention(hidden_states, attn_metadata)
+            hidden_states = layer.feed_forward(hidden_states)
+        
+        <span class="cmt"># 5. 采样输出</span>
+        logits = self.model.head(hidden_states)
+        <span class="kw">return</span> logits
+</pre>
+        </div>
+    </div>
+
+    <!-- 7. V2子模块 -->
+    <div class="section">
+        <h2>七、V2子模块详解</h2>
+        
+        <div class="worker-grid">
+            <div class="worker-card">
+                <h4>spec_decode/</h4>
+                <p>V2投机解码支持</p>
+                <ul>
+                    <li>init_speculator() - 初始化提议器</li>
+                    <li>Eagle提议器</li>
+                    <li>DFlash提议器</li>
+                    <li>DSpark提议器</li>
+                </ul>
+            </div>
+            <div class="worker-card">
+                <h4>sample/</h4>
+                <p>V2 NPU优化采样</p>
+                <ul>
+                    <li>apply_top_k_top_p_npu()</li>
+                    <li>apply_bad_words()</li>
+                    <li>compute_token_logprobs()</li>
+                </ul>
+            </div>
+            <div class="worker-card">
+                <h4>model_states/</h4>
+                <p>模型状态管理</p>
+                <ul>
+                    <li>AscendModelState</li>
+                    <li>AscendMambaHybridModelState</li>
+                </ul>
+            </div>
+            <div class="worker-card">
+                <h4>pcp_manager.py</h4>
+                <p>流水线上下文并行</p>
+                <ul>
+                    <li>AscendPCPManager</li>
+                    <li>AscendPCPAttentionContext</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        themeVariables: { fontSize: '16px', fontFamily: 'Arial, sans-serif' }
+    });
+</script>
+</body>
+</html>

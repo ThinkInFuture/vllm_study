@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>补丁模块 - vLLM Ascend</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.2rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar-nav { display: flex; gap: 12px; list-style: none; }
+        .navbar-nav a { color: #666; text-decoration: none; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
+        .navbar-nav a:hover, .navbar-nav a.active { background: #667eea; color: white; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #333; margin-bottom: 8px; }
+        .page-header p { color: #666; }
+        .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section h2 { color: #333; font-size: 1.4rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .section h3 { color: #667eea; font-size: 1.15rem; margin: 25px 0 12px 0; }
+        .section p { color: #555; margin-bottom: 12px; }
+        .mermaid-box { background: #fafbfc; border: 1px solid #e8ecf0; border-radius: 10px; padding: 20px; margin: 20px 0; }
+        .mermaid-box .chart-label { color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 15px; text-align: center; }
+        .mermaid-box .chart-content { text-align: center; overflow-x: auto; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; padding: 18px; margin: 15px 0; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; }
+        .code-block .file { color: #667eea; font-size: 0.85rem; margin-bottom: 8px; display: block; }
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .note { background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 15px 0; }
+        .note h4 { color: #667eea; margin-bottom: 6px; font-size: 0.95rem; }
+        .note p { color: #555; margin: 0; font-size: 0.9rem; }
+        .file-tree { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 2; overflow-x: auto; white-space: pre; }
+        .file-tree .dir { color: #667eea; font-weight: bold; }
+        .file-tree .file { color: #555; }
+        .patch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .patch-card { background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #667eea; }
+        .patch-card h4 { color: #667eea; margin-bottom: 10px; font-size: 1.05rem; }
+        .patch-card p { color: #666; font-size: 0.9rem; margin-bottom: 10px; }
+        .patch-card ul { list-style: none; padding: 0; }
+        .patch-card li { color: #555; font-size: 0.85rem; padding: 3px 0; }
+        .patch-card li::before { content: "→ "; color: #667eea; }
+        footer { text-align: center; color: #999; padding: 30px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="source-guide.html">源码讲解</a></li>
+            <li><a href="core.html">核心模块</a></li>
+            <li><a href="models.html">模型定义</a></li>
+            <li><a href="attention.html">注意力</a></li>
+            <li><a href="ops.html">算子</a></li>
+            <li><a href="worker.html">执行器</a></li>
+            <li><a href="distributed.html">分布式</a></li>
+            <li><a href="quantization.html">量化</a></li>
+            <li><a href="patch.html" class="active">补丁</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>补丁模块 (patch/)</h1>
+        <p>上游vLLM的补丁和扩展</p>
+    </header>
+
+    <!-- 1. 模块概述 -->
+    <div class="section">
+        <h2>一、模块概述</h2>
+        <p>patch目录包含对上游vLLM的补丁，用于适配NPU特性和优化性能。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图1：补丁应用流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[引擎启动] --> B[adapt_patch]
+    B --> C[加载平台补丁]
+    C --> D[加载Worker补丁]
+    D --> E[完成适配]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 文件结构 -->
+    <div class="section">
+        <h2>二、文件结构</h2>
+        
+        <pre class="file-tree"><span class="dir">patch/</span>
+├── <span class="file">__init__.py</span>
+├── <span class="file">patch_utils.py</span>       # 补丁工具
+├── <span class="dir">platform/</span>            # 平台级补丁
+│   ├── <span class="file">__init__.py</span>
+│   └── <span class="file">patch_*.py</span>      # 各种平台补丁
+└── <span class="dir">worker/</span>              # 工作节点补丁
+    ├── <span class="file">__init__.py</span>
+    └── <span class="file">patch_*.py</span>      # 各种Worker补丁</pre>
+    </div>
+
+    <!-- 3. 补丁分类 -->
+    <div class="section">
+        <h2>三、补丁分类</h2>
+        
+        <div class="patch-grid">
+            <div class="patch-card">
+                <h4>平台级补丁</h4>
+                <p>修改vLLM平台层行为</p>
+                <ul>
+                    <li>调度器适配</li>
+                    <li>编译器适配</li>
+                    <li>内存管理适配</li>
+                </ul>
+            </div>
+            <div class="patch-card">
+                <h4>Worker补丁</h4>
+                <p>修改Worker执行逻辑</p>
+                <ul>
+                    <li>模型加载优化</li>
+                    <li>推理执行优化</li>
+                    <li>通信优化</li>
+                </ul>
+            </div>
+            <div class="patch-card">
+                <h4>模型补丁</h4>
+                <p>特定模型优化</p>
+                <ul>
+                    <li>DeepSeek优化</li>
+                    <li>Qwen优化</li>
+                    <li>Kimi优化</li>
+                </ul>
+            </div>
+            <div class="patch-card">
+                <h4>兼容性补丁</h4>
+                <p>版本兼容性适配</p>
+                <ul>
+                    <li>API兼容</li>
+                    <li>配置兼容</li>
+                    <li>行为兼容</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 补丁代码示例 -->
+    <div class="section">
+        <h2>四、补丁代码示例</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图2：补丁机制原理</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[原始类] --> B[补丁函数]
+    B --> C[修改类方法]
+    C --> D[新类行为]
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/patch/worker/patch_deepseek.py</div>
+<pre>
+<span class="kw">from</span> vllm.model_executor.models.deepseek_v2 <span class="kw">import</span> DeepseekV2Model
+
+<span class="kw">def</span> <span class="fn">forward</span>(self, input_ids, positions, ...):
+    <span class="cmt"># NPU优化的forward实现</span>
+    ...
+
+<span class="cmt"># 应用补丁</span>
+DeepseekV2Model.forward = forward
+</pre>
+        </div>
+
+        <div class="note">
+            <h4>说明</h4>
+            <p>补丁通过直接替换类方法来修改上游vLLM的行为，实现NPU特定的优化。</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        themeVariables: { fontSize: '16px', fontFamily: 'Arial, sans-serif' }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Kimi K3 三平台架构对比解读</title>
+<link rel="stylesheet" href="../assets/highlight/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root { --bg: #f6f8fa; --card: #ffffff; --border: #d0d7de; --text: #1f2328; --accent: #0969da; --green: #1a7f37; --orange: #9a6700; --purple: #8250df; --red: #cf222e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-size: 16px;
+  }
+  h1 { text-align: center; font-size: 2rem; color: var(--accent); margin-bottom: 0.5rem; }
+  h2 { color: var(--accent); font-size: 1.5rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+  h3 { color: var(--purple); font-size: 1.2rem; margin: 1.2rem 0 0.6rem; }
+  .subtitle { text-align: center; color: #656d76; margin-bottom: 2rem; font-size: 1.05rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .tag-nv { background: #dafbe1; color: #1a7f37; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+  .tag-amd { background: #fff8c5; color: #9a6700; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+  .tag-ascend { background: #f0e3ff; color: #8250df; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+  .tag-shared { background: #ddf4ff; color: #0969da; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
+  code { background: #eef1f5; color: #be5026; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; font-family: 'Consolas', 'Fira Code', monospace; }
+  pre { background: #1f2328; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.9rem; line-height: 1.6; }
+  pre code { background: none; color: #e6edf3; }
+  .diff-add { color: #3fb950; font-weight: 600; }
+  .diff-del { color: #f85149; font-weight: 600; }
+  .diff-ctx { color: #8b949e; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  th { background: #f0f3f6; color: var(--accent); text-align: left; padding: 8px 10px; border: 1px solid var(--border); font-weight: 600; }
+  td { padding: 8px 10px; border: 1px solid var(--border); }
+  tr:hover td { background: #f6f8fa; }
+
+  .mermaid {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+  }
+  .mermaid svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    flex-shrink: 0;
+  }
+
+  /* 图编号和按钮样式 */
+  .fig-caption {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--accent);
+    margin: 0.5rem 0 0.2rem;
+  }
+  .download-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    transition: background 0.2s;
+  }
+  .download-btn:hover {
+    background: #0550ae;
+  }
+
+  .arrow-box { text-align: center; padding: 0.8rem; font-size: 1.1rem; color: var(--accent); }
+  .highlight { background: rgba(9,105,218,0.08); border-left: 3px solid var(--accent); padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0 4px 4px 0; }
+  .callout { background: rgba(255,248,197,0.5); border-left: 3px solid var(--orange); padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0 4px 4px 0; }
+  ul { padding-left: 1.5rem; margin: 0.5rem 0; }
+  li { margin: 0.3rem 0; }
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.5rem 0; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.95rem; }
+  .section-nav { position: sticky; top: 0; background: var(--bg); z-index: 10; padding: 0.5rem 0 1rem; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .section-nav a { color: var(--accent); text-decoration: none; margin-right: 1.2rem; font-size: 1rem; }
+  .section-nav a:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    body { font-size: 16px; padding: 1rem; max-width: 100%; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .mermaid { justify-content: flex-start; overflow-x: auto; padding-bottom: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Kimi K3 三平台架构对比解读</h1>
+<p class="subtitle">vLLM 上游 (NVIDIA / AMD) vs vLLM-Ascend 插件 — 源码级深度对比</p>
+
+<nav class="section-nav">
+  <a href="#sec1">1. 整体架构</a>
+  <a href="#sec2">2. 目录结构对比</a>
+  <a href="#sec3">3. 平台路由机制</a>
+  <a href="#sec4">4. 组件级对比</a>
+  <a href="#sec5">5. Attention 残差对比</a>
+  <a href="#sec6">6. Decoder Layer 对比</a>
+  <a href="#sec7">7. 继承关系全图</a>
+  <a href="#sec8">8. 设计哲学总结</a>
+  <a href="#sec9">9. 函数级调用链</a>
+  <a href="#sec10">10. 软件栈分层</a>
+</nav>
+
+<!-- ======================== Section 1 ======================== -->
+<h2 id="sec1">1. 整体架构总览</h2>
+
+<div class="card">
+<p>同一个 Kimi K3 模型，在三个硬件平台上需要不同的底层算子实现。vLLM 的设计是：</p>
+<ul>
+  <li><span class="tag-nv">NVIDIA</span> 和 <span class="tag-amd">AMD</span> 是上游 vLLM 的<strong>内建实现</strong>，各自独立完整地实现了整个模型</li>
+  <li><span class="tag-ascend">Ascend</span> 是外部<strong>硬件插件</strong>，通过继承上游类、替换 NPU 特定组件来适配</li>
+</ul>
+</div>
+
+<div class="fig-caption">图1：整体架构总览</div>
+<div class="mermaid">
+graph TB
+    subgraph upstream["上游 vLLM (vllm-main)"]
+        direction TB
+        init["__init__.py<br/>平台路由"]
+        common["common/<br/>公共模块"]
+        nv["nvidia/<br/>完整实现<br/>~2155行"]
+        amd["amd/<br/>完整实现<br/>~900行"]
+        init --> common
+        init -->|"GPU (CUDA)"| nv
+        init -->|"ROCm"| amd
+        init -->|"TPU"| tpu_pass["pass (插件自己注册)"]
+    end
+
+    subgraph plugin["vLLM-Ascend 插件 (vllm-ascend-main)"]
+        direction TB
+        ascend_model["kimi_k3.py<br/>适配层 ~879行"]
+        ascend_ops["ops/kimi_kda.py<br/>NPU 算子 ~752行"]
+        ascend_triton["ops/triton/kimi_k3/<br/>NPU Triton 算子"]
+        ascend_model --> ascend_ops
+        ascend_model --> ascend_triton
+    end
+
+    common -.->|"复用"| ascend_model
+    amd -.->|"继承"| ascend_model
+
+    style upstream fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+    style plugin fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style nv fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style amd fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style ascend_model fill:#f0e3ff,stroke:#8250df,color:#1f2328
+</div>
+
+<!-- ======================== Section 2 ======================== -->
+<h2 id="sec2">2. 目录结构对比</h2>
+
+<div class="grid-3">
+  <div class="card">
+    <h3><span class="tag-nv">NVIDIA</span> vllm/models/kimi_k3/nvidia/</h3>
+    <pre><code>model.py         2155行 完整模型
+mla.py            MLA注意力
+kda.py           1058行 KDA注意力
+latent_moe_runner.py
+dspark_mla.py
+mtp.py
+ops/
+  attn_res.py      Triton kernel
+  latent_moe_tail.py
+  cute_dsl/        CUDA底层
+  third_party/kda/ KDA chunk算子</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> vllm/models/kimi_k3/amd/</h3>
+    <pre><code>linear.py        ~900行 完整实现
+model.py         249行 多模态封装
+kda.py           619行 KDA注意力
+mla.py           MLA注意力
+latent_moe_runner.py
+mtp.py
+ops/
+  attn_res.py      Triton kernel
+  kda_decode.py
+  third_party/kda/ KDA算子</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> vllm_ascend/</h3>
+    <pre><code>models/kimi_k3.py    879行 适配层
+ops/kimi_kda.py      752行 NPU KDA
+ops/triton/kimi_k3/
+  attention_residual.py  NPU attn_res</code></pre>
+    <div class="callout">注意：Ascend 没有完整独立实现，<br/>而是继承上游 AMD 版本再替换</div>
+  </div>
+</div>
+
+<!-- ======================== Section 3 ======================== -->
+<h2 id="sec3">3. 平台路由机制</h2>
+
+<div class="card">
+<h3>上游入口：<code>vllm/models/kimi_k3/__init__.py</code></h3>
+<p>上游通过检测当前平台，自动路由到对应的实现：</p>
+<pre><code><span class="diff-ctx"># vllm/models/kimi_k3/__init__.py</span>
+<span class="diff-ctx">from vllm.platforms import current_platform</span>
+
+<span class="diff-ctx">if TYPE_CHECKING:</span>
+<span class="diff-ctx">    from .nvidia.model import KimiK3ForConditionalGeneration</span>
+<span class="diff-del">elif current_platform.is_rocm():</span>
+<span class="diff-del">    from .amd.model import KimiK3ForConditionalGeneration  # AMD</span>
+<span class="diff-add">elif current_platform.device_type == "tpu":</span>
+<span class="diff-add">    pass  # TPU插件自己注册，不在此加载</span>
+<span class="diff-ctx">else:</span>
+<span class="diff-ctx">    from .nvidia.model import KimiK3ForConditionalGeneration  # NVIDIA</span></code></pre>
+</div>
+
+<div class="card">
+<h3>Ascend 入口：<code>vllm_ascend/models/kimi_k3.py</code></h3>
+<p>Ascend 插件绕过上述路由，直接继承上游 AMD 版本的类，并替换关键组件：</p>
+<pre><code><span class="diff-ctx"># vllm_ascend/models/kimi_k3.py 的导入链</span>
+<span class="diff-del">from vllm.models.kimi_k3.amd.linear import KimiDecoderLayer as UpstreamKimiDecoderLayer</span>
+<span class="diff-del">from vllm.models.kimi_k3.amd.linear import KimiMLAAttention as UpstreamKimiMLAAttention</span>
+<span class="diff-del">from vllm.models.kimi_k3.amd.model import KimiK3ForConditionalGeneration as UpstreamKimiK3ForConditionalGeneration</span>
+
+<span class="diff-add">from vllm_ascend.ops.kimi_kda import AscendKimiK3DeltaAttention  # NPU KDA后端</span>
+<span class="diff-add">from vllm_ascend.ops.triton.kimi_k3.attention_residual import apply_attn_res  # NPU attn_res</span></code></pre>
+</div>
+
+<div class="fig-caption">图2：平台路由机制（时序图）</div>
+<div class="mermaid">
+sequenceDiagram
+    participant User as 用户启动推理
+    participant Registry as 模型注册表
+    participant Init as __init__.py
+    participant NV as NVIDIA实现
+    participant AMD as AMD实现
+    participant Ascend as Ascend插件
+
+    alt NVIDIA GPU
+        User->>Registry: 请求 Kimi K3
+        Registry->>Init: 查找模型类
+        Init->>Init: current_platform检测
+        Init->>NV: 路由到 nvidia/model.py
+        NV-->>User: KimiK3ForConditionalGeneration
+    else AMD ROCm
+        User->>Registry: 请求 Kimi K3
+        Registry->>Init: 查找模型类
+        Init->>Init: current_platform检测
+        Init->>AMD: 路由到 amd/model.py
+        AMD-->>User: KimiK3ForConditionalGeneration
+    else Ascend NPU
+        User->>Registry: 请求 Kimi K3
+        Registry->>Ascend: Ascend插件已注册
+        Ascend->>AMD: 继承上游AMD基类
+        Ascend->>Ascend: 替换NPU特定组件
+        Ascend-->>User: AscendKimiK3ForConditionalGeneration
+    end
+</div>
+
+<!-- ======================== Section 4 ======================== -->
+<h2 id="sec4">4. 组件级对比：同一模块，三种实现</h2>
+
+<h3>4.1 Attention 模块对比</h3>
+
+<div class="card">
+<table>
+<tr>
+  <th>维度</th>
+  <th><span class="tag-nv">NVIDIA</span></th>
+  <th><span class="tag-amd">AMD</span></th>
+  <th><span class="tag-ascend">Ascend</span></th>
+</tr>
+<tr>
+  <td><strong>类定义</strong></td>
+  <td>独立完整实现</td>
+  <td><code>KimiMLAAttention</code><br/>独立完整实现</td>
+  <td><code>AscendKimiMLAAttention</code><br/><strong>继承</strong> <code>UpstreamKimiMLAAttention</code></td>
+</tr>
+<tr>
+  <td><strong>KDA 层</strong></td>
+  <td><code>nvidia/kda.py</code><br/>1058行, Triton+CUDA</td>
+  <td><code>amd/kda.py</code><br/>619行, ROCm Triton</td>
+  <td><code>ops/kimi_kda.py</code><br/>752行, AscendC+Triton</td>
+</tr>
+<tr>
+  <td><strong>MLA 层</strong></td>
+  <td>自建 CUDA MLA wrapper</td>
+  <td><code>amd/mla.py</code><br/>ROCm MLA wrapper</td>
+  <td>复用上游 MLA wrapper<br/>仅配置 RoPE + DSpark</td>
+</tr>
+<tr>
+  <td><strong>底层算子</strong></td>
+  <td>CUDA / Triton kernel</td>
+  <td>ROCm / Triton kernel</td>
+  <td>AscendC / NPU Triton kernel</td>
+</tr>
+<tr>
+  <td><strong>forward 逻辑</strong></td>
+  <td>完整实现</td>
+  <td>完整实现</td>
+  <td>委托给 <code>self.mla_attn()</code><br/>上游已构建好</td>
+</tr>
+</table>
+</div>
+
+<div class="fig-caption">图3：KDA 层同一接口，三种算子实现</div>
+<div class="mermaid">
+graph LR
+    subgraph "KDA 层：同一接口，三种算子"
+        KDA_IF["KDA 接口<br/>前向计算"]
+        KDA_NV["NVIDIA<br/>Triton chunk_kda<br/>fused_recurrent_kda"]
+        KDA_AMD["AMD<br/>ROCm chunk_kda<br/>fused_recurrent_kda_packed_decode"]
+        KDA_ASC["Ascend<br/>AscendC NPU算子<br/>npu_stream_switch"]
+        KDA_IF --> KDA_NV
+        KDA_IF --> KDA_AMD
+        KDA_IF --> KDA_ASC
+    end
+
+    style KDA_IF fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style KDA_NV fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style KDA_AMD fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style KDA_ASC fill:#f0e3ff,stroke:#8250df,color:#1f2328
+</div>
+
+<h3>4.2 MoE 模块对比</h3>
+
+<div class="card">
+<table>
+<tr>
+  <th>维度</th>
+  <th><span class="tag-nv">NVIDIA</span></th>
+  <th><span class="tag-amd">AMD</span></th>
+  <th><span class="tag-ascend">Ascend</span></th>
+</tr>
+<tr>
+  <td><strong>类定义</strong></td>
+  <td>内联在 model.py 中</td>
+  <td><code>KimiMoE</code> 独立类</td>
+  <td><code>AscendKimiMoE</code> 独立类</td>
+</tr>
+<tr>
+  <td><strong>Gate</strong></td>
+  <td><code>GateLinear</code></td>
+  <td><code>GateLinear</code></td>
+  <td><code>GateLinear</code> ✓ 相同</td>
+</tr>
+<tr>
+  <td><strong>Shared Experts</strong></td>
+  <td><code>KimiMLP</code></td>
+  <td><code>KimiMLP</code></td>
+  <td><code>KimiMLP</code> ✓ 从上游导入</td>
+</tr>
+<tr>
+  <td><strong>Routed Experts</strong></td>
+  <td><code>FusedMoEFactory</code></td>
+  <td><code>FusedMoEFactory</code><br/>+ <code>ROCmLatentMoERunner</code></td>
+  <td><code>FusedMoEFactory</code><br/>+ 序列并行支持</td>
+</tr>
+<tr>
+  <td><strong>Latent MoE</strong></td>
+  <td>内建降维→专家→升维</td>
+  <td><code>ROCmLatentMoERunner</code></td>
+  <td>复用上游 <code>KimiRoutedOutputTransform</code><br/>量化配置走 Ascend 量化</td>
+</tr>
+<tr>
+  <td><strong>关键差异</strong></td>
+  <td>—</td>
+  <td>TP padding 处理</td>
+  <td>Ascend 量化配置透传<br/>+ 序列并行开关</td>
+</tr>
+</table>
+</div>
+
+<h3>4.3 MoE 初始化代码对比</h3>
+
+<div class="grid-2">
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> <code>KimiMoE.__init__</code></h3>
+    <pre><code class="language-python">self.experts = FusedMoEFactory(          # ↳ 专家容器来自上游 FusedMoE 体系
+    ...
+    runner_cls=ROCmLatentMoERunner       # ↳ AMD 特有：潜空间 MoE 专用 Runner
+        if self.use_latent_moe else None,
+)
+if self.padded_moe_intermediate_size
+    != moe_intermediate_size:
+    # AMD 特有的 TP padding 处理
+    w13_weight.data.zero_()   # ↳ AMD 特有：TP 切分 pad 需要先清零
+    w2_weight.data.zero_()    #    （昇腾无此处理）</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> <code>AscendKimiMoE.__init__</code></h3>
+    <pre><code class="language-python">latent_quant_config = (
+    quant_config if quant_config is not None
+    and quant_config.get_name() == "ascend"
+    else None                            # ⚡ 只有昇腾量化配置才透传给潜空间专家
+)
+self.experts = FusedMoEFactory(
+    ...
+    is_sequence_parallel=use_sequence_parallel,  # ⚡ 昇腾新增：序列并行开关
+    # ↳ 无需 runner_cls，复用上游默认 Runner
+)</code></pre>
+  </div>
+</div>
+
+<!-- ======================== Section 5 ======================== -->
+<h2 id="sec5">5. Attention 残差 (attn_res) 三平台对比</h2>
+
+<div class="card">
+<p>Attention Residual 是 Kimi K3 独有的机制：将传统的加法残差替换为<strong>学习式 softmax 加权混合</strong>。三平台的数学逻辑完全相同，但算子实现不同。</p>
+</div>
+
+<div class="fig-caption">图4：attn_res 数学流程（三平台相同）</div>
+<div class="mermaid">
+graph TD
+    subgraph "attn_res 数学流程（三平台相同）"
+        PS["prefix_sum<br/>累积残差"] --> CAT["拼接<br/>block_residual + prefix_sum"]
+        BR["block_residual<br/>块级残差"] --> CAT
+        CAT --> RMS["RMSNorm<br/>归一化"]
+        RMS --> SCORE["score = norm(x) · weight<br/>计算每条路径分数"]
+        SCORE --> SOFTMAX["softmax<br/>路径权重"]
+        SOFTMAX --> MIX["加权求和<br/>混合输出"]
+    end
+
+    style PS fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style BR fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style CAT fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style RMS fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style SCORE fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style SOFTMAX fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style MIX fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+</div>
+
+<div class="grid-3">
+  <div class="card">
+    <h3><span class="tag-nv">NVIDIA</span> attn_res</h3>
+    <p>实现在 <code>nvidia/ops/attn_res.py</code></p>
+    <ul>
+      <li>Triton JIT kernel</li>
+      <li>Source tiling 优化 decode</li>
+      <li>Online softmax 避免显存溢出</li>
+      <li>混合 BF16 精度策略</li>
+    </ul>
+    <pre><code class="language-python">@triton.jit
+def _attn_res_kernel(
+  prefix_ptr, delta_ptr,          # 累积残差 / 本块增量
+  blocks_ptr, norm_weight_ptr,    # 块级残差 / RMSNorm 权重
+  qk_weight_ptr, ...              # 打分投影权重
+):
+  # ↳ NVIDIA 路径：Triton GPU kernel（CUDA 后端编译）
+  # ⚡ 对应昇腾的 _apply_attn_res_kernel，数学逻辑相同</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> attn_res</h3>
+    <p>实现在 <code>amd/ops/attn_res.py</code></p>
+    <ul>
+      <li>同样是 Triton JIT kernel</li>
+      <li>与 NVIDIA 版逻辑几乎相同</li>
+      <li>适配 ROCm Triton 编译</li>
+      <li>相同的 source tiling 策略</li>
+    </ul>
+    <pre><code class="language-python">@triton.jit
+def _attn_res_kernel(
+  prefix_ptr, delta_ptr,          # 与 NVIDIA 版同参同名
+  blocks_ptr, norm_weight_ptr,
+  qk_weight_ptr, ...
+):
+  # ↳ AMD 路径：同一份 Triton 源码，改由 ROCm 后端编译
+  # → 昇腾版本见 9.3 源码外的 apply_attn_res（triton-ascend 编译）</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> _apply_ascend_attn_res</h3>
+    <p>实现在 <code>models/kimi_k3.py:92</code></p>
+    <ul>
+      <li>优先走 NPU Triton 优化</li>
+      <li>回退纯 PyTorch 实现</li>
+      <li>无需单独 kernel 文件</li>
+    </ul>
+    <pre><code class="language-python">def _apply_ascend_attn_res(...):
+  if apply_attn_res is not None
+    and prefix_sum.device.type=="npu":
+    return apply_attn_res(...)  # NPU Triton
+  # 回退：纯PyTorch实现
+  values = torch.cat(...)
+  scores = (normalized * weight).sum(-1)
+  return softmax @ values</code></pre>
+  </div>
+</div>
+
+<div class="card">
+<h3>关键代码对比：残差计算核心</h3>
+<pre><code><span class="diff-ctx"># ─── AMD 版 (amd/linear.py:141) ─── 调用 ROCm Triton kernel</span>
+def _apply_attn_res(prefix_sum, block_residual, proj, norm, num_valid_blocks, ...):
+    return attn_res(prefix_sum, delta, block_residual,
+                    norm.weight, proj.weight.squeeze(0), ...)
+
+<span class="diff-ctx"># ─── Ascend 版 (kimi_k3.py:92) ─── 优先 NPU Triton，回退纯 PyTorch</span>
+def _apply_ascend_attn_res(prefix_sum, block_residual, proj, norm, num_valid_blocks):
+    if apply_attn_res is not None and prefix_sum.device.type == "npu":
+        return apply_attn_res(...)                    <span class="diff-add"># ← NPU 加速路径</span>
+    <span class="diff-ctx"># 纯 PyTorch 回退（数学等价）</span>
+    values = torch.cat((block_residual[:,:num_valid_blocks,:], prefix_sum.unsqueeze(1)), dim=1)
+    values_fp32 = values.float()
+    inverse_rms = torch.rsqrt(values_fp32.square().mean(-1, keepdim=True) + norm.variance_epsilon)
+    normalized_without_gamma = values_fp32 * inverse_rms
+    score_weight = norm.weight.float() * proj.weight.squeeze(0).float()
+    scores = (normalized_without_gamma * score_weight).sum(-1)
+    probabilities = scores.softmax(-1).unsqueeze(1)
+    return torch.matmul(probabilities, values_fp32).squeeze(1).to(values.dtype)</code></pre>
+</div>
+
+<!-- ======================== Section 6 ======================== -->
+<h2 id="sec6">6. Decoder Layer 对比（最核心差异）</h2>
+
+<div class="card">
+<p>Decoder Layer 是差异最大的组件。三平台的核心分歧在于 <strong>Attention 后端的选择</strong> 和 <strong>残差路径的处理</strong>。</p>
+</div>
+
+<div class="fig-caption">图5：Decoder Layer 组件选择</div>
+<div class="mermaid">
+graph TB
+    subgraph "Decoder Layer 组件选择"
+        CFG["config.is_kda_layer(idx)?"]
+        
+        CFG -->|"是 KDA 层"| KDA_Q["选择 KDA 后端"]
+        CFG -->|"非 KDA 层"| MLA_Q["选择 MLA 后端"]
+        
+        KDA_Q --> NV_KDA["NVIDIA<br/>nvidia/kda.py<br/>Triton+CUDA"]
+        KDA_Q --> AMD_KDA["AMD<br/>amd/kda.py<br/>ROCm Triton"]
+        KDA_Q --> ASC_KDA["Ascend<br/>ops/kimi_kda.py<br/>AscendC+NPU"]
+        
+        MLA_Q --> NV_MLA["NVIDIA<br/>自建 CUDA MLA wrapper"]
+        MLA_Q --> AMD_MLA["AMD<br/>amd/mla.py<br/>ROCm MLA wrapper"]
+        MLA_Q --> ASC_MLA["Ascend<br/>继承上游MLA<br/>+ DSpark RoPE配置"]
+    end
+
+    MOE_Q["is_moe_layer?"]
+    MOE_Q -->|"是"| NV_MOE["NVIDIA KimiMoE"]
+    MOE_Q -->|"是"| AMD_MOE["AMD KimiMoE + ROCmRunner"]
+    MOE_Q -->|"是"| ASC_MOE["Ascend AscendKimiMoE + SP"]
+    MOE_Q -->|"否"| DENSE["KimiMLP (三平台共用)"]
+
+    style CFG fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style KDA_Q fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style MLA_Q fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style NV_KDA fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style AMD_KDA fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style ASC_KDA fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style NV_MLA fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style AMD_MLA fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style ASC_MLA fill:#f0e3ff,stroke:#8250df,color:#1f2328
+</div>
+
+<h3>6.1 初始化对比</h3>
+
+<div class="grid-2">
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> <code>KimiDecoderLayer.__init__</code></h3>
+    <pre><code class="language-python">if config.is_kda_layer(layer_idx):
+    kda_config = config.linear_attn_config
+    if kda_config.get("use_full_rank_gate", False):
+        self.self_attn = KimiK3DeltaAttention(...)      # ↳ AMD KDA（ROCm Triton）
+    else:
+        self.self_attn = KimiLinearGatedDeltaNetAttention(...)
+else:
+    self.self_attn = KimiMLAAttention(...)              # ↳ AMD MLA wrapper
+# ⚡ 昇腾版把上面两个分支整体换成 Ascend 实现（见右侧 Ascend 版对比）
+
+if self.is_moe_layer:
+    self.block_sparse_moe = KimiMoE(...)
+    self.mlp = self.block_sparse_moe
+else:
+    self.mlp = KimiMLP(...)</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> <code>AscendKimiDecoderLayer.__init__</code></h3>
+    <pre><code>if config.is_kda_layer(layer_idx):
+    <span class="diff-add">self.self_attn = AscendKimiK3DeltaAttention(...)</span>
+    <span class="diff-ctx"># ↑ NPU 专用 KDA 后端</span>
+else:
+    self.self_attn = <span class="diff-add">AscendKimiMLAAttention(...</span>
+        use_rope=False,  # 无RoPE
+    )
+
+if self.is_moe_layer:
+    self.block_sparse_moe = <span class="diff-add">AscendKimiMoE(...</span>
+        use_sequence_parallel=use_sequence_parallel,
+    )
+    self.mlp = self.block_sparse_moe
+else:
+    self.mlp = KimiMLP(...)</code></pre>
+  </div>
+</div>
+
+<h3>6.2 forward 对比</h3>
+
+<div class="grid-2">
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> <code>_run_self_attn</code></h3>
+    <pre><code>def _run_self_attn(self, positions, hidden_states):
+    <span class="diff-del">attn_output = torch.empty_like(hidden_states)</span>
+    <span class="diff-del">self.self_attn(</span>
+    <span class="diff-del">    hidden_states=hidden_states,</span>
+    <span class="diff-del">    positions=positions,</span>
+    <span class="diff-del">    output=attn_output,  # 写入预分配缓冲</span>
+    <span class="diff-del">)</span>
+    <span class="diff-del">return attn_output</span></code></pre>
+    <div class="callout">AMD 版要求预先分配输出缓冲<br/>attention 结果写入传入的 output 参数</div>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> <code>_run_self_attn</code></h3>
+    <pre><code>def _run_self_attn(self, positions, hidden_states):
+    <span class="diff-add">return self.self_attn(</span>
+    <span class="diff-add">    positions=positions,</span>
+    <span class="diff-add">    hidden_states=hidden_states,</span>
+    <span class="diff-add">    # ↑ Ascend attention 直接返回结果</span>
+    <span class="diff-add">)</span></code></pre>
+    <div class="highlight">Ascend 版直接返回结果<br/>无需预分配缓冲区（NPU 内存管理不同）</div>
+  </div>
+</div>
+
+<h3>6.3 forward_attn_residual 对比</h3>
+
+<div class="grid-2">
+  <div class="card">
+    <h3><span class="tag-amd">AMD</span> <code>forward_attn_residual</code></h3>
+    <pre><code>def forward_attn_residual(self, positions, hidden_states, block_residual):
+    prefix_sum = hidden_states
+    hidden_states = <span class="diff-del">_apply_attn_res(</span>
+        prefix_sum, block_residual,
+        self.self_attention_res_proj,
+        self.self_attention_res_norm,
+        self.prev_valid_blocks,
+        <span class="diff-del">output_norm=self.input_layernorm,</span>
+        <span class="diff-del">block_write_idx=(self.block_write_idx</span>
+        <span class="diff-del">    if self.is_block_write_layer else -1),</span>
+    )
+    if self.is_block_write_layer:
+        prefix_sum = None
+
+    hidden_states = self._run_self_attn(positions, hidden_states)
+
+    if prefix_sum is None:
+        prefix_sum = hidden_states
+        prefix_delta = None
+    else:
+        prefix_delta = hidden_states
+
+    hidden_states = <span class="diff-del">_apply_attn_res(</span>
+        ..., delta=prefix_delta,
+        <span class="diff-del">output_norm=self.post_attention_layernorm,</span>
+    )
+    hidden_states = self.mlp(hidden_states)
+    prefix_sum = prefix_sum + hidden_states
+    return prefix_sum, block_residual</code></pre>
+  </div>
+  <div class="card">
+    <h3><span class="tag-ascend">Ascend</span> <code>forward_attn_residual</code></h3>
+    <pre><code>def forward_attn_residual(self, positions, hidden_states, block_residual):
+    prefix_sum = hidden_states
+    hidden_states = <span class="diff-add">_apply_ascend_attn_res(</span>
+        prefix_sum, block_residual,
+        self.self_attention_res_proj,
+        self.self_attention_res_norm,
+        self.prev_valid_blocks,
+    )
+    if self.is_block_write_layer:
+        <span class="diff-add">block_residual[:, self.block_write_idx, :].copy_(prefix_sum)</span>
+        prefix_sum = None
+
+    hidden_states = self.input_layernorm(hidden_states)
+    <span class="diff-add">if self.use_sequence_parallel:</span>
+    <span class="diff-add">    hidden_states = sp_all_gather(hidden_states)</span>
+    <span class="diff-add">    hidden_states = hidden_states[:positions.shape[0]]</span>
+    hidden_states = self.self_attn(...)
+    <span class="diff-add">if self.use_sequence_parallel:</span>
+    <span class="diff-add">    hidden_states = sp_reduce_scatter(hidden_states)</span>
+
+    prefix_sum = hidden_states if prefix_sum is None else prefix_sum + hidden_states
+    hidden_states = <span class="diff-add">_apply_ascend_attn_res(</span>...)
+    hidden_states = self.post_attention_layernorm(hidden_states)
+    hidden_states = self.mlp(hidden_states)
+    hidden_states = prefix_sum + hidden_states
+    return hidden_states, block_residual</code></pre>
+  </div>
+</div>
+
+<!-- ======================== Section 7 ======================== -->
+<h2 id="sec7">7. 继承关系全图</h2>
+
+<!-- 下载按钮 -->
+<button class="download-btn" id="downloadInheritanceBtn">📥 下载此图 (SVG)</button>
+
+<div class="fig-caption">图6：继承关系全图</div>
+<div class="mermaid" id="inheritanceDiagram">
+graph TB
+    subgraph "上游 vLLM (vllm-main)"
+        NV_MODEL["NVIDIA<br/>KimiK3ForConditionalGeneration<br/>2155行 完整实现"]
+        AMD_MODEL["AMD<br/>KimiK3ForConditionalGeneration<br/>249行 封装层"]
+        AMD_LINEAR["AMD<br/>KimiLinearForCausalLM"]
+        AMD_LM["AMD<br/>KimiLinearModel"]
+        AMD_DEC["AMD<br/>KimiDecoderLayer"]
+        AMD_MLA["AMD<br/>KimiMLAAttention"]
+        AMD_KDA["AMD<br/>KimiK3DeltaAttention"]
+        AMD_MOE["AMD<br/>KimiMoE"]
+
+        AMD_MODEL --> AMD_LINEAR
+        AMD_LINEAR --> AMD_LM
+        AMD_LM --> AMD_DEC
+        AMD_DEC --> AMD_MLA
+        AMD_DEC --> AMD_KDA
+        AMD_DEC --> AMD_MOE
+    end
+
+    subgraph "vLLM-Ascend 插件"
+        ASC_MODEL["Ascend<br/>AscendKimiK3ForConditionalGeneration"]
+        ASC_LINEAR["Ascend<br/>AscendKimiLinearForCausalLM"]
+        ASC_LM["Ascend<br/>AscendKimiLinearModel"]
+        ASC_DEC["Ascend<br/>AscendKimiDecoderLayer"]
+        ASC_MLA["Ascend<br/>AscendKimiMLAAttention"]
+        ASC_KDA["Ascend<br/>AscendKimiK3DeltaAttention<br/>ops/kimi_kda.py"]
+        ASC_MOE["Ascend<br/>AscendKimiMoE"]
+        ASC_PROJ["Ascend<br/>AscendKimiK3MultiModalProjector"]
+    end
+
+    ASC_MODEL -.->|"继承"| AMD_MODEL
+    ASC_LINEAR -.->|"继承"| AMD_LINEAR
+    ASC_LM -.->|"继承"| AMD_LM
+    ASC_DEC -.->|"继承"| AMD_DEC
+    ASC_MLA -.->|"继承"| AMD_MLA
+    ASC_PROJ -.->|"继承"| K25_PROJ["上游<br/>KimiK25MultiModalProjector"]
+
+    ASC_KDA -.->|"替换 (非继承)"| AMD_KDA
+    ASC_MOE -.->|"替换 (非继承)"| AMD_MOE
+
+    linkStyle 0,1,2,3,4,5 stroke-dasharray: 5 5, stroke: #bc8cff
+    linkStyle 6,7 stroke-dasharray: 3 3, stroke: #f85149
+
+    style ASC_MODEL fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style ASC_LINEAR fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style ASC_LM fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style ASC_DEC fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style ASC_MLA fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style ASC_KDA fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style ASC_MOE fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style ASC_PROJ fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style AMD_MODEL fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_LINEAR fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_LM fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_DEC fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_MLA fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_KDA fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style AMD_MOE fill:#fff8c5,stroke:#9a6700,color:#1f2328
+</div>
+
+<div class="card">
+<h3>继承策略图例</h3>
+<div class="legend">
+  <div class="legend-item"><span style="display:inline-block;width:30px;border-top:2px dashed #bc8cff;"></span> 继承上游类，复用通用逻辑</div>
+  <div class="legend-item"><span style="display:inline-block;width:30px;border-top:2px dashed #f85149;"></span> 完全替换，NPU 专用实现</div>
+</div>
+<p style="margin-top:0.8rem;">规律：越靠近底层（算子级），越需要替换；越靠近上层（模型结构、权重加载），越可以继承复用。</p>
+</div>
+
+<!-- ======================== Section 8 ======================== -->
+<h2 id="sec8">8. 设计哲学总结</h2>
+
+<div class="fig-caption">图7：设计哲学——为什么需要每个平台写一遍？</div>
+<div class="mermaid">
+graph LR
+    subgraph "为什么需要每个平台写一遍？"
+        A["硬件算子不同"] --> B["CUDA ≠ ROCm ≠ AscendC"]
+        C["内存模型不同"] --> D["GPU HBM ≠ NPU HBM<br/>缓冲区管理策略不同"]
+        E["编译工具链不同"] --> F["nvcc ≠ hipcc ← AscendC<br/>Triton 三平台各需适配"]
+    end
+
+    subgraph "为什么 Ascend 可以少写很多？"
+        G["继承上游 AMD 版"] --> H["模型结构/权重加载<br/>前向逻辑/接口规范<br/>全部复用"]
+        I["只替换差异部分"] --> J["KDA 后端算子<br/>MLA RoPE 配置<br/>attn_res NPU 实现<br/>序列并行逻辑"]
+    end
+
+    style A fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style C fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style E fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style G fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style I fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>NVIDIA / AMD（内建平台）</h3>
+    <ul>
+      <li>必须<strong>完整独立实现</strong>所有组件</li>
+      <li>因为上游需要为每个平台提供<strong>开箱即用</strong>的支持</li>
+      <li>两者逻辑相似但<strong>算子不能混用</strong></li>
+      <li>NVIDIA 2155 行 vs AMD ~900 行（AMD 结构更精简）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Ascend（外部插件）</h3>
+    <ul>
+      <li><strong>继承为主，替换为辅</strong></li>
+      <li>只替换硬件强相关部分（KDA算子、attn_res）</li>
+      <li>新增 NPU 特有逻辑（序列并行、量化透传）</li>
+      <li>879 行（其中大量是继承的上游逻辑）</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card">
+<h3>一图总结：代码复用 vs 硬件替换</h3>
+<div class="fig-caption">图8：代码复用 vs 硬件替换</div>
+<div class="mermaid">
+graph TB
+    subgraph "模型层级（从上到下）"
+        L1["多模态顶层<br/>KimiK3ForConditionalGeneration"]
+        L2["Causal LM<br/>KimiLinearForCausalLM"]
+        L3["文本模型<br/>KimiLinearModel"]
+        L4["Decoder Layer<br/>KimiDecoderLayer"]
+        L5A["Attention<br/>MLA / KDA"]
+        L5B["FFN<br/>MoE / MLP"]
+        L6["底层算子<br/>attn_res / kda_kernel / moe_kernel"]
+    end
+    L1 --> L2 --> L3 --> L4 --> L5A
+    L4 --> L5B
+    L5A --> L6
+    L5B --> L6
+
+    L1 -.- R1["🟢 几乎全复用"]
+    L2 -.- R2["🟢 几乎全复用"]
+    L3 -.- R3["🟡 大部分复用，SP新增"]
+    L4 -.- R4["🟡 继承+覆盖forward"]
+    L5A -.- R5A["🔴 完全替换（KDA）<br/>🟡 继承+配置（MLA）"]
+    L5B -.- R5B["🟡 继承+SP/量化适配"]
+    L6 -.- R6["🔴 完全替换（NPU算子）"]
+
+    style R1 fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style R2 fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style R3 fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style R4 fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style R5A fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style R5B fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style R6 fill:#ffebe9,stroke:#cf222e,color:#1f2328
+</div>
+<div class="legend" style="margin-top:1rem;">
+  <div class="legend-item"><span style="color:#3fb950;">🟢</span> 几乎全复用（继承即可）</div>
+  <div class="legend-item"><span style="color:#d29922;">🟡</span> 部分复用，需覆盖/扩展</div>
+  <div class="legend-item"><span style="color:#f85149;">🔴</span> 完全替换（硬件强相关）</div>
+</div>
+</div>
+
+<div class="card" style="border-color: var(--accent); background: rgba(9,105,218,0.05);">
+<h3>最终结论</h3>
+<p>不是每个平台"都写一遍"同一份代码，而是：</p>
+<ul>
+  <li><strong>NVIDIA 和 AMD</strong> 各自完整独立实现（因为它们的算子生态完全不同，且是上游内建）</li>
+  <li><strong>Ascend</strong> 通过继承 AMD 版本，只替换 <strong>NPU 特有的底层算子</strong>和<strong>内存管理策略</strong>，上层的模型结构、权重加载、前向框架全部复用</li>
+  <li>越靠近<strong>算子层</strong>，差异越大（必须替换）；越靠近<strong>模型层</strong>，共性越多（可以继承）</li>
+  <li>如果未来 Ascend 被合并进上游，它也会变成 <code>vllm/models/kimi_k3/ascend/</code> 下的一套完整实现，届时代码量会大幅增加</li>
+</ul>
+</div>
+
+
+<!-- ======================== Section 9 ======================== -->
+<h2 id="sec9">9. K3 逐层看：从一次推理到 NPU 算子</h2>
+
+<div class="card">
+<p>图9-1 把一次推理分成了六步，其中<strong>第④步「模型逐层计算」占 95% 以上的计算量</strong>。
+接下来两节只聚焦它：9.2 放大看 30 层里<strong>一层</strong>的实际调用时序（顺便看清哪些代码来自 AMD 基类、
+哪些是昇腾新写的）；9.3 顺着时序钻进源码。</p>
+</div>
+
+<h3>9.1 一次推理的完整旅程</h3>
+<div class="card"><p>先快速过一遍全流程（上一版已有，紫色是本章主角）：</p></div>
+<div class="fig-caption">图9-1：K3 一次推理的六步（本章只展开紫色第④步）</div>
+<div class="mermaid">
+graph TD
+    A["① 请求排队"] --> B["② 调度器决定本步跑什么"]
+    B --> C["③ 执行器准备输入<br/>（图片先过视觉编码器）"]
+    C --> D["④ 模型逐层计算 ×30 层<br/>残差混合 → 注意力 → 专家前馈"]
+    D --> E["⑤ 采样出下一个词"]
+    E --> F["⑥ 返回 / 存回队列"]
+    style A fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+    style B fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+    style C fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+    style D fill:#f0e3ff,stroke:#8250df,color:#1f2328
+    style E fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+    style F fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+</div>
+
+<h3>9.2 第④步放大：一层计算的实际时序</h3>
+<div class="card">
+<p>第④步 = 30 次循环，每次调 <code>AscendKimiDecoderLayer.forward_attn_residual</code>
+（models/kimi_k3.py:478，<strong>这个类继承自 AMD 的 KimiDecoderLayer，同名方法被覆盖重写</strong>）。
+下面是一次层计算的完整时序——注意三列参与者的来源：<strong>中间是昇腾写的，右列是 NPU 底层算子，
+方法名旁标 ↳ 的行为/组件直接来自 AMD 基类</strong>。</p>
+</div>
+<div class="fig-caption">图9-2：一层计算的调用时序（↳来自AMD基类 · ⚡昇腾新实现 · 红色=NPU底层算子）</div>
+<div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Layer as AscendKimiDecoderLayer<br/>（models/kimi_k3.py:478）
+    participant Res as 残差混合<br/>_apply_ascend_attn_res
+    participant Attn as _run_self_attn<br/>（kimi_k3.py:470）
+    participant KDA as AscendKimiK3DeltaAttention<br/>（ops/kimi_kda.py:145）
+    participant OPS as NPU 底层算子
+
+    Note over Layer: ↳ forward_attn_residual 骨架与 AMD 基类同名同序，只换实现
+    Layer->>Res: ① 残差混合（block_residual 加权）
+    Res->>OPS: ⚡ @triton.jit _apply_attn_res_kernel
+    Layer->>Layer: ② input_layernorm ↳ 直接用 AMD 基类的组件
+    Layer->>Attn: ③ ⚡ _run_self_attn：按层类型二选一（AMD 基类没有此分派）
+    alt KDA 层（delta attention）
+        Attn->>KDA: forward(hidden_states, positions)
+        KDA->>OPS: ⚡ _C_ascend.npu_causal_conv1d_custom
+        KDA->>OPS: ⚡ _C_ascend.chunk_kda_fwd（prefill）<br/>或 recurrent_kda（decode）
+    else MLA 层
+        Attn->>OPS: ⚡ AscendKimiMLAAttention（kimi_k3.py:344，继承上游MLA）<br/>→ AscendMLAImpl → FIA
+    end
+    Layer->>Res: ④ 残差混合② + post_attention_layernorm ↳
+    Layer->>Layer: ⑤ MoE/MLP：AscendKimiMoE.forward（kimi_k3.py:232）<br/>⚡ → npu_grouped_matmul_swiglu_quant
+</div>
+
+<div class="card">
+<h3>那"依赖 AMD"到底是什么意思？——三种机制，对应到代码</h3>
+<pre><code class="language-python"># 机制一：整类继承 —— 类体是空的或只加参数，方法全部来自 AMD 基类
+class AscendKimiMLAAttention(UpstreamKimiMLAAttention):   # Upstream = vllm/models/kimi_k3/amd/linear.py
+    def forward(self, positions, hidden_states):
+        return self.mla_attn(positions, hidden_states)     # 只改一个委托点
+
+# 机制二：继承 + 覆盖 —— 方法签名沿用 AMD 基类，实现重写
+class AscendKimiDecoderLayer(UpstreamKimiDecoderLayer):
+    def forward_attn_residual(self, ...): ...              # 同名同序，换掉残差函数/注意力分派
+
+# 机制三：整组件替换 —— 上游类彻底不用，接口对齐
+self.self_attn = AscendKimiK3DeltaAttention(...)           # AMD 的 KimiK3DeltaAttention 被丢弃</code></pre>
+<p>一句话：<strong>AMD 提供的是"层的组织方式"（方法顺序、组件接线、权重加载），昇腾提供的是"每个动作怎么算"</strong>。
+时序图里的编号 ①→⑤ 就是 AMD 基类定下的顺序；每个编号算什么，红色算子说了算。</p>
+</div>
+
+<h3>9.3 沿时序看源码：KDA 从 Python 到 NPU 算子</h3>
+<div class="card">
+<p>时序图 alt 分支里 KDA 是最特殊的一条（上游没有、AMD 用 ROCm Triton、昇腾用自研 AscendC 算子）。
+下面三段源码就是时序图 <strong>消息 4 → 6 → 7</strong> 的真身（截自 <code>ops/kimi_kda.py</code>，
+⚡ 昇腾新逻辑 / ↳ 与 AMD·上游的关系 / →NPU 底层算子，见行内注释）。</p>
+</div>
+
+<div class="fig-caption">源码① —— 对应时序图消息 4：KDA 入口 forward（kimi_kda.py:145）</div>
+<div class="card">
+<pre><code class="language-python">def forward(  # ↳ 接口与上游 KimiK3DeltaAttention 一致（整组件替换，机制三）
+    self,
+    hidden_states: torch.Tensor,
+    positions: torch.Tensor,
+) -&gt; torch.Tensor:
+    if self.uses_mixed_projection:
+        num_tokens = hidden_states.size(0)
+        mixed_qkv = self.in_proj_qkvgfab(hidden_states)  # ⚡ 融合投影：一次出 q/k/v/门控多路[0]
+        projected_gfab = self.in_proj_gfab(hidden_states)[0]
+        split_sizes = [
+            self.local_projection_size,
+            self.head_dim,
+            self.local_num_heads,
+        ]
+        if self.in_proj_padding:
+            split_sizes.append(self.in_proj_padding)</code></pre>
+</div>
+
+<div class="fig-caption">源码② —— 对应时序图消息 6 前置：分派与 AscendC 契约（kimi_kda.py:321）</div>
+<div class="card">
+<pre><code class="language-python">def _forward(
+    self,
+    mixed_qkv: torch.Tensor,
+    g1: torch.Tensor,
+    g2: torch.Tensor,
+    beta: torch.Tensor,
+    core_attn_out: torch.Tensor,
+) -&gt; None:
+    &quot;&quot;&quot;Dispatch speculative, prefill, and decode tokens through KDA kernels.&quot;&quot;&quot;
+    forward_context = get_forward_context()
+    attn_metadata_raw = forward_context.attn_metadata
+    if attn_metadata_raw is None:
+        core_attn_out.zero_()
+        return
+
+    assert isinstance(attn_metadata_raw, dict)
+    attn_metadata = attn_metadata_raw[self.prefix]
+    assert isinstance(attn_metadata, GDNAttentionMetadata)
+
+    num_actual_tokens = attn_metadata.num_actual_tokens
+    mixed_qkv = mixed_qkv[:num_actual_tokens]
+    g1 = g1[:, :num_actual_tokens]</code></pre>
+</div>
+
+<div class="fig-caption">源码③ —— 对应时序图消息 7：真正跨过 Python/硬件边界的调用（kimi_kda.py:199）</div>
+<div class="card">
+<pre><code class="language-python">def _run_causal_conv1d(
+    mixed_qkv: torch.Tensor,
+    conv_weights_t: torch.Tensor,
+    conv_state: torch.Tensor,
+    query_start_loc: torch.Tensor,
+    cache_indices: torch.Tensor,
+    initial_state_mode: torch.Tensor | None,
+    *,
+    run_mode: int,
+    num_accepted_tokens: torch.Tensor | None = None,
+) -&gt; torch.Tensor:
+    output = torch.empty_like(mixed_qkv)
+    # Consume the operator&#x27;s declared output alias. Returning ``output``
+    # independently would let graph functionalization treat the custom-op
+    # result as dead and expose the uninitialized allocation instead.
+    return torch.ops._C_ascend.npu_causal_conv1d_custom(  # →NPU：自研 AscendC 算子，CANN 调度到 AI Core
+        output,
+        mixed_qkv,
+        conv_weights_t,
+        conv_state=conv_state,
+        bias_opt=None,
+        query_start_loc_opt=query_start_loc,
+        cache_indices_opt=cache_indices,
+        initial_state_mode_opt=initial_state_mode,</code></pre>
+<p style="margin-top:0.8rem;"><strong>读完这三段，时序图右边一列（NPU 底层算子）就有了实体</strong>：
+<code>torch.ops._C_ascend.*</code> 是 vllm-ascend 自己编译的 C++ 算子库（AscendC 语言编写、随包发布），
+调用之后编译与调度全部交给 CANN 落到 AI Core。MLA 分支同理，走的是第二个通道 torch_npu（第 10 章）。</p>
+</div>
+<h2 id="sec10">10. Ascend 软件栈：从 Python 一路到 NPU 硬件</h2>
+
+<div class="card">
+<p>第 9 章调用链里出现了三种"红色"底层调用：<code>torch.ops._C_ascend.*</code>、<code>torch_npu.npu_*</code>、
+<code>@triton.jit</code>。它们就是 vllm-ascend 与"Ascend 底层"的三个接口。这一章把它们与 CANN、硬件串成一条线。</p>
+</div>
+
+<!-- 图10 较大，提供下载 -->
+<button class="download-btn" id="downloadStackBtn">📥 下载此图 (SVG)</button>
+<div class="fig-caption">图10：vllm-ascend 软件栈分层（含三个算子通道）</div>
+<div class="mermaid" id="stackDiagram">
+graph LR
+    subgraph L1["① 模型/后端层（vllm_ascend Python）"]
+        M1["models/kimi_k3.py<br/>attention/mla_v1.py<br/>ops/kimi_kda.py"]
+    end
+    subgraph L2["② 算子封装层（三个通道）"]
+        C1["torch.ops._C_ascend.*<br/>vllm_ascend_C（C++ 扩展）<br/>算子用 AscendC 语言编写<br/>例：chunk_kda_fwd / recurrent_kda<br/>/ npu_causal_conv1d_custom"]
+        C2["torch_npu.npu_*<br/>华为官方 aclnn 算子库<br/>例：npu_grouped_matmul_swiglu_quant<br/>npu_fused_infer_attention_score"]
+        C3["@triton.jit<br/>triton-ascend 编译器<br/>例：_apply_attn_res_kernel"]
+    end
+    subgraph L3["③ CANN 异构计算架构"]
+        K["AscendC Kernel（设备侧 C++）"]
+        ACL["libascendcl / aclnn<br/>Host 侧运行时 + Stream 调度"]
+        K --> ACL
+    end
+    subgraph L4["④ 硬件"]
+        HW["NPU AI Core<br/>Cube（矩阵）+ Vector（向量）单元<br/>+ HBM 显存"]
+    end
+    M1 --> C1
+    M1 --> C2
+    M1 --> C3
+    C1 --> K
+    C2 --> ACL
+    C3 -->|"triton-ascend 编译为设备代码"| K
+    ACL --> HW
+    K --> HW
+
+    style L1 fill:#faf5ff,stroke:#8250df,color:#1f2328
+    style L2 fill:#ffffff,stroke:#d0d7de,color:#1f2328
+    style C1 fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style C2 fill:#fff8c5,stroke:#9a6700,color:#1f2328
+    style C3 fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style L3 fill:#f0f3f6,stroke:#0969da,color:#1f2328
+    style L4 fill:#f6f8fa,stroke:#d0d7de,color:#1f2328
+</div>
+
+<div class="card">
+<h3>三个算子通道怎么区分（对应真实代码）</h3>
+<table>
+<tr><th>通道</th><th>是什么</th><th>Kimi K3 里在哪用</th><th>为什么选它</th></tr>
+<tr>
+  <td><code>torch.ops._C_ascend.*</code></td>
+  <td>vllm-ascend 自己编译的 C++ 扩展 <code>vllm_ascend_C</code>（<code>utils.enable_custom_op</code> 惰性注册），内部算子用华为 AscendC 语言写，随包发布</td>
+  <td>KDA 全部核心计算：<code>chunk_kda_fwd</code>（prefill 分块）、<code>recurrent_kda</code>（decode 递归）、<code>npu_causal_conv1d_custom</code>（因果卷积）</td>
+  <td>上游没有的算子（KDA 是 Kimi K3 新结构），必须自己写设备代码</td>
+</tr>
+<tr>
+  <td><code>torch_npu.npu_*</code></td>
+  <td>华为官方 torch_npu 库提供的 aclnn 算子（CANN 自带，随固件/驱动发布）</td>
+  <td>MLA 的融合推理注意力（FIA）、MoE 的 <code>npu_grouped_matmul_swiglu_quant</code>、各类基础算子</td>
+  <td>通用大算子华为已高度优化，直接调用即可，无需自研</td>
+</tr>
+<tr>
+  <td><code>@triton.jit</code>（triton-ascend）</td>
+  <td>Triton 语言的 Ascend 后端，Python 写 kernel、运行时编译到 NPU</td>
+  <td>注意力残差 <code>_apply_attn_res_kernel</code>（ops/triton/kimi_k3/attention_residual.py）</td>
+  <td>与 NVIDIA/AMD 共享同一份 Triton 源码风格，移植成本低；无环境时回退纯 PyTorch</td>
+</tr>
+</table>
+</div>
+
+<div class="card">
+<h3>"和 Ascend 底层啥关系"——一次 KDA 计算的完整下沉过程</h3>
+<pre><code class="language-python"># ① Python 层：ops/kimi_kda.py（你能在文档里打开的源码）
+def _run_prefill(self, ...):
+    ...准备 q/k/v/beta 并按 AscendC 契约整理（_prepare_beta）...
+    return torch.ops._C_ascend.chunk_kda_fwd(q, k, v, g, beta, ...)   # ← 跨过 Python/USA 边界
+
+# ② C++ 层：vllm_ascend_C 扩展（随包发布的 .so，源码在仓库 vllm_ascend/C 下）
+#    chunk_kda_fwd 的 C++ 实现负责：参数校验 → 取 NPU Stream → launch AscendC kernel
+
+# ③ CANN 层：AscendC kernel（设备侧 C++/类 CUDA 语法）编译产物在 AI Core 上执行
+#    Host 侧由 libascendcl（acl）管理设备上下文、内存、Stream 任务下发
+
+# ④ 硬件层：AI Core 的 Cube 单元做矩阵乘（q·k、状态更新），Vector 单元做激活/门控</code></pre>
+<div class="highlight">
+对照 AMD：同样的四层是 Python → hipcc 编译的 ROCm Triton kernel → ROCm 运行时（HIP/ROCR）→ CDNA 计算单元。
+<strong>平台差异被压缩在 ②③ 两层</strong>，这就是为什么第 9 章里调用链的上半段两平台长得一样。
+</div>
+</div>
+
+<div class="card" style="border-color: var(--accent); background: rgba(9,105,218,0.05);">
+<h3>把两个问题串起来（本章结论）</h3>
+<ul>
+  <li><strong>"看不到 Ascend 实现全景"</strong>：因为 70% 的实现是"继承来的"（引擎/runner/模型骨架），真正的 Ascend 代码集中在
+  worker/（执行器）、attention/（注意力后端）、ops/（算子）、models/（适配层）四处——第 9 章调用链把它们挂回了同一条链上。</li>
+  <li><strong>"和 Ascend 底层串不起来"</strong>：中间缺的是"算子通道"这一环——vllm-ascend 从不直接摸硬件，
+  它只会走 <code>torch.ops._C_ascend</code>（自研 AscendC）、<code>torch_npu</code>（华为 aclnn）、
+  <code>triton-ascend</code> 三个入口，再由 CANN 完成编译与调度落到 AI Core（本章图 10）。</li>
+</ul>
+</div>
+
+<script src="../assets/highlight/highlight.min.js"></script>
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'base',
+  themeVariables: {
+    darkMode: false,
+    background: '#ffffff',
+    primaryColor: '#f0e3ff',
+    primaryTextColor: '#1f2328',
+    primaryBorderColor: '#8250df',
+    lineColor: '#656d76',
+    secondaryColor: '#fff8c5',
+    tertiaryColor: '#dafbe1',
+    mainBkg: '#ffffff',
+    nodeBorder: '#d0d7de',
+    clusterBkg: '#f6f8fa',
+    clusterBorder: '#d0d7de',
+    titleColor: '#1f2328',
+    edgeLabelBackground: '#ffffff',
+    actorBorder: '#656d76',
+    actorBkg: '#ffffff',
+    actorTextColor: '#1f2328',
+    actorLineColor: '#656d76',
+    activationBorderColor: '#d0d7de',
+    activationBkg: '#f6f8fa',
+    labelBoxBkgColor: '#f6f8fa',
+    labelBoxBorderColor: '#d0d7de',
+    labelTextColor: '#1f2328',
+    loopTextColor: '#1f2328',
+    noteBkgColor: '#fff8c5',
+    noteBorderColor: '#9a6700',
+    noteTextColor: '#1f2328',
+    altBackground: '#f6f8fa',
+    altBackground2: '#fefefe',
+    taskTextColor: '#1f2328',
+    doneTextColor: '#ffffff',
+    criticalBorderColor: '#cf222e',
+    criticalBkgColor: '#ffebe9',
+    fontSize: '20px',
+    nodePadding: '16px'
+  },
+  flowchart: {
+    curve: 'basis',
+    htmlLabels: true,
+    useMaxWidth: false,
+    nodeSpacing: 60,
+    rankSpacing: 70
+  },
+  sequence: { actorMargin: 80, mirrorActors: false }
+});
+
+// ---------- 下载继承关系图（SVG） ----------
+document.getElementById('downloadInheritanceBtn').addEventListener('click', function() {
+  const container = document.getElementById('inheritanceDiagram');
+  const svg = container.querySelector('svg');
+  if (!svg) {
+    alert('未找到 SVG 图表，请检查页面加载是否完整。');
+    return;
+  }
+  // 克隆 SVG 以避免干扰原图
+  const clone = svg.cloneNode(true);
+  // 确保没有内联样式影响
+  const svgData = new XMLSerializer().serializeToString(clone);
+  const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '继承关系全图.svg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+// ---------- 下载大图（SVG）通用函数 ----------
+function bindSvgDownload(btnId, diagramId, filename) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', function() {
+    const container = document.getElementById(diagramId);
+    const svg = container && container.querySelector('svg');
+    if (!svg) { alert('未找到 SVG 图表，请检查页面加载是否完整。'); return; }
+    const clone = svg.cloneNode(true);
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+bindSvgDownload('downloadStackBtn', 'stackDiagram', 'Ascend软件栈分层.svg');
+</script>
+
+<script>
+try { document.querySelectorAll("pre code.language-python")
+        .forEach(el => hljs.highlightElement(el)); } catch (e) { console.warn("highlight skip:", e); }
+</script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+window.__SRC_SET("observability/__init__.py","# SPDX-License-Identifier: Apache-2.0\n# SPDX-FileCopyrightText: Copyright contributors to the vLLM project\n\"\"\"Observability integrations owned by vLLM Ascend.\"\"\"\n\nfrom .provider import get_metric_provider\n\n__all__ = [\"get_metric_provider\"]\n");

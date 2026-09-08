@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend - 根模块 API 参考</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;}
+.navbar{background:white;border-radius:12px;padding:15px 25px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.navbar-brand{font-size:1.2rem;font-weight:bold;color:#667eea;text-decoration:none;}
+.navbar-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap;}
+.navbar-nav a{color:#666;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;}
+.navbar-nav a:hover,.navbar-nav a.active{background:#667eea;color:white;}
+.page-header{text-align:center;margin-bottom:30px;}
+.page-header h1{font-size:1.8rem;color:#333;margin-bottom:5px;}
+.page-header p{color:#666;font-size:0.95rem;}
+.section{background:white;border-radius:12px;padding:25px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.section h2{color:#333;font-size:1.2rem;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #667eea;}
+.file-block{margin-bottom:25px;padding-left:20px;border-left:3px solid #e8ecf0;}
+.file-block:hover{border-left-color:#667eea;}
+.file-name{font-family:"Consolas",monospace;font-size:0.95rem;font-weight:bold;color:#667eea;margin-bottom:8px;display:block;}
+.file-desc{color:#888;font-size:0.85rem;margin-bottom:12px;line-height:1.4;}
+.item{display:flex;gap:10px;padding:4px 0;font-size:0.85rem;}
+.item-type{font-family:"Consolas",monospace;font-size:0.75rem;padding:1px 6px;border-radius:4px;white-space:nowrap;min-width:50px;text-align:center;}
+.type-class{background:#e8f5e9;color:#2e7d32;}
+.type-func{background:#e3f2fd;color:#1565c0;}
+.item-name{font-family:"Consolas",monospace;color:#333;min-width:220px;}
+.item-desc{color:#666;}
+footer{text-align:center;color:#999;padding:30px;font-size:0.85rem;}
+.file-desc-real{color:#444;font-size:0.88rem;margin-bottom:8px;line-height:1.7;background:#f8f9fc;border-radius:8px;padding:10px 12px;}
+.src-link{font-size:0.75rem;color:#fff;background:#667eea;border-radius:4px;padding:1px 8px;margin-left:8px;text-decoration:none;font-weight:normal;vertical-align:middle;}
+.src-link:hover{background:#5568d8;}
+.file-classes{color:#999;font-size:0.78rem;margin-bottom:10px;line-height:1.5;}
+.container{max-width:1200px;margin:0 auto;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="../index.html" class="navbar-brand">vLLM Ascend</a><ul class="navbar-nav"><li><a href="panorama.html">全景索引</a></li><li><a class="active" href="panorama-root.html">root</a></li><li><a href="panorama-core.html">core</a></li><li><a href="panorama-attention.html">attention</a></li><li><a href="panorama-ops.html">ops</a></li><li><a href="panorama-worker.html">worker</a></li><li><a href="panorama-models.html">models</a></li><li><a href="panorama-distributed.html">distributed</a></li><li><a href="panorama-rest.html">rest(其他)</a></li></ul></nav>
+<div class="page-header"><h1>vLLM Ascend · 根模块 API 参考</h1><p>文件数: 27 | 函数条目: 208 | 每个文件含职责讲解，每个函数含 [代码行数]，文件名旁可跳转源码查看页</p></div><div class="section">
+<h2>文件详情</h2>
+<p>共 530 个文件，每个文件列出该文件所有类和函数名前20个（其余函数见源码）。</p>
+</div>
+<div class="file-block">
+<div class="file-name">__init__.py<a class="src-link" href="../src-viewer.html?file=__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">vllm_ascend 包入口（108 行）。_ensure_global_patch 在 engine-core 初始化前应用进程级 vLLM patch；register() 向 vLLM 注册 NPU 平台（Platform），并依次注册 KV connector（register_connector）、模型加载器（register_model_loader）、服务级 profiling（register_service_profiling）与 Ascend 定制模型（register_model），是整个插件被 vLLM 识别的起点。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_ensure_global_patch</span><span class="item-desc">[15行] 应用所有 vllm_ascend 顶层全局 patch</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register</span><span class="item-desc">[4行] vllm_ascend 插件入口：依次注册 connector、model_loader、service_profiling</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_connector</span><span class="item-desc">[8行] 把自定义 KV connector 子类注册到 vllm 的 connector 注册表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_model_loader</span><span class="item-desc">[8行] 注册自定义 model loader（处理非 HuggingFace 模型）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_service_profiling</span><span class="item-desc">[6行] 注册 service profiling 配置到 ~/.config/vllm_ascend/</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_model</span><span class="item-desc">[4行] 把模型架构名注册到 vLLM ModelRegistry</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ascend_config.py<a class="src-link" href="../src-viewer.html?file=ascend_config.py" target="_blank">查看源码</a></div><div class="file-desc-real">Ascend 配置中心（1473 行）。AscendConfig 承载 additional_config 的全部 Ascend 专属选项：输入范围校验（_validate_user_input_ranges）、派生校验（derive_and_validate）、MC2 通信算法校验、sparse C8 KV offload 兼容性检查、megamoe 支持判定、dump 配置落盘、compile ranges 解析与分段点更新等；子配置类：AscendCompilationConfig/AscendFusionConfig（图优化与融合算子开关）、EplbConfig、RejectionSamplerConfig（Block/Entropy Verify）、RlConfig（强化学习负载默认值）、DynamicSpecConfig（动态投机）、FinegrainedTPConfig、XliteGraphConfig、ProfilingChunkConfig、BatchJobSchedConfig、ShortRequestFirstConfig、DyntraLBConfig、SchedulerConfig、SparseKVOffloadConfig；init_ascend_config/get_ascend_config/clear_ascend_config 管理全局单例生命周期。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_mega_moe_supported</span><span class="item-desc">[12行] 判断当前运行时是否可用 MegaMoe fused MC2（基于环境/import 检查）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">validate_additional_config_bool</span><span class="item-desc">[6行] 在 config 初始化前对 bool 字段做 pydantic 严格校验</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_unsupported_hardware_downgrade_and_static_kernel_check</span><span class="item-desc">[16行] 关闭 npugraph_ex/static_kernel（若硬件不支持）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate_config</span><span class="item-desc">[21行] EplbConfig 验证：文件路径、间隔、policy、heat_collection_stage 等</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate</span><span class="item-desc">[22行] RejectionSamplerConfig 验证：posterior_threshold/alpha 范围</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply</span><span class="item-desc">[19行] RlConfig.apply：开启 RL 时覆盖 weight_nz_mode、关闭 expandable_segments、设置 batch-invariant</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate_user_input_ranges</span><span class="item-desc">[18行] AscendConfig 验证：weight_nz_mode、mega_moe 启用回退、envs</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">derive_and_validate</span><span class="item-desc">[204行] AscendConfig 主校验：mutex、SP、profiling_chunk、PD tp 比例、enable_kv_nz 前置条件等</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate_mc2_comm_alg</span><span class="item-desc">[31行] 校验 mc2_comm_alg 选项与硬件、专家数、fused MC2 是否冲突</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate_sparse_c8_kv_offload_compatibility</span><span class="item-desc">[7行] 校验 sparse C8 KV cache 与 sparse SFA C8 主 cache 的互斥</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_check_mooncake_c8_kv_cache_quant</span><span class="item-desc">[24行] 校验 MooncakeConnector + C8 KV 量化在 GQA 模型上的不兼容性</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_check_mix_placement</span><span class="item-desc">[4行] 校验 mix_placement 与 shared expert DP / multistream overlap 的互斥</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_megamoe_supported_by_config</span><span class="item-desc">[30行] 按 hidden/中间/量化类型判断模型是否能启用 MegaMoe</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_materialize_dump_config_to_file</span><span class="item-desc">[8行] 把 additional_config.dump_config（内联 dict）物化到 msprobe_dump_config.json</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_resolve_dump_config_path</span><span class="item-desc">[16行] 从 additional_config 解析 dump_config_path/dump_config 并检查互斥</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_has_sparse_li_c8_layer_config</span><span class="item-desc">[6行] 判断 quant_description 是否包含 sparse LI C8 索引器字段</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parse_sparse_li_c8_layers_from_quant_config</span><span class="item-desc">[24行] 从 quant_description 中提取 indexer C8 量化的层 id 与名称</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_sparse_li_c8_layer</span><span class="item-desc">[18行] 判断某层是否属于已配置的 sparse LI C8 索引器量化层</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_compile_ranges</span><span class="item-desc">[2行] 读 compile_ranges_endpoints</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_set_compile_ranges</span><span class="item-desc">[2行] 写 compile_ranges_endpoints</span></span></div>
+<div class="item"><span class="item-type">...</span> 还有 12 个函数</div>
+</div>
+<div class="file-block">
+<div class="file-name">ascend_forward_context.py<a class="src-link" href="../src-viewer.html?file=ascend_forward_context.py" target="_blank">查看源码</a></div><div class="file-desc-real">NPU forward 上下文（456 行）。set_ascend_forward_context 是核心上下文管理器：把注意力元数据、token 数、DP 分布、profile-run 标志等注入 forward 状态供各层读取；select_moe_comm_method 按 A2/A3/A5 硬件代际与并行配置选择 MoE 通信方法（_select_a2/a3/a5_moe_comm_method，结合 MC2 tokens 容量判定）；set_mc2_tokens_capacity/set_mc2_mask 管理 MC2 通信容量与掩码的全局状态；override_mrv2_in_profile_run 为单次 forward 临时设置 MRV2 profile-run 标记；_ExtraForwardContextProxy 为 v1/v2 两个运行器提供统一的 forward-context 属性访问代理。</div>
+<div class="file-classes">类: MoECommType</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_decode_only_node</span><span class="item-desc">[24行] 判断当前节点是否为 P/D 分离中的 decode-only 节点</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">override_mrv2_in_profile_run</span><span class="item-desc">[13行] 上下文管理器：在一次 forward 中临时设置 MRV2 额外 profile-run 标记</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_mrv2_in_profile_run</span><span class="item-desc">[2行] 读取当前 forward 是否处于 MRv2 的 profile-run 标记下</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">use_cann_megamoe</span><span class="item-desc">[11行] 判断当前配置是否启用 CANN MegaMoe fused MC2</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_ascend_forward_context</span><span class="item-desc">[120行] 上下文管理器：注入 MoE 通信类型、mmrs 融合、layer_idx、mc2_mask 等 forward 状态</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_mc2_tokens_capacity</span><span class="item-desc">[32行] 根据 max_num_batched_tokens 与 TP 规模计算并锁定 MC2 通信每 rank token 上限</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_mc2_tokens_capacity</span><span class="item-desc">[2行] 返回当前全局 MC2 通信容量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_mc2_mask</span><span class="item-desc">[10行] 预分配 MC2 mask 缓冲区（仅 MoE 模型）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_mc2_mask</span><span class="item-desc">[2行] 读取已预分配的 MC2 mask 张量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_a2_moe_comm_method</span><span class="item-desc">[17行] 在 A2 设备上选择 MoE 通信方式（MC2 或 AllGather）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_a3_moe_comm_method</span><span class="item-desc">[14行] 在 A3 设备上选择 MoE 通信方式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_a5_moe_comm_method</span><span class="item-desc">[16行] 在 A5 设备上选择 MoE 通信方式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">select_moe_comm_method</span><span class="item-desc">[64行] 统一入口：根据设备型号、并行配置、token 数返回 MoE 通信方法</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">check_extra_attr</span><span class="item-desc">[6行] 校验属性名是否在允许的 extra forward context 字段名单内</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_ctx</span><span class="item-desc">[2行] 获取当前 forward context（内部 helper）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getattr__</span><span class="item-desc">[8行] 代理属性访问到 vllm forward context 或 V2 additional_kwargs</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__setattr__</span><span class="item-desc">[7行] 写入额外 forward 上下文字段（V2 走 additional_kwargs）</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 17 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">batch_invariant.py<a class="src-link" href="../src-viewer.html?file=batch_invariant.py" target="_blank">查看源码</a></div><div class="file-desc-real">批不变（batch-invariant）模式（163 行）。enable_batch_invariant_mode/init_batch_invariance 把关键算子替换为批不变实现：add_rms_norm 绕过 AclnnAddRmsNorm（其无法保证批不变，改用等价组合实现）、reduce_sum 用 npu_reduce_sum_batch_invariant 替换 torch.sum；override_envs_for_invariance 设置相关环境变量。目的是保证同一输入在不同 batch size 下产生逐位一致的结果（RL 训练/数值对齐场景必需）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">add_rms_norm</span><span class="item-desc">[13行] 拆分 AddRmsNorm 为 add + rms_norm（保证 batch-invariant）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reduce_sum</span><span class="item-desc">[9行] 对 NPU 上指定 dim 调用 batch-invariant reduce_sum（CPU 仍走 torch.sum）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">override_envs_for_invariance</span><span class="item-desc">[17行] 设置 batch-invariant 所需环境（HCCL/LCCL deterministic、torch deterministic、weight_nz_mode=0）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enable_batch_invariant_mode</span><span class="item-desc">[40行] 把 aten::mm/matmul/addmm/bmm/softmax 等注册为 batch-invariant 实现（优先 AscendC，其次 Triton）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">init_batch_invariance</span><span class="item-desc">[24行] 检查 VLLM_BATCH_INVARIANT 后调用 override_envs_for_invariance + enable_batch_invariant_mode</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 5 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">config_utils.py<a class="src-link" href="../src-viewer.html?file=config_utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">轻量配置工具（50 行）。config 装饰器把普通 dataclass 变成与 vLLM config 兼容的配置类（不导入 vllm.config，避免依赖），用于定义无需完整 vLLM 配置体系的小型配置对象。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">config</span><span class="item-desc">[19行] 构造 vllm 兼容的 config dataclass（避免导入 vllm.config 引发循环）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">decorator</span><span class="item-desc">[2行] config 装饰器：内部包装函数，把 dataclass config 装饰为 vllm 兼容</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">cpu_binding.py<a class="src-link" href="../src-viewer.html?file=cpu_binding.py" target="_blank">查看源码</a></div><div class="file-desc-real">CPU 亲和性绑核（804 行）。DeviceInfo 解析 npu-smi 输出：分离 header、识别 CPU 列表、枚举逻辑 NPU、解析 NPU-CPU 拓扑亲和（parse_topo_affinity）与可用 CPU；CpuAlloc 生成并应用绑核方案：cpu_to_mask 转亲和性掩码、average_distribute 平均分配、extend_numa 跨 NUMA 扩展、build_ascend_950_cpu_pools 为 Ascend 950 构建专用 CPU 池、bind_uvb_poll_window_threads 绑定 UVB 轮询线程；bind_cpus(rank_id) 是对外入口：按 rank 的 NPU 拓扑把 worker 线程绑到最优 CPU 集合，减少跨 NUMA 访问；is_arm_cpu 判断 ARM 平台。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_arm_cpu</span><span class="item-desc">[11行] 判断当前 CPU 架构是否为 ARM（aarch64/arm64/arm*）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">execute_command</span><span class="item-desc">[13行] 在 C locale 下执行 shell 命令并返回 (output, return_code)</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[10行] 初始化：从 npu-smi 收集 NPU 拓扑与允许 CPU 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_npu_smi_header</span><span class="item-desc">[2行] 按多个空格分隔 npu-smi 表头</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_cpu_list</span><span class="item-desc">[2行] 判断字符串是否是合法的 CPU 列表格式（"0-3,5,7"）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">expand_cpu_list</span><span class="item-desc">[9行] 把 "0-3,5,7" 字符串展开为 [0,1,2,3,5,7] 的 CPU id 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_all_logic_npus</span><span class="item-desc">[13行] 从 npu_map_info 中收集全部逻辑 NPU id</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_npu_map_info</span><span class="item-desc">[28行] 通过 npu-smi info -m 解析 NPU 拓扑映射</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">resolve_logic_id</span><span class="item-desc">[14行] 根据 npu_id 与可选 chip_id 解析逻辑 NPU id</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_running_npus</span><span class="item-desc">[33行] 从 npu-smi info 解析当前进程使用的 NPU id 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">parse_allowed_cpus</span><span class="item-desc">[8行] 从 /proc/self/status 读取 Cpus_allowed_list</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">parse_topo_affinity</span><span class="item-desc">[13行] 从 npu-smi info -t topo 解析每个 NPU 的 NUMA CPU 亲和性</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">cpu_to_mask</span><span class="item-desc">[8行] 把 CPU id 转换为 smp_affinity 十六进制掩码</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_threads_map</span><span class="item-desc">[17行] 从 ps -Te 输出解析 acl_thread / release_thread</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bind</span><span class="item-desc">[9行] 用 taskset 把进程或线程绑定到指定 CPU 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">average_distribute</span><span class="item-desc">[10行] 在多 NPU 间平均分配一组 CPU</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extend_numa</span><span class="item-desc">[13行] 若列表全在同一 NUMA，扩展到下一 NUMA 的允许 CPU</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_cpu_node_map</span><span class="item-desc">[13行] 从 lscpu -e 解析 cpu→numa 节点映射</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">parse_threads_per_core</span><span class="item-desc">[8行] 从 lscpu 解析 Thread(s) per core</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_uvb_poll_window_threads</span><span class="item-desc">[9行] 从 ps 输出提取 uvb_poll_window 线程 id</span></span></div>
+<div class="item"><span class="item-type">...</span> 还有 26 个函数</div>
+</div>
+<div class="file-block">
+<div class="file-name">envs.py<a class="src-link" href="../src-viewer.html?file=envs.py" target="_blank">查看源码</a></div><div class="file-desc-real">环境变量定义模块（87 行）。通过模块级 __getattr__ 惰性解析环境变量（访问时才读取并校验），__dir__ 支持自动补全，集中管理 vllm_ascend 的全部环境变量开关。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getattr__</span><span class="item-desc">[5行] 懒取值：从 env_variables 字典中读取环境变量并调用对应 lambda</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__dir__</span><span class="item-desc">[2行] 列出全部环境变量名（用于 tab 补全等）</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">logger.py<a class="src-link" href="../src-viewer.html?file=logger.py" target="_blank">查看源码</a></div><div class="file-desc-real">日志配置（208 行）。在 vLLM 日志体系上叠加 Ascend 标识：AscendFormatter/AscendColoredFormatter 给每条日志加 [vllm-ascend] 前缀并从调用方文件路径推断模块名（_infer_module_name）；RotatingAscendFileHandler 按 _setup_file_logging 配置的大小上限轮转日志文件；configure_ascend_logging/configure_ascend_file_logging 完成 vllm_ascend logger 的格式化器与文件 handler 装配；_use_color 判断终端是否启用彩色输出。</div>
+<div class="file-classes">类: AscendFormatter, AscendColoredFormatter, RotatingAscendFileHandler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_use_color</span><span class="item-desc">[11行] 根据 envs 判断是否在控制台启用彩色输出</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_ascend_module</span><span class="item-desc">[4行] 判断日志调用的文件路径是否来自 vllm_ascend</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_infer_module_name</span><span class="item-desc">[15行] 从文件路径推断模块名（如 platform.py -> platform）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_format_with_ascend_prefix</span><span class="item-desc">[17行] 为 ascend 模块日志添加 [vllm-ascend] / [module] 前缀</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">format</span><span class="item-desc">[2行] LogRecord 格式化（带 [vllm-ascend] 模块名前缀与颜色）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[8行] 初始化：生成基于 timestamp+pid 的日志文件名</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">emit</span><span class="item-desc">[8行] 写入前检查文件大小，超过上限则触发 rotate</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rotate</span><span class="item-desc">[7行] 关闭当前 stream，按序号递增生成新文件</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_setup_file_logging</span><span class="item-desc">[18行] 添加 RotatingAscendFileHandler 到 vllm / vllm_ascend logger</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">configure_ascend_file_logging</span><span class="item-desc">[20行] 根据 ascend_config.ascend_log_path 重新设置文件日志</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">configure_ascend_logging</span><span class="item-desc">[30行] 为 vllm_ascend logger 添加控制台 handler（带 Ascend 前缀与颜色）</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 11 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">meta_registration.py<a class="src-link" href="../src-viewer.html?file=meta_registration.py" target="_blank">查看源码</a></div><div class="file-desc-real">自定义算子 meta 注册（77 行）。register_meta_if_necessary 为算子注册 fake/meta 推导函数（torch.compile 需要无设备执行的形状推导）；bgmv_expand_meta/sgmv_expand_meta 分别定义 LoRA BGMV/SGMV expand 算子的输出形状推导规则。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_meta_if_necessary</span><span class="item-desc">[8行] 检查后若 meta 实现尚未注册，则把 Python meta 函数注册到指定命名空间</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bgmv_expand_meta</span><span class="item-desc">[5行] 返回与 y 同形同 dtype 的空张量（bgmv_expand meta 实现）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sgmv_expand_meta</span><span class="item-desc">[11行] 返回与 y 同形同 dtype 的空张量（sgmv_expand meta 实现）</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">platform.py<a class="src-link" href="../src-viewer.html?file=platform.py" target="_blank">查看源码</a></div><div class="file-desc-real">NPU 平台类（1567 行）。NPUPlatform 是 vLLM Platform 在昇腾上的实现：设备能力声明（sleep 模式、cumem 分配器、pin memory、hybrid KV cache、静态图模式、自定义集合通信、opaque attention op）、设备管理（set_device/manual_seed_all）、KV cache 规格注册（register_custom_kv_cache_specs）、pass 管理器选择（get_pass_manager_cls）等；模块级校验与装配函数：_fix_incompatible_config 修正与 NPU 不兼容的配置、_validate_eplb_config/_validate_parallel_config/_validate_fa3_backend/_validate_sfa_dcp_kv_sp 等专项校验、_update_compilation_modes/_setup_compile_backend 更新编译与 cudagraph 模式并重算捕获尺寸、_setup_worker_and_scheduler 选择 worker/调度器实现（含重计算调度器与 DyntraLB 调度器类解析）、_set_pytorch_npu_alloc_env 配置分配器环境。</div>
+<div class="file-classes">类: NPUPlatform</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pass_key</span><span class="item-desc">[7行] 返回 COMPILATION_PASS_KEY（Inductor PassManager 自定义 pass key）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">manual_seed_all</span><span class="item-desc">[2行] 占位方法，NPU 当前不实现随机种子设置</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_sleep_mode_available</span><span class="item-desc">[2行] NPU 平台支持 sleep/wake，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_cumem_allocator_available</span><span class="item-desc">[7行] NPU 提供 CaMemAllocator，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_pin_memory_available</span><span class="item-desc">[2行] NPU 支持 pinned memory，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">opaque_attention_op</span><span class="item-desc">[2行] NPU 自定义 attention 算子对上游 opaque，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">support_hybrid_kv_cache</span><span class="item-desc">[2行] NPU 支持混合 KV cache（全 attn + 线性），），返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">support_static_graph_mode</span><span class="item-desc">[2行] NPU 支持静态图模式，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">use_custom_op_collectives</span><span class="item-desc">[2行] NPU 使用自定义算子实现集合通信，返回 True</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_device_capability</span><span class="item-desc">[2行] NPU 无 compute capability，返回 None</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_device_name</span><span class="item-desc">[2行] 返回 torch.npu.get_device_name() 的字符串</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">inference_mode</span><span class="item-desc">[2行] 上下文管理器：进入 torch.inference_mode()</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_device</span><span class="item-desc">[2行] 调用 torch.npu.set_device() 切换当前 NPU 设备</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_custom_kv_cache_specs</span><span class="item-desc">[4行] 调用 core.register_ascend_kv_cache_specs() 注册 Ascend 特有的 KV cache spec</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_pass_manager_cls</span><span class="item-desc">[6行] 返回 GraphFusionPassManager 的导入路径</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_compile_backend</span><span class="item-desc">[6行] 返回 AscendCompiler 的导入路径</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_punica_wrapper</span><span class="item-desc">[2行] 返回 PunicaWrapperNPU 的导入路径（LoRA 拼接）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_current_memory_usage</span><span class="item-desc">[3行] 重置 NPU peak 后返回 max_memory_allocated</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_device_communicator_cls</span><span class="item-desc">[2行] 返回 NPUCommunicator 的导入路径</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_static_graph_wrapper_cls</span><span class="item-desc">[5行] 返回 ACLGraphWrapper 的导入路径</span></span></div>
+<div class="item"><span class="item-type">...</span> 还有 30 个函数</div>
+</div>
+<div class="file-block">
+<div class="file-name">profiling_config.py<a class="src-link" href="../src-viewer.html?file=profiling_config.py" target="_blank">查看源码</a></div><div class="file-desc-real">服务级 profiling 配置生成器（591 行）。generate_service_profiling_config 生成 service_profiling_symbols.yaml 配置文件（指定需要采集的性能符号），get_config_dir 定位 vllm_ascend 配置目录，_cleanup_temp_file 清理临时文件；配合 CANN 的 Profiler 实现按需采集。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_config_dir</span><span class="item-desc">[10行] 返回 ~/.config/vllm_ascend/ 目录路径</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_cleanup_temp_file</span><span class="item-desc">[10行] 删除临时文件（若存在）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">generate_service_profiling_config</span><span class="item-desc">在 ~/.config/vllm_ascend/ 下生成（若不存在）service_profiling_symbols.<vllm_version>.yaml</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">utils.py<a class="src-link" href="../src-viewer.html?file=utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">全局工具集（1570 行）。硬件与设备：is_rc_device 检测 310P 是否 RC 模式、aligned_16 为 310P 做 16 对齐；DSV4 辅助：extract_dsv4_layer_index/get_dsv4_spec_layer_idx_from_weight_name/get_dsv4_compress_ratio 处理层号与压缩比；格式转换：nd_to_nz_2d/nd_to_nz_spec 把 ND 张量/掩码转为 NZ 分块布局、_custom_pad/_custom_reshape/_custom_transpose 封装设备端变换；多流管理：current_stream/global_stream/shared_experts_calculation_stream/attention_calculation_stream/cp_chunkedprefill_comm_stream 提供各计算/通信流；自定义算子：enable_custom_op 惰性初始化 vllm_ascend_C（避免 CANN RTS 提前初始化）、bootstrap_custom_op_env/register_ascend_customop 注册环境与算子、find_hccl_library 定位 HCCL 库；细粒度 TP 开关：lmhead_tp_enable/embedding_tp_enable/oproj_tp_enable/olora_tp_enable；其他：dispose_tensor 释放张量、update_cudagraph_capture_sizes、vllm_version_is 版本判断、adapt_patch 全局/局部 patch 适配、setup_ascend_local_comm_res 加载 A5 本地通信端点配置。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extract_dsv4_layer_index</span><span class="item-desc">[14行] 提取 DSV4 的 per-layer 数组索引（MTP 层位于主模型层之后）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsv4_spec_layer_idx_from_weight_name</span><span class="item-desc">[5行] 从权重名（如 mtp.0.weight）中提取 MTP 本地层 idx</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsv4_compress_ratio</span><span class="item-desc">[6行] 返回 DSV4 指定层压缩比（未配置或越界返回 0）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">model_uses_sfa_sparse</span><span class="item-desc">[9行] 判断模型是否使用 SFA 稀疏注意力（带 index_topk 且无 compress_ratios）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enable_sfa_dcp_replicated_indexer</span><span class="item-desc">[8行] 判断是否启用 SFA DCP 复制 indexer（DCP>1 且 SFA 稀疏模型）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">clear_enable_sp</span><span class="item-desc">[4行] 清空 enable_sp / enable_dsa_cp 等 lru_cache，便于重新读取配置</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_rc_device</span><span class="item-desc">[21行] 检测 310P NPU 是否在 Root Complex 模式（通过 lspci 输出判断）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mark_op_side_effectful</span><span class="item-desc">[5行] 把 torch.ops 节点标记为带副作用，避免 FX / Inductor DCE 或重排</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_ensure_device_print_registered</span><span class="item-desc">[22行] 确保 _C_ascend.device_print 自定义算子已注册 side-effect</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">device_print</span><span class="item-desc">[46行] 从 device 回调打印一个标量/字符串/张量（用于 NPU graph 内调试）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_should_trans_nz</span><span class="item-desc">[27行] 判断是否应把权重转换为 NZ 布局（基于 dtype、硬件 profile、weight_nz_mode）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">maybe_trans_nz</span><span class="item-desc">[4行] 必要时调用 npu_format_cast 把权重转 NZ 布局</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_round_up</span><span class="item-desc">[8行] 把 x 上取整到 align 的倍数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepend_env_path</span><span class="item-desc">[6行] 把路径插入环境变量 PATH 类字段的前面（去重）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bootstrap_custom_op_env</span><span class="item-desc">[10行] 把 _cann_ops_custom vendor 路径加入 ASCEND_CUSTOM_OPP_PATH（可选 LD_LIBRARY_PATH）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_custom_pad</span><span class="item-desc">[5行] 对张量按 pad_dims 末尾填充</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_custom_reshape</span><span class="item-desc">[5行] reshape 张量到 target_shape</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_custom_transpose</span><span class="item-desc">[5行] transpose两个维度</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">nd_to_nz_2d</span><span class="item-desc">[20行] 把 2D 张量从 ND 布局转换为 NZ 布局</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">nd_to_nz_spec</span><span class="item-desc">[11行] 构造掩码张量并以 NZ 布局返回</span></span></div>
+<div class="item"><span class="item-type">...</span> 还有 68 个函数</div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\__init__.py<a class="src-link" href="../src-viewer.html?file=compilation/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">compilation 子包标记。该包实现 Ascend 的图编译与 ACL graph 捕获重放：编译器接口、图融合 pass 管理器及各融合 pass。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\acl_graph.py<a class="src-link" href="../src-viewer.html?file=compilation/acl_graph.py" target="_blank">查看源码</a></div><div class="file-desc-real">ACL graph 捕获与重放核心（396 行）。ACLGraphWrapper 把可执行对象包装出 ACL graph 捕获/重放能力（__call__ 按形状桶捕获后重放）；GraphParams 按捕获 token 数键控图参数，提供主模型/draft/draft-prefill 三套 set/get/update 接口；update_full_graph_params 在重放前重绑注意力后端的 host 侧参数（block table/seq lens 等）；weak_ref_workspaces 用弱引用持有 workspace 防止捕获期间被回收；_is_stream_resource_capture_error/_is_old_hdk_capture_error 识别捕获失败的已知错误类型以便降级处理。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_stream_resource_capture_error</span><span class="item-desc">[6行] 判断 RuntimeError 是否为 NPU 流资源不足导致的 capture 错误</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_old_hdk_capture_error</span><span class="item-desc">[3行] 判断 RuntimeError 是否为旧版 HDK 的 capture 错误</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[33行] 初始化：记录 runnable 与 runtime_mode，按需初始化 graph_pool</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getattr__</span><span class="item-desc">[9行] 转发属性访问到底层 runnable</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unwrap</span><span class="item-desc">[3行] 返回底层 runnable 引用</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[135行] dispatch：根据 runtime_mode 决定 capture/replay/直接调用</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">weak_ref_workspaces</span><span class="item-desc">[7行] 将所有 workspaces 张量替换为 weakref，延长 graph 生命周期</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_full_graph_params</span><span class="item-desc">[35行] 更新 FULL 图注意力所需的 graph params</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_graph_params</span><span class="item-desc">[10行] 注册 graph params（context manager 内绑定到当前 forward）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params_workspaces</span><span class="item-desc">[4行] 根据新输入更新 graph workspaces</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_graph_params</span><span class="item-desc">[2行] 读取当前 forward context 关联的 graph params</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_draft_graph_params</span><span class="item-desc">[10行] 注册 draft 模型（EAGLE）的 graph params</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_draft_graph_params_workspaces</span><span class="item-desc">[4行] 更新 draft graph 的 workspaces</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_draft_graph_params</span><span class="item-desc">[2行] 读取 draft graph params</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_draft_graph_prefill_params</span><span class="item-desc">[10行] 注册 draft prefill 阶段的 graph params</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_draft_graph_prefill_params_workspaces</span><span class="item-desc">[4行] 更新 draft prefill graph workspaces</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_draft_graph_prefill_params</span><span class="item-desc">[2行] 读取 draft prefill graph params</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 17 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\breakable_aclgraph.py<a class="src-link" href="../src-viewer.html?file=compilation/breakable_aclgraph.py" target="_blank">查看源码</a></div><div class="file-desc-real">可中断 ACL graph 封装（91 行）。BreakableACLGraphWrapper 支持 in/out 图边界打断的捕获（_capture）与重放（_replay），用于单张图无法覆盖整个前向（如含条件分支或通信边界）时把前向切成多段图执行。</div>
+<div class="file-classes">类: BreakableACLGraphWrapper</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[14行] 初始化：记录 use_eagle、enable_enpu 标志</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_capture</span><span class="item-desc">[22行] 执行 capture：FULL 图模式时设置 capturing=True 与 workspace weakref</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_replay</span><span class="item-desc">[15行] 执行 replay：FULL 图模式时按 use_eagle/enpu 同步当前 stream</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\compiler_interface.py<a class="src-link" href="../src-viewer.html?file=compilation/compiler_interface.py" target="_blank">查看源码</a></div><div class="file-desc-real">Ascend 编译器接口（368 行）。AscendCompiler 是注册给 torch.compile 的自定义编译器：compute_hash 计算编译缓存键、initialize_cache 初始化缓存目录、compile/load 编译与加载；_configure_backend 配置后端选项；fusion_pass_compile 走图融合 pass 的编译路径（配合 GraphFusionPassManager）；npugraph_ex_compile 走 NPU graph 扩展编译路径；_compute_decode_cudagraph_batch_sizes 计算 decode 图的批量捕获尺寸；compile_fx 为 FX 图的标准编译入口（含分解规则）。</div>
+<div class="file-classes">类: AscendCompiler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compile_fx</span><span class="item-desc">[6行] 编译 FX 图：递归调用 inner_compile，必要时 make_graph_return_tuple</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fusion_pass_compile</span><span class="item-desc">[22行] 用当前 GraphFusionPassManager 跑一遍图融合 pass 再编译</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compile_inner</span><span class="item-desc">[4行] 实际执行当前 PassManager 并返回 graph（fusion_pass_compile 内部 helper）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_decode_cudagraph_batch_sizes</span><span class="item-desc">[9行] 计算 decode-only 阶段可捕获的 cuda graph 批次大小</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_configure_backend</span><span class="item-desc">[65行] 配置 npugraph_ex/torchair 后端选项</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">npugraph_ex_compile</span><span class="item-desc">[75行] 主编译入口：调用 npugraph_ex 编译 FX 图，含 Triton 内核时跳过缓存</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">patched_get_compiled_gm</span><span class="item-desc">[22行] monkey patch：把编译出的 py_code 写入磁盘缓存</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_hash</span><span class="item-desc">[14行] 基于 graph 与 example_inputs 计算编译缓存的 hash</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">initialize_cache</span><span class="item-desc">[3行] 初始化 FX graph 缓存目录</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compile</span><span class="item-desc">[47行] 入口：根据 cache miss/调用 inner_compile 并写入缓存</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load</span><span class="item-desc">[66行] 根据 hash 从磁盘读取已编译的图</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compiled_fn</span><span class="item-desc">[5行] 返回编译产物 callable</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 12 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\graph_fusion_pass_manager.py<a class="src-link" href="../src-viewer.html?file=compilation/graph_fusion_pass_manager.py" target="_blank">查看源码</a></div><div class="file-desc-real">图融合 pass 管理器（69 行）。GraphFusionPassManager 维护融合 pass 列表：add 注册 pass、configure 按 compile range 配置适用范围、__call__ 依次执行各 pass 对 FX 图做模式匹配重写。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[2行] 初始化空 pass 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[8行] 执行所有通过的 pass 后 recompile 图</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">add</span><span class="item-desc">[3行] 添加一个 VllmInductorPass 到 pass 列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">configure</span><span class="item-desc">[21行] 根据 Ascend 编译开关加载各种融合 pass</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\__init__.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">compilation.passes 子包标记。该包收录基于模式匹配的图融合 pass。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\allgather_chunk_noop_pass.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/allgather_chunk_noop_pass.py" target="_blank">查看源码</a></div><div class="file-desc-real">AllGather+chunk 恒等折叠 pass（40 行）。AllGatherChunkNoOpCleanupPass 匹配 all_gather 后接 sequence_parallel_chunk 的组合（gather 后又按原样切回），把整段重写为 identity 消除无效通信。</div>
+<div class="file-classes">类: AllGatherChunkNoOpCleanupPass</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[6行] 初始化：注册 all_gather + sequence_parallel_chunk 折叠规则</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_all_gather</span><span class="item-desc">[2行] 调用 vllm.all_gather 算子（TP 集合）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_empty</span><span class="item-desc">[2行] 构造模型 dtype 的示例空张量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_register_patterns</span><span class="item-desc">[9行] 注册 all_gather→sequence_parallel_chunk 折叠为恒等映射</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pattern</span><span class="item-desc">[3行] 返回待匹配的 all_gather + sequence_parallel_chunk 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">replacement</span><span class="item-desc">[2行] 返回把上述模式折叠为恒等映射的替换函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[5行] 在 FX 图中应用该 pass</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 7 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\base_pattern.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/base_pattern.py" target="_blank">查看源码</a></div><div class="file-desc-real">融合模式基类（63 行）。BasePattern 定义模式匹配 pass 的骨架：get_inputs 声明模式占位输入、get_pattern 给出匹配子图、get_replacement 给出替换子图、get_extra_stream_scope_check 附加同流检查、register 把模式注册进 torch 图替换体系。</div>
+<div class="file-classes">类: BasePattern</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[4行] 初始化：保存 vllm_config、dtype、eps</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_inputs</span><span class="item-desc">[2行] 抽象方法：返回示例输入张量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_pattern</span><span class="item-desc">[2行] 抽象方法：返回待匹配的模式函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_replacement</span><span class="item-desc">[2行] 抽象方法：返回替换函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_extra_stream_scope_check</span><span class="item-desc">[2行] 返回流作用域检查器</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register</span><span class="item-desc">[23行] 同时注册到 torch inductor 与 npugraph_ex 的 pattern matcher</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\muls_add_pass.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/muls_add_pass.py" target="_blank">查看源码</a></div><div class="file-desc-real">乘加融合 pass（110 行）。MulsAddPattern 匹配逐元素 x*scale+y 序列，替换为单个 muls_add 算子减少访存；MulsAddFusionPass 在指定 compile range 内应用该模式（is_applicable_for_range 判断适用性）。</div>
+<div class="file-classes">类: MulsAddPattern, MulsAddFusionPass</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[13行] 初始化：保存 vllm_config 与缩放因子 scale</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_inputs</span><span class="item-desc">[12行] 返回示例输入（x, y）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_pattern</span><span class="item-desc">[10行] 返回 x*scale + y 的模式函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pattern</span><span class="item-desc">[7行] 返回待匹配的 x*scale + y 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_replacement</span><span class="item-desc">[9行] 返回替换为 muls_add 算子的函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">replacement</span><span class="item-desc">[6行] 返回替换为 muls_add 算子的函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[5行] 在 FX 图中应用 muls_add 融合</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_applicable_for_range</span><span class="item-desc">[9行] 判断该 pass 是否在当前 compile_range 生效</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 8 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\noop_elimination.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/noop_elimination.py" target="_blank">查看源码</a></div><div class="file-desc-real">无效节点清理 pass（62 行）。NoOpEliminationPass 在其他 pattern 重写后扫描图：识别 view/reshape 类节点（_is_view_like），若其维度变换前后等价（_dims_equivalent/_all_dims_equivalent）则从图中移除，减图优化噪声。</div>
+<div class="file-classes">类: NoOpEliminationPass</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[27行] 移除 FX 图中形状不变的 view/reshape 节点</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_view_like</span><span class="item-desc">[9行] 判断节点是否为 view/reshape 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dims_equivalent</span><span class="item-desc">[2行] 符号化判断两个维度是否相等</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_all_dims_equivalent</span><span class="item-desc">[6行] 判断两个 shape 是否所有维度相等</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\norm_quant_fusion_pass.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/norm_quant_fusion_pass.py" target="_blank">查看源码</a></div><div class="file-desc-real">Norm+量化融合 pass 族（403 行）。匹配 AddRMSNorm 后接量化的组合并融合为单一算子：静态量化（AddRMSNormQuantPattern 及带 bias 变体）、动态量化（AddRMSNormDynamicQuantPattern 及带 bias 变体）、动态 MX 量化（AddRMSNormDynamicMXQuantPattern）、RMSNorm+MX 量化（RMSNormDynamicMXQuantPattern）；AddRMSNormQuantFusionPass 为 pass 入口，_model_uses_w4a4_quant 检查模型是否含 W4A4 层以决定是否启用。</div>
+<div class="file-classes">类: AddRMSNormQuantPattern, AddRMSNormQuantPatternWithBias, AddRMSNormDynamicQuantPattern, AddRMSNormDynamicQuantPatternWithBias, AddRMSNormDynamicMXQuantPattern, RMSNormDynamicMXQuantPattern, AddRMSNormQuantFusionPass</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[28行] 初始化：注册多种 norm+quant 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_inputs</span><span class="item-desc">[7行] 返回示例输入张量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_pattern</span><span class="item-desc">[11行] 返回 add_rms_norm_bias + quantize 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pattern</span><span class="item-desc">[8行] 返回待匹配的 add+rms_norm+quant 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_replacement</span><span class="item-desc">[14行] 返回融合 npu_add_rms_norm_quant 算子的替换</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">replacement</span><span class="item-desc">[11行] 返回替换为 npu_add_rms_norm_quant 的函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_model_uses_w4a4_quant</span><span class="item-desc">[19行] 判断模型是否使用 w4a4 量化</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[5行] 在 FX 图中应用 norm+quant 融合</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_applicable_for_range</span><span class="item-desc">[5行] 判断该 pass 是否在当前 compile_range 生效</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 9 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\qknorm_rope_fusion_pass.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/qknorm_rope_fusion_pass.py" target="_blank">查看源码</a></div><div class="file-desc-real">QK-Norm+RoPE 融合 pass（244 行）。QKNormRopeFusionPattern（及带 bias 变体）匹配 QKV 分裂后对 Q/K 各做 RMSNorm 再接 RoPE 的子图，融合为单个 qk_rmsnorm_rope 算子；QKNormRopeFusionPass 为 pass 入口并判断适用 compile range。</div>
+<div class="file-classes">类: QKNormRopeFusionPattern, QKNormRopeFusionPatternWithBias, QKNormRopeFusionPass</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[34行] 初始化：保存 head_dim/num_heads/num_kv_heads/rope_dim</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_inputs</span><span class="item-desc">[12行] 返回示例输入（qkv、q/k 权重、cos_sin、positions）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_pattern</span><span class="item-desc">[29行] 返回 Q/K 各自 rms_norm + RoPE 拼接模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pattern</span><span class="item-desc">[26行] 返回待匹配的 QK rms_norm + RoPE 模式</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_replacement</span><span class="item-desc">[26行] 返回 split_qkv_rmsnorm_rope 算子调用</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">replacement</span><span class="item-desc">[23行] 返回替换为 split_qkv_rmsnorm_rope 算子的函数</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__call__</span><span class="item-desc">[12行] 在 FX 图中应用 QK-Norm+RoPE 融合</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_applicable_for_range</span><span class="item-desc">[5行] 判断该 pass 是否在当前 compile_range 生效</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 8 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\utils\__init__.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/utils/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">compilation.passes.utils 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">compilation\passes\utils\npugraph_ex_utils_check.py<a class="src-link" href="../src-viewer.html?file=compilation/passes/utils/npugraph_ex_utils_check.py" target="_blank">查看源码</a></div><div class="file-desc-real">NPU graph 扩展工具检查（75 行）。extra_stream_scope_check 校验匹配子图的所有节点在同一条流上（跨流子图不能安全融合）；check_and_register_fusion_pass 检查通过后把 pattern 类注册进融合体系。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extra_stream_scope_check</span><span class="item-desc">[31行] 检查被匹配节点是否全部在同一 stream（排除跨流模式匹配）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">check_and_register_fusion_pass</span><span class="item-desc">[17行] 全局注册单个融合 pass（避免重复注册）</span></span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">其余文件 (480 个)</div>
+<div class="file-desc">全部函数计数: 4145 个，分布在 530 个文件中。<br/>使用 <a href="panorama-root.html">panorama-root.html</a> 查看完整列表或直接查看源码。</div>
+</div>
+</body>
+</html>

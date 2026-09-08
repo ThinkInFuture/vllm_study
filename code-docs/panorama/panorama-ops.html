@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend - 算子模块 API 参考</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;}
+.navbar{background:white;border-radius:12px;padding:15px 25px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.navbar-brand{font-size:1.2rem;font-weight:bold;color:#667eea;text-decoration:none;}
+.navbar-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap;}
+.navbar-nav a{color:#666;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;}
+.navbar-nav a:hover,.navbar-nav a.active{background:#667eea;color:white;}
+.page-header{text-align:center;margin-bottom:30px;}
+.page-header h1{font-size:1.8rem;color:#333;margin-bottom:5px;}
+.page-header p{color:#666;font-size:0.95rem;}
+.section{background:white;border-radius:12px;padding:25px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.section h2{color:#333;font-size:1.2rem;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #667eea;}
+.file-block{margin-bottom:25px;padding-left:20px;border-left:3px solid #e8ecf0;}
+.file-block:hover{border-left-color:#667eea;}
+.file-name{font-family:"Consolas",monospace;font-size:0.95rem;font-weight:bold;color:#667eea;margin-bottom:8px;display:block;}
+.file-desc{color:#888;font-size:0.85rem;margin-bottom:12px;line-height:1.4;}
+.item{display:flex;gap:10px;padding:4px 0;font-size:0.85rem;}
+.item-type{font-family:"Consolas",monospace;font-size:0.75rem;padding:1px 6px;border-radius:4px;white-space:nowrap;min-width:50px;text-align:center;}
+.type-class{background:#e8f5e9;color:#2e7d32;}
+.type-func{background:#e3f2fd;color:#1565c0;}
+.item-name{font-family:"Consolas",monospace;color:#333;min-width:220px;}
+.item-desc{color:#666;}
+footer{text-align:center;color:#999;padding:30px;font-size:0.85rem;}
+.file-desc-real{color:#444;font-size:0.88rem;margin-bottom:8px;line-height:1.7;background:#f8f9fc;border-radius:8px;padding:10px 12px;}
+.src-link{font-size:0.75rem;color:#fff;background:#667eea;border-radius:4px;padding:1px 8px;margin-left:8px;text-decoration:none;font-weight:normal;vertical-align:middle;}
+.src-link:hover{background:#5568d8;}
+.file-classes{color:#999;font-size:0.78rem;margin-bottom:10px;line-height:1.5;}
+.container{max-width:1200px;margin:0 auto;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="../index.html" class="navbar-brand">vLLM Ascend</a><ul class="navbar-nav"><li><a href="panorama.html">全景索引</a></li><li><a href="panorama-root.html">root</a></li><li><a href="panorama-core.html">core</a></li><li><a href="panorama-attention.html">attention</a></li><li><a class="active" href="panorama-ops.html">ops</a></li><li><a href="panorama-worker.html">worker</a></li><li><a href="panorama-models.html">models</a></li><li><a href="panorama-distributed.html">distributed</a></li><li><a href="panorama-rest.html">rest(其他)</a></li></ul></nav>
+<div class="page-header"><h1>vLLM Ascend · 自定义算子模块 API 参考</h1><p>文件数: 111 | 函数条目: 494 | 每个文件含职责讲解，每个函数含 [代码行数]，文件名旁可跳转源码查看页</p></div><div class="file-block">
+<div class="file-name">ops\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops 包入口（54 行）。register_dummy_fusion_op 注册 dummyFusionOp 占位融合算子（供 torch.compile 融合体系挂接），是自定义算子注册体系的组成部分。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[2行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_dummy_fusion_op</span><span class="item-desc">[9行] 注册 dummy fusion op（用于占位）</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\activation.py<a class="src-link" href="../src-viewer.html?file=ops/activation.py" target="_blank">查看源码</a></div><div class="file-desc-real">激活函数算子族（86 行）。为 NPU 实现的 CustomOp：AscendQuickGELU（QuickGELU）、AscendSiluAndMul（Silu×门控乘，NPU 融合实现）、AscendSiluAndMulWithClamp（带 clamp 的变体）、AscendSwigluOAIAndMul（OAI 风格 SwiGLU）、AscendSwigluStepAndMul（SwigluStep，带 limit 截断），均通过 forward_oot 走 NPU 算子路径。</div>
+<div class="file-classes">类: AscendQuickGELU, AscendSiluAndMul, AscendSiluAndMulWithClamp</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_oot</span><span class="item-desc">[7行] out-of-tree NPU forward 实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">swiglu_oai_forward</span><span class="item-desc">[8行] OAI 版 SwiGLU 前向</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[2行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">swiglustep_forward</span><span class="item-desc">[24行] Step 版 SwiGLU 前向</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\bailing_moe_linear_attn.py<a class="src-link" href="../src-viewer.html?file=ops/bailing_moe_linear_attn.py" target="_blank">查看源码</a></div><div class="file-desc-real">BailingMoE 线性注意力的 NPU 友好替换（169 行）。AscendBailingMoELinearAttention 作为上游类的 drop-in 替换：_prefill_and_mix_infer 处理 prefill 与混合推理、_decode_infer 处理 decode、_forward 分发，配合 Triton lightning attention kernel 在 NPU 上执行。</div>
+<div class="file-classes">类: AscendBailingMoELinearAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prefill_and_mix_infer</span><span class="item-desc">[14行] prefill 与混合推理入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_infer</span><span class="item-desc">[16行] decode 推理入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward</span><span class="item-desc">[86行] 内部前向实现</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\conv.py<a class="src-link" href="../src-viewer.html?file=ops/conv.py" target="_blank">查看源码</a></div><div class="file-desc-real">3D 卷积层适配（26 行）。AscendConv3dLayer 用 forward_oot 把 vLLM 的 Conv3dLayer（视觉编码器用）映射到 NPU 卷积实现。</div>
+<div class="file-classes">类: AscendConv3dLayer</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_oot</span><span class="item-desc">[3行] out-of-tree NPU forward 实现</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\cv_linear.py<a class="src-link" href="../src-viewer.html?file=ops/cv_linear.py" target="_blank">查看源码</a></div><div class="file-desc-real">Vector/Cube 分离线性层（145 行）。CVLinearWrapper 把一个普通 Linear 拆成两段：quantize 段（Vector 单元做量化）+ matmul 段（Cube 单元做矩阵乘），用于 W8A8 动态量化场景的算力单元优化；自动检测量化方式（_detect_w8a8_dynamic）与通信方式（_detect_communication），属性转发保持与原 Linear 兼容。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[12行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_detect_w8a8_dynamic</span><span class="item-desc">[9行] 检测是否 w8a8 dynamic 量化</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_detect_communication</span><span class="item-desc">[19行] 检测通信方式（allgather/all2all）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">quantize</span><span class="item-desc">[19行] Execute only the quantization step (Vector operator).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">matmul</span><span class="item-desc">[36行] Execute only the matrix multiplication step (Cube operator).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[4行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">weight</span><span class="item-desc">[2行] 权重属性</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getattr__</span><span class="item-desc">[3行] Delegate undefined attributes to the inner linear object</span></div>
+<div class="item"><span class="item-type">(已列出全部 8 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\dsa.py<a class="src-link" href="../src-viewer.html?file=ops/dsa.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek 稀疏注意力算子入口（266 行）。dsa_forward 注册为自定义算子（带 fake 实现）供 torch.compile 切图；AscendDeepseekSparseAttention 组装 SFA V2 所需模块（DSAModules）并执行前向；_build_kv_cache 构建 impl.forward 需要的 6 元组 KV cache、unfold_kvcache 展开缓存视图。</div>
+<div class="file-classes">类: AscendDeepseekSparseAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[90行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[18行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dsa_forward</span><span class="item-desc">[19行] DSA NPU 前向实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dsa_forward_fake</span><span class="item-desc">[6行] DSA NPU forward 的 meta/fake 实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_kv_cache</span><span class="item-desc">[53行] Construct the 6-tuple KV cache used by impl.forward().</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unfold_kvcache</span><span class="item-desc">[4行] 将 MLA KV cache 拆分为 kc 和 kpe</span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\gdn.py<a class="src-link" href="../src-viewer.html?file=ops/gdn.py" target="_blank">查看源码</a></div><div class="file-desc-real">Gated DeltaNet（GDN）注意力算子（605 行）。AscendGatedDeltaNetAttention 实现门控增量线性注意力：_probe_fused_chunk 探测融合 chunk kernel 可用性、_chunk_gated_delta_rule_fused 融合 chunk 计算、_split_ba_for_tp 做 TP 切分、get_state_shape 声明状态形状、_warmup_prefill_kernels（含 v0202 变体）预热 prefill kernel、_forward_core 主计算。</div>
+<div class="file-classes">类: AscendGatedDeltaNetAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_probe_fused_chunk</span><span class="item-desc">[46行] 探测 CANN fused chunk 可用性</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_chunk_gated_delta_rule_fused</span><span class="item-desc">[55行] fused chunk 模式 gated delta rule</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_ba_for_tp</span><span class="item-desc">[4行] 为 TP 切分 BA（gated delta rule 中间变量）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_state_shape</span><span class="item-desc">[12行] 取得 SSM 状态张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_warmup_prefill_kernels</span><span class="item-desc">[2行] warmup prefill 内核</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_warmup_prefill_kernels_v0202</span><span class="item-desc">[2行] warmup prefill 内核（v0.20.2）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[2行] 根据 vllm_config 返回 attention backend 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[81行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_core</span><span class="item-desc">[343行] Core attention computation (called by custom op).</span></div>
+<div class="item"><span class="item-type">(已列出全部 9 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\gdn_attn_builder.py<a class="src-link" href="../src-viewer.html?file=ops/gdn_attn_builder.py" target="_blank">查看源码</a></div><div class="file-desc-real">GDN 注意力元数据构建器（923 行）。AscendGDNAttentionMetadataBuilder 为 GDN 构建各类元数据：chunked prefill（GDNChunkedPrefillMetadata）、causal conv1d（普通/投机两种）、prefill/decode/spec decode 元数据；处理细节：_stable_argsort_for_npu NPU 友好稳定排序、_treat_single_token_prefills_with_state_as_decodes 把带状态的单 token prefill 按 decode 处理、_compact_empty_segments 丢弃零长段使 AscendC fwd_h/fwd_o 索引对齐、_pad_non_spec_decode_graph_inputs/_reset_spec_decode_graph_inputs 图捕获输入管理；AscendGDNAttentionBackend 提供 builder 类。</div>
+<div class="file-classes">类: AscendGDNAttentionMetadataBuilder, AscendGDNAttentionBackend</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_stable_argsort_for_npu</span><span class="item-desc">[4行] NPU 友好的稳定 argsort</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_treat_single_token_prefills_with_state_as_decodes</span><span class="item-desc">[24行] Use decode metadata for one-token stateful prompt chunks.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_actual_seq_lengths</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compact_empty_segments</span><span class="item-desc">[25行] Drop zero-length segments so AscendC fwd_h/fwd_o indexing lines up.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_non_spec_chunked_prefill_metadata</span><span class="item-desc">[49行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[56行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_init_reorder_batch_threshold</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_copy_sequence_indices_to_device</span><span class="item-desc">[23行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pad_non_spec_decode_graph_inputs</span><span class="item-desc">[31行] Refresh fixed buffers consumed by a non-spec decode graph.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reset_spec_decode_graph_inputs</span><span class="item-desc">[6行] Make a captured speculative branch a no-op for this replay.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_attach_non_spec_prefill_metadata</span><span class="item-desc">[36行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_attach_spec_decode_metadata</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_attach_non_spec_decode_metadata</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fold_spec_sized_prefill_chunks_into_spec</span><span class="item-desc">[35行] Advance stateful spec-width prompt chunks through live spec inputs.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[368行] 构造 attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_prefill_has_initial_state_and_causal_conv1d_meta</span><span class="item-desc">[36行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[2行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type">(已列出全部 17 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\kimi_kda.py<a class="src-link" href="../src-viewer.html?file=ops/kimi_kda.py" target="_blank">查看源码</a></div><div class="file-desc-real">Kimi K3 KDA（knee delta attention）Ascend 后端（544 行）。AscendKimiK3DeltaAttention 用 AscendC prefill 与 recurrent kernel 实现 KDA：_run_causal_conv1d/_pack_conv_weights 因果卷积、_run_recurrent 递归路径、_run_prefill chunk 路径；_prepare_beta 把 vLLM 0.27 的 packed beta 转成 AscendC 契约格式；_zero_padded_output/_zero_padded_recurrent_output 清除图填充行。</div>
+<div class="file-classes">类: AscendKimiK3DeltaAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_zero_padded_output</span><span class="item-desc">[12行] Clear graph-padding rows using a device-side live-token count.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_zero_padded_recurrent_output</span><span class="item-desc">[6行] Clear graph-padding rows skipped by recurrent KDA.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_beta</span><span class="item-desc">[6行] Convert vLLM 0.27's packed raw beta to the AscendC contract.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[71行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_and_pack</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[2行] 根据 vllm_config 返回 attention backend 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[37行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_causal_conv1d</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pack_conv_weights</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_recurrent</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_prefill</span><span class="item-desc">[53行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward</span><span class="item-desc">[224行] 内部前向实现</span></div>
+<div class="item"><span class="item-type">(已列出全部 12 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\layernorm.py<a class="src-link" href="../src-viewer.html?file=ops/layernorm.py" target="_blank">查看源码</a></div><div class="file-desc-real">归一化算子族（215 行）。AscendRMSNorm（含 bias 权重加载 _bias_weight_loader）、AscendGemmaRMSNorm（Gemma 风格）、LayerNormFn（通用 LayerNorm）、AscendRMSNormGated（门控 RMSNorm）、AscendFusedRMSNormGated（在上游 FLA CustomOp 边界使用 Ascend 融合 kernel），全部走 NPU 融合算子路径。</div>
+<div class="file-classes">类: AscendRMSNorm, AscendGemmaRMSNorm, LayerNormFn, AscendRMSNormGated, AscendFusedRMSNormGated</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[32行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_bias_weight_loader</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_oot</span><span class="item-desc">[3行] out-of-tree NPU forward 实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[44行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reset_parameters</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 5 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\linear.py<a class="src-link" href="../src-viewer.html?file=ops/linear.py" target="_blank">查看源码</a></div><div class="file-desc-real">并行线性层族（585 行）。AscendUnquantizedLinearMethod 非量化线性方法（process_weights_after_loading 做 NZ 格式转换 _should_keep_nd_for_compatibility_weight、apply 调 unquantized_gemm 自定义算子）；层实现：AscendQKVParallelLinear（QKV 融合列并行）、AscendMergedColumnParallelLinear（多列打包）、AscendColumnParallelLinear/AscendRowParallelLinear（列/行并行）、AscendReplicatedLinear（副本）；各层 forward 按通信组与量化方式选择最优路径（支持 TP 切分、all-reduce/reduce-scatter、custom op 注册）。</div>
+<div class="file-classes">类: AscendUnquantizedLinearMethod, AscendLinearBase, AscendQKVParallelLinear, AscendMergedColumnParallelLinear, AscendRowParallelLinear, AscendColumnParallelLinear, AscendReplicatedLinear</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unquantized_gemm</span><span class="item-desc">[6行] 非量化 GEMM：F.linear(x, weight, bias)</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unquantized_gemm_fake</span><span class="item-desc">[7行] unquantized_gemm 的 fake 实现（用于 meta tensor）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_should_keep_nd_for_compatibility_weight</span><span class="item-desc">[6行] 判断是否应保持 ND layout（兼容权重）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[13行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply</span><span class="item-desc">[7行] 对输入张量应用 Linear 计算</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[58行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[8行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">weight_loader</span><span class="item-desc">[41行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 8 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\linear_op.py<a class="src-link" href="../src-viewer.html?file=ops/linear_op.py" target="_blank">查看源码</a></div><div class="file-desc-real">线性层并行算子定制（387 行）。CustomLinearOp 及其派生（CustomColumnParallelOp/CustomRowParallelOp/CustomReplicatedOp）把线性层的通信与计算封装为可替换算子：comm_group 按层前缀选通信组、apply_impl 定制前向；专用变体：MLPColumnParallelOp/MLPRowParallelOp（MoE MLP 共享专家）、DSV4OProjColumn/RowParallelOp（DSV4 o_proj）、OProjRowParallelOp、ShardedCPColumnParallelOp（CP 分片）；_is_shared_expert_layer 判断共享专家层、get_parallel_op/get_replicated_op 按前缀与层类型返回对应算子、is_moe_layer 判断 MoE 层。</div>
+<div class="file-classes">类: CustomColumnParallelOp, CustomRowParallelOp, CustomReplicatedOp, MLPColumnParallelOp, MLPRowParallelOp, DSV4OProjColumnParallelOp, DSV4OProjRowParallelOp, OProjRowParallelOp, ShardedCPColumnParallelOp</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[2行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">comm_group</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">tp_rank</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">tp_size</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_attrs</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply_impl</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply</span><span class="item-desc">[6行] 对输入张量应用 Linear 计算</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_input_parallel</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_shared_expert_layer</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_column_parallel_op</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_row_parallel_op</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_parallel_op</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_replicated_op</span><span class="item-desc">[6行] 按 layer 特征选择合适的复制 op 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_moe_layer</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_moe_params</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 15 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\mla.py<a class="src-link" href="../src-viewer.html?file=ops/mla.py" target="_blank">查看源码</a></div><div class="file-desc-real">MLA 算子入口（199 行）。mla_forward 注册为自定义算子（带 fake）；AscendMultiHeadLatentAttention 组织 MLA 层前向；IndexerWrapper 包装 DeepSeek V3.2 的 lightning indexer 供注意力层调用。</div>
+<div class="file-classes">类: IndexerWrapper, AscendMultiHeadLatentAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[85行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[15行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">wrapped_process_weights</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mla_forward</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mla_forward_fake</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 5 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\mm_encoder_attention.py<a class="src-link" href="../src-viewer.html?file=ops/mm_encoder_attention.py" target="_blank">查看源码</a></div><div class="file-desc-real">多模态编码器注意力（352 行）。AscendMMEncoderAttention 实现上游 MMEncoderAttention 的 Ascend 版：_reshape_qkv_to_3d 三维重排、_maybe_pad_qkv 填充、_maybe_compute_cu_seqlens 计算变长序列偏移、_run_vit_fia 走 ViT FIA 融合推理注意力；两条前向路径：_forward_eager_fia（eager）与 _forward_capture_fia（ACL graph 捕获），_maybe_unpad_output/_restore_batch_output 恢复输出布局。</div>
+<div class="file-classes">类: AscendMMEncoderAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[27行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reshape_qkv_to_3d</span><span class="item-desc">[23行] Reshape query, key, value to 3D tensors:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_pad_qkv</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_compute_cu_seqlens</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_unpad_output</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_restore_batch_layout</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_vit_fia</span><span class="item-desc">[42行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_eager_fia</span><span class="item-desc">[26行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_capture_fia</span><span class="item-desc">[92行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_oot</span><span class="item-desc">[35行] out-of-tree NPU forward 实现</span></div>
+<div class="item"><span class="item-type">(已列出全部 10 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\qwen2_decoder.py<a class="src-link" href="../src-viewer.html?file=ops/qwen2_decoder.py" target="_blank">查看源码</a></div><div class="file-desc-real">Qwen2 定制解码器（356 行）。AscendCustomQwen2Decoder 构建优化版定制模型（_create_optimized_custom_model）；AscendQwen2Model/AscendQwen2DecoderLayer/AscendQwen2Attention/AscendQwen2RMSNorm 为全套 NPU 化组件；optimized_apply_rotary_pos_emb 为优化的 RoPE 应用。该文件是早期自研解码器实现（vllm-ascend 项目历史代码）。</div>
+<div class="file-classes">类: AscendCustomQwen2Decoder, CustomQwen2ModelInner, AscendQwen2Model, AscendQwen2DecoderLayer, AscendQwen2Attention, AscendQwen2RMSNorm</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[4行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_create_optimized_custom_model</span><span class="item-desc">[93行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[32行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_create_npu_optimized_mask</span><span class="item-desc">[45行] 4D Mask generation optimized for NPU</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_create_standard_causal_mask</span><span class="item-desc">[10行] Standard causal mask (when token_type_ids is None)</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">optimized_apply_rotary_pos_emb</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\register_custom_ops.py<a class="src-link" href="../src-viewer.html?file=ops/register_custom_ops.py" target="_blank">查看源码</a></div><div class="file-desc-real">自定义算子注册中心（213 行）。注册一批 torch 自定义算子（带 fake 实现）：EP 通信算子 _maybe_all_gather_and_maybe_unpad（EP all-gather + 按 DP 分布 unpad）与 _maybe_pad_and_reduce（pad + reduce-scatter）、_quantize 动态量化、_rope_forward_oot、_muls_add；_get_ep_local_sizes/_pad_to_ep_local_size 保证 EP all-gather 输入各 rank 第一维一致。这些算子是 torch.compile 切图与融合的基本单元。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_ep_local_sizes</span><span class="item-desc">[13行] 返回 SP token layout（仅 MoE runner 安装时）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pad_to_ep_local_size</span><span class="item-desc">[9行] 把 EP all-gather 输入 pad 到相同第一维</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_all_gather_and_maybe_unpad_impl</span><span class="item-desc">[30行] EP all-gather + 按 DP token 分布 unpad</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_pad_and_reduce_impl</span><span class="item-desc">[36行] 仅用于 EP 通信场景：按 DP token 分布 pad 后做 EP reduce_scatter。</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_all_gather_and_maybe_unpad_fake</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_pad_and_reduce_fake</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_quantize_impl</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_quantize_impl_fake</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rope_forward_oot_impl_fake</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_muls_add_impl_fake</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 10 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\rel_pos_attention.py<a class="src-link" href="../src-viewer.html?file=ops/rel_pos_attention.py" target="_blank">查看源码</a></div><div class="file-desc-real">相对位置注意力（68 行）。AscendRelPosAttention 实现带相对位置编码的注意力前向（用于特定模型架构的小众注意力形态）。</div>
+<div class="file-classes">类: AscendRelPosAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[19行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[42行] attention 前向入口</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\rope_dsv4.py<a class="src-link" href="../src-viewer.html?file=ops/rope_dsv4.py" target="_blank">查看源码</a></div><div class="file-desc-real">DSV4 专用 RoPE（311 行）。ComplexExpRotaryEmbedding 复指数旋转嵌入（precompute_freqs_cis 预计算频率表）；get_cos_and_sin_dsa 按位置取 cos/sin（支持缓存与 draft 索引）、get_full_cos_and_sin_dsa 取整组预计算缓存；RopeGlobalState/RopeDataProxy 管理全局 RoPE 数据与填充代理。</div>
+<div class="file-classes">类: ComplexExpRotaryEmbedding</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[76行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pad_to</span><span class="item-desc">[19行] Return a new proxy whose underlying tensors are padded to ``target_len`` along ``dim``.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getitem__</span><span class="item-desc">[32行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cos_and_sin_dsa</span><span class="item-desc">[55行] DSA 路径下按 positions 取 cos/sin</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_full_cos_and_sin_dsa</span><span class="item-desc">[22行] Return the full precomputed RoPE cache for a registered DSA RoPE group.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precompute_freqs_cis</span><span class="item-desc">[47行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">yarn_find_correction_dim</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">yarn_find_correction_range</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">yarn_linear_ramp_mask</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[18行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extra_repr</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 11 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\rotary_embedding.py<a class="src-link" href="../src-viewer.html?file=ops/rotary_embedding.py" target="_blank">查看源码</a></div><div class="file-desc-real">RoPE 算子族（578 行）。AscendRotaryEmbedding/AscendYaRNRotaryEmbedding/AscendDeepseekScalingRotaryEmbedding（YaRN 缩放，_yarn_* 系列计算 mscale/ramp/校正维度）/AscendMRotaryEmbedding（多模态 mrope，支持 Triton 路径）/AscendApplyRotaryEmb；缓存管理：set_cos_and_sin 预计算解码期 cos/sin（按最大请求数与每请求 token 数）、get_cos_and_sin_mla 按位置取用（带缓存）、update_cos_sin/get_cos_and_sin_slice 滑动更新；rope_forward_oot 为统一前向入口（注册自定义算子）。</div>
+<div class="file-classes">类: AscendRotaryEmbedding, AscendYaRNRotaryEmbedding, AscendDeepseekScalingRotaryEmbedding, AscendMRotaryEmbedding, AscendApplyRotaryEmb</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_cos_and_sin</span><span class="item-desc">[25行] 按模型需要分配并初始化 cos/sin 缓存</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cos_and_sin_mla</span><span class="item-desc">[13行] MLA 路径下按 positions 取 cos/sin</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_cos_sin_cache</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_cos_and_sin_cache</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_cos_and_sin_cache_interleaved</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_cos_sin</span><span class="item-desc">[18行] 更新 rotary embedding 的 cos/sin 缓存</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cos_and_sin_slice</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rope_forward_oot</span><span class="item-desc">[39行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[11行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_oot</span><span class="item-desc">[29行] out-of-tree NPU forward 实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_yarn_get_mscale</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rotate_half</span><span class="item-desc">[5行] Rotates half the hidden dims of the input.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_yarn_linear_ramp_mask</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_yarn_find_correction_dim</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_yarn_find_correction_range</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_rotary_pos_emb</span><span class="item-desc">[45行] Applies Rotary Position Embedding to the query and key tensors.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_set_cos_sin_cache</span><span class="item-desc">[32行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[18行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_triton</span><span class="item-desc">[40行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 19 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\vocab_parallel_embedding.py<a class="src-link" href="../src-viewer.html?file=ops/vocab_parallel_embedding.py" target="_blank">查看源码</a></div><div class="file-desc-real">词嵌入与输出头（411 行）。AscendVocabParallelEmbedding 注册为自定义算子：_mask_input_for_vocab_range 越界掩码、_forward_embed_tp 走 embedding TP 路径、_forward_origin 常规路径；AscendParallelLMHead 并行输出头；lmhead_all_to_all 做 lm-head TP 的 all-to-all（把 [N, V/P] 部分词表重分布为 [N/P, V] 全词表）；AscendLogitsProcessor logits 处理器（_get_logits 分派 lmhead TP 路径 _get_logits_lmheadtp 或常规路径 _get_logits_normal，_apply_head 应用输出头）。</div>
+<div class="file-classes">类: AscendVocabParallelEmbedding, AscendParallelLMHead, AscendLogitsProcessor</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[38行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mask_input_for_vocab_range</span><span class="item-desc">[26行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[5行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_embed_tp</span><span class="item-desc">[58行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_origin</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">lmhead_all_to_all</span><span class="item-desc">[41行] All-to-all for lm-head TP: redistribute `[N, V/P]` (all tokens, partial</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_head</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_logits</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_logits_lmheadtp</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_logits_normal</span><span class="item-desc">[19行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 10 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.fused_moe 子包标记。该包实现 MoE（专家混合）全链路：路由、token 分发、专家计算、通信策略与 EPLB。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\eplb.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/eplb.py" target="_blank">查看源码</a></div><div class="file-desc-real">EPLB 专家映射算子（138 行）。build_expert_replica_routing_table 构建逻辑专家→物理副本的周期路由表；map_to_physical 经路由表把逻辑专家 ID 映射为全局物理 ID；map_to_physical_and_record 在收集开启时同时记录负载（带 fake 实现供 torch.compile）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_expert_replica_routing_table</span><span class="item-desc">[25行] Build a rank-aware table for routing logical experts to replicas.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">map_to_physical</span><span class="item-desc">[48行] Map logical expert IDs to global physical IDs through a periodic table.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">map_to_physical_and_record</span><span class="item-desc">[33行] Map logical IDs and record load only while collection is enabled.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_map_to_physical_and_record_fake</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\force_eplb.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/force_eplb.py" target="_blank">查看源码</a></div><div class="file-desc-real">强制 EPLB 路由（142 行）。build_force_eplb_topk 在 ACL graph 捕获前构建确定性路由表；get_force_eplb_topk 在策略启用时返回确定性轮询（round-robin）专家 ID（_build_round_robin_topk），用于 EPLB 重排期间的稳定路由测试。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_or_get_topk</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_force_eplb_topk</span><span class="item-desc">[28行] Build force-EPLB tables before ACLGraph capture.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_force_eplb_topk</span><span class="item-desc">[17行] Return deterministic round-robin ids when the policy is enabled.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_round_robin_topk</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\fused_moe.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/fused_moe.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 运行器（336 行）。AscendMoERunner 驱动融合 MoE 执行：is_internal_router 判断内部路由、use_dp_chunking 判断 DP 分块、_fused_output_is_reduced 判断输出已归约、共享专家并行模式（_get_shared_expert_parallel_mode）、三级输出归约控制（_maybe_reduce_shared/routed/final_output）、set_lora_context。</div>
+<div class="file-classes">类: AscendMoERunner</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[59行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_internal_router</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">use_dp_chunking</span><span class="item-desc">[4行] Ascend uses its own forward_impl path, not the FlashInfer Cutlass</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fused_output_is_reduced</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_shared_expert_parallel_mode</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reduce_shared_output_if_needed</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">local_num_experts</span><span class="item-desc">[3行] Number of physical experts managed by this EPLB layer.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ep_rank</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_reduce_shared_expert_output</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_reduce_routed_output_before_transform</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_reduce_final_output</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_impl</span><span class="item-desc">[64行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 13 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\gate_linear.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/gate_linear.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 门控线性层（63 行）。AscendGateLinear 替换 vLLM 的 GateLinear（路由打分入口），forward 走 NPU 优化路径。</div>
+<div class="file-classes">类: AscendGateLinear</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[19行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[10行] attention 前向入口</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\moe_comm_method.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/moe_comm_method.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 通信方法族（492 行）。MoECommMethod 基类定义 prepare/finalize/fused_experts 流程与 LoRA 上下文；实现按场景选择：AllGatherCommImpl（all-gather + reduce-scatter）、MC2CommImpl（华为 MC2 通信算子，pad_and_split_input_ids 做输入切分）、AlltoAllCommImpl（标准 all-to-all）、FusedMC2CommImpl（融合 MC2 + CANN megamoe：_init_mega_moe_symm_buffer 对称内存缓冲、_apply_cann_mega_moe 一体化执行）；get_moe_comm_method/setup_moe_comm_method 管理全局选择；FusedExpertsResult 承载专家计算结果。</div>
+<div class="file-classes">类: MoECommMethod, AllGatherCommImpl, MC2CommImpl, AlltoAllCommImpl, FusedMC2CommImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_moe_comm_method</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">setup_moe_comm_method</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[14行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">finalize</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_experts</span><span class="item-desc">[45行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_mlp</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_token_dispatcher</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_prepare_finalize</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pad_and_split_input_ids</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_init_mega_moe_symm_buffer</span><span class="item-desc">[79行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_cann_mega_moe</span><span class="item-desc">[83行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">to_list</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 14 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\moe_mlp.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/moe_mlp.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE MLP 计算核心（884 行）。quant_apply_mlp 量化路径（gmm 分组乘 + swiglu + 量化，支持 group_list）、unquant_apply_mlp 非量化路径（gmm + 激活 + bias）；融合判定：_custom_gmm_swiglu_enabled/_gmm_swiglu_quant_fusion_enabled 决定是否走 gmm+swiglu(+quant) 融合算子；scale 准备（_prepare_dequant_swiglu_weight_scale/_prepare_swigluoai_grouped_matmul_scales）；激活变体：_apply_situ/_apply_clipped_swiglu/_swiglu_oai_dynamic_mx_quant；cumsum_group_list 把专家分组列表转成累计形式（不同 AscendC 算子契约互转）；unified_apply_mlp 统一入口。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_custom_gmm_swiglu_enabled</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gmm_swiglu_quant_fusion_enabled</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">cumsum_group_list</span><span class="item-desc">[30行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_require_single_tensor_for_swiglu_quant</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_dequant_swiglu_weight_scale</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_swigluoai_grouped_matmul_scales</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_situ</span><span class="item-desc">[14行] Match SituAndMul.forward_native without constructing a CustomOp in forward.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_clipped_swiglu</span><span class="item-desc">[23行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_swiglu_oai_dynamic_mx_quant</span><span class="item-desc">[24行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">quant_apply_mlp</span><span class="item-desc">[457行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unquant_apply_mlp</span><span class="item-desc">[123行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unified_apply_mlp</span><span class="item-desc">[111行] Unified MoE MLP entry.</span></div>
+<div class="item"><span class="item-type">(已列出全部 12 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\moe_utils.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/moe_utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 通信与 CANN 工具（169 行）。async_all_to_all 异步 all-to-all（带事件）、gather_from_sequence_parallel_region 序列并行收集（AG 前向/RS 反向）、_gather_along_first_dim 沿首维拼接；load_cann_mega_moe_ops 加载 CANN megamoe 算子（_get_cann_mega_moe_quant_settings 量化设置）；get_moe_num_logical_experts 计算逻辑专家数（扣冗余与共享专家）；enable_fusion_gmmswigluquant 查询 gmm+swiglu+quant 融合开关。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">async_all_to_all</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gather_along_first_dim</span><span class="item-desc">[31行] Gather tensors and concatenate along the first dimension.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">gather_from_sequence_parallel_region</span><span class="item-desc">[7行] Wrapper for autograd function: forward: AG, backward: RS <first dim></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_cann_mega_moe_ops</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_cann_mega_moe_quant_settings</span><span class="item-desc">[24行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_moe_num_logical_experts</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enable_fusion_gmmswigluquant</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 7 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\prepare_finalize.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/prepare_finalize.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 通信策略实现（573 行）。PrepareAndFinalize 抽象基类定义 prepare/finalize 两阶段；三种策略：PrepareAndFinalizeWithAll2All（all-to-all 切分，含 _restore_tp_across_dp 跨 DP 恢复 TP）、PrepareAndFinalizeWithMC2（MC2，基于 all2all 加华为通信算子）、PrepareAndFinalizeWithAllGather（all-gather + reduce-scatter，支持 EP 序列并行 _use_ep_sequence_parallel，按 EP/DP 组分别处理 prepare/finalize 与输入填充）。</div>
+<div class="file-classes">类: PrepareAndFinalize, PrepareAndFinalizeWithAll2All, PrepareAndFinalizeWithMC2, PrepareAndFinalizeWithAllGather</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[3行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare</span><span class="item-desc">[18行] Preparation steps:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">finalize</span><span class="item-desc">[17行] Finalization steps:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_restore_tp_across_dp</span><span class="item-desc">[8行] Restore original TP configuration.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pad_and_split_input_ids</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_use_ep_sequence_parallel</span><span class="item-desc">[8行] Whether MoE itself must use the EP sequence-parallel path.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_with_ep_group</span><span class="item-desc">[54行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_with_dp_group</span><span class="item-desc">[54行] Preparation steps:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">all_gather_input_id_with_dp_group</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_with_ep_group</span><span class="item-desc">[17行] Argument `reduce_results` is not needed in this func. Given sequence parallelism is enabled:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_with_dp_group</span><span class="item-desc">[18行] Finalization steps:</span></div>
+<div class="item"><span class="item-type">(已列出全部 12 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\routed_experts.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/routed_experts.py" target="_blank">查看源码</a></div><div class="file-desc-real">路由专家容器（593 行）。AscendRoutedExperts 管理 MoE 专家权重全生命周期：get_expert_weights 获取权重、EPLB 初始化（init_eplb/make_eplb_placement_config）、专家映射三件套（ascend_expert_map 构建映射/update_expert_map 更新/get_log2phy_map 逻辑到物理映射）、量化方式选择（_get_quant_method/quant_type）、权重视图（get_eplb_weight_views/EplbExpertTensorList 兼容上游 EPLB 权重契约）、forward_impl 执行；AscendUnquantizedFusedMoEMethod 为非量化 MoE 方法（is_monolithic 判断单体执行、set_lora_context）；use_multistage_eplb_load 判断是否按步保留专家负载向量。</div>
+<div class="file-classes">类: AscendUnquantizedFusedMoEMethod, EplbExpertTensorList, AscendRoutedExperts</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[38行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_monolithic</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">maybe_make_prepare_finalize</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_eplb_weight_views</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[31行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply</span><span class="item-desc">[70行] 对输入张量应用 Linear 计算</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">use_multistage_eplb_load</span><span class="item-desc">[3行] Whether EPLB should retain a separate expert-load vector per step.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">make_eplb_placement_config</span><span class="item-desc">[7行] Build the minimal config view consumed by init_eplb_config.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">shape</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__torch_function__</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_expert_weights</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">init_eplb</span><span class="item-desc">[86行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_promote_attr_to_buffer</span><span class="item-desc">[7行] Move an existing tensor attribute onto a Level-2 restorable named buffer.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_quant_method</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_eplb_parameter</span><span class="item-desc">[3行] Return an expert parameter from the refactored weight owner.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ascend_expert_map</span><span class="item-desc">[5行] Return the global-to-local map used by Ascend MoE execution.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_expert_map</span><span class="item-desc">[7行] Update the upstream map or preserve the legacy Ascend update API.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_log2phy_map</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ep_rank</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">...</span> 还有 4 个函数</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\shared_experts.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/shared_experts.py" target="_blank">查看源码</a></div><div class="file-desc-real">共享专家执行器（418 行）。AscendSharedExperts 实现所有 token 共享的专家计算：part1/part2 两段 MLP、并行模式（SharedExpertParallelMode 决定激活与权重布局）、DP 本地输入准备与输出收尾（_prepare_local_dp_input/_finalize_local_dp_output）、SP 输入收集（_gather_sp_input）、pad + reduce-scatter（_pad_and_reduce_scatter）、prepare_input_before_routed_experts 在路由专家前预计算；FusedMoEEvents 携带执行事件。</div>
+<div class="file-classes">类: SharedExpertParallelMode</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[41行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">wrapped_process_weights</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">validate_consistency</span><span class="item-desc">[37行] Validate that split shared expert computation matches integrated computation.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">part1</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">part2</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">parallel_mode</span><span class="item-desc">[20行] Resolve the effective activation/weight layout for this forward.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_local_dp_input</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_local_dp_output</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gather_sp_input</span><span class="item-desc">[10行] Gather SP-sharded activations to the full sequence via TP all-gather + unpad.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pad_and_reduce_scatter</span><span class="item-desc">[15行] Pad the full output to a TP multiple, then reduce-scatter to the SP shard.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_input_before_routed_experts</span><span class="item-desc">[14行] Start the SP-only input all-gather on the shared-expert stream.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[158行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">maybe_wait_event</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 14 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\token_dispatcher.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/token_dispatcher.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE token 分发器族（719 行）。MoETokenDispatcher 基类定义 token_dispatch/token_combine；实现：TokenDispatcherWithMC2（MC2 分发，refresh_hccl_group 刷新组、get_dispatch_mc2_kwargs/get_combine_mc_kwargs 构造算子参数）、TokenDispatcherWithAllGather（all-gather 分发）、TokenDispatcherWithAll2AllV（all-to-all：_dispatch_preprocess/_preprocess/_dispatch_postprocess 与 combine 对应三段处理）；_get_expert_token_nums_type 判断专家 token 数张量类型。</div>
+<div class="file-classes">类: MoETokenDispatcher, TokenDispatcherWithMC2, TokenDispatcherWithAllGather, TokenDispatcherWithAll2AllV</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_expert_token_nums_type</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[7行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_lora_context</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ep_group</span><span class="item-desc">[3行] Get expert model parallel group.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ep_rank</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ep_size</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">token_dispatch</span><span class="item-desc">[83行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">token_combine</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">refresh_hccl_group</span><span class="item-desc">[6行] Refresh MC2 communicator metadata after HCCL groups are recreated.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dispatch_mc2_kwargs</span><span class="item-desc">[73行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_combine_mc_kwargs</span><span class="item-desc">[58行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dispatch_preprocess</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_preprocess</span><span class="item-desc">[44行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dispatch_postprocess</span><span class="item-desc">[38行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_combine_preprocess</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_combine_postprocess</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 16 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">fused_moe.dataclass 子包标记。该包定义 MoE 流水线的类型化数据结构。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\fused_experts.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/fused_experts.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 专家计算数据类（136 行）。MoEWeights 携带稠密/量化权重载荷；MoEFusedExpertsInput 为路由专家管线顶层输入；build_fused_experts_input 构建工厂函数。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_fused_experts_input</span><span class="item-desc">[71行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\moe_mlp.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/moe_mlp.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE MLP 计算输入数据类（114 行）。MoEMlpComputeInput 描述一次 MLP 计算的全部输入；build_mlp_compute_input 构建工厂。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_mlp_compute_input</span><span class="item-desc">[53行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\moe_quant.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/moe_quant.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 量化参数数据类（159 行）。MoEQuantParams 携带量化模式/后端覆盖/MXFP 叶配置，提供模式判断（is_quant/is_mxfp/is_w4a4_mxfp/is_int_quant/is_fp8/use_w4a8_per_channel_gmm_swiglu）与类型查询（get_dst_type/get_scale_type）；MoEMxfpParams 为 MXFP 内部精度设置；build_quant_params/_build_mxfp_params 构建工厂。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_quant</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_mxfp</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_w4a4_mxfp</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_int_quant</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_fp8</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">use_w4a8_per_channel_gmm_swiglu</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dispatch_with_quant</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dst_type</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_scale_type</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_mxfp_params</span><span class="item-desc">[32行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_quant_params</span><span class="item-desc">[23行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 11 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\prepare_finalize.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/prepare_finalize.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE prepare 阶段输出数据类（30 行）。MoEPrepareOutput 承载 prepare 阶段的类型化输出。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\router_input.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/router_input.py" target="_blank">查看源码</a></div><div class="file-desc-real">MoE 路由输入数据类（39 行）。MoeRouterInput 携带一次 MoE 调用的路由与分发侧输入。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\dataclass\token_dispatcher.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/dataclass/token_dispatcher.py" target="_blank">查看源码</a></div><div class="file-desc-real">token 分发数据类（97 行）。MoEMC2CombineMetadata/MoEAllGatherCombineMetadata/MoEAllToAllCombineMetadata 三种 combine 元数据；MoETokenDispatchInput/MoETokenDispatchOutput 分发输入输出；build_token_dispatch_input 构建工厂。</div>
+<div class="file-classes">类: MoETokenDispatchOutput</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_token_dispatch_input</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\router\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/router/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">fused_moe.router 子包标记（9 行）。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\router\fused_topk_router.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/router/fused_topk_router.py" target="_blank">查看源码</a></div><div class="file-desc-real">融合 top-k 路由器（159 行）。AscendFusedTopKRouter 对接 Ascend 的专家选择算子（npu_moe_gating_top_k）：is_fused_supported 判断融合支持、_compute_routing 执行路由计算（softmax + top-k + 归一化）。</div>
+<div class="file-classes">类: AscendFusedTopKRouter</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[34行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_fused_supported</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_routing</span><span class="item-desc">[76行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\router\grouped_topk_router.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/router/grouped_topk_router.py" target="_blank">查看源码</a></div><div class="file-desc-real">分组 top-k 路由器（129 行）。AscendGroupedTopKRouter 用于 DeepSeek 等分组路由模型：routing_method_type 映射路由方法、_native_grouped_topk 原生分组 top-k、_renormalize_topk_weights 权重重归一化、_compute_routing 主计算。</div>
+<div class="file-classes">类: AscendGroupedTopKRouter</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[27行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">routing_method_type</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_renormalize_topk_weights</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_native_grouped_topk</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_routing</span><span class="item-desc">[50行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 5 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\fused_moe\router\router_factory.py<a class="src-link" href="../src-viewer.html?file=ops/fused_moe/router/router_factory.py" target="_blank">查看源码</a></div><div class="file-desc-real">路由器工厂（114 行）。check_npu_moe_gating_top_k 校验当前配置可否走 NPU 门控 top-k 算子；create_ascend_fused_moe_router 按 top_k/分组/归一化配置创建对应的路由器实例。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">check_npu_moe_gating_top_k</span><span class="item-desc">[19行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">create_ascend_fused_moe_router</span><span class="item-desc">[79行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton 子包标记。该包收录 NPU 上的 Triton kernel（Triton-Ascend 后端），覆盖激活、采样、FLA 线性注意力、KDA、Mamba、投机解码等。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_memcpy.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_memcpy.py" target="_blank">查看源码</a></div><div class="file-desc-real">批量内存拷贝 Triton kernel（31 行）。batch_memcpy_kernel 按指针/大小数组批量拷贝多段内存，用于小段聚合拷贝场景。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">batch_memcpy_kernel</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\bincount.py<a class="src-link" href="../src-viewer.html?file=ops/triton/bincount.py" target="_blank">查看源码</a></div><div class="file-desc-real">token 计数 Triton kernel（149 行）。token_bin_counts_and_mask_kernel 按批次行统计 token 出现次数（bincount）并生成掩码；get_token_bin_counts_and_mask_triton 为包装入口，供采样惩罚计算使用。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">token_bin_counts_and_mask_kernel</span><span class="item-desc">[48行] Count token occurrences per batch row.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_token_bin_counts_and_mask_triton</span><span class="item-desc">[61行] Triton-Ascend implementation of token bin counting.</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\compute_slot_mapping.py<a class="src-link" href="../src-viewer.html?file=ops/triton/compute_slot_mapping.py" target="_blank">查看源码</a></div><div class="file-desc-real">slot mapping 计算 Triton kernel（84 行）。_compute_slot_mapping_kernel 按请求位置与块表计算每个 token 的 KV cache slot（query_start_loc + block_table 查表），_next_power_of_2 计算 kernel 块大小。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_next_power_of_2</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_slot_mapping_kernel</span><span class="item-desc">[73行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\dsa_cp.py<a class="src-link" href="../src-viewer.html?file=ops/triton/dsa_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">DSA-CP 本地元数据 kernel（41 行）。build_local_metadata_triton 融合计算本地 token 元数据（local query_start_loc/seq_lens），供 DSA 上下文并行使用。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_local_metadata_triton</span><span class="item-desc">[37行] Fused NPU kernel for local token metadata computation</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\eplb.py<a class="src-link" href="../src-viewer.html?file=ops/triton/eplb.py" target="_blank">查看源码</a></div><div class="file-desc-real">EPLB 映射 Triton kernel（76 行）。map_to_physical_and_record_triton/_map_to_physical_and_record_kernel 在设备端完成逻辑→物理专家映射并按需记录负载（含 num_unpadded_tokens 处理），替代 torch 实现减少 host 同步。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_map_to_physical_and_record_kernel</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">map_to_physical_and_record_triton</span><span class="item-desc">[29行] Map logical IDs and optionally record physical-expert load.</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fused_gdn_gating.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fused_gdn_gating.py" target="_blank">查看源码</a></div><div class="file-desc-real">GDN 门控融合 kernel（99 行）。fused_gdn_gating_patch 融合计算 Gated DeltaNet 的 beta/gating（A_log/a/b/dt_bias 参与），fused_gdn_gating_kernel 为实现 kernel。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_gdn_gating_kernel</span><span class="item-desc">[43行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_gdn_gating_patch</span><span class="item-desc">[41行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\layernorm_gated.py<a class="src-link" href="../src-viewer.html?file=ops/triton/layernorm_gated.py" target="_blank">查看源码</a></div><div class="file-desc-real">门控 LayerNorm Triton kernel（168 行）。_layer_norm_fwd_1pass_kernel_npu 单遍 LayerNorm（带可选残差 Z 与 Mean 输出）；layer_norm_fwd_npu 为包装入口。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_layer_norm_fwd_1pass_kernel_npu</span><span class="item-desc">[85行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_norm_fwd_npu</span><span class="item-desc">[66行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\mul_add.py<a class="src-link" href="../src-viewer.html?file=ops/triton/mul_add.py" target="_blank">查看源码</a></div><div class="file-desc-real">乘加 Triton kernel（57 行）。muls_add_kernel/muls_add_triton 计算 x*scale+y（与 compilation passes 的 muls_add 融合配套的独立实现）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">muls_add_kernel</span><span class="item-desc">[19行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">muls_add_triton</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\muls_add.py<a class="src-link" href="../src-viewer.html?file=ops/triton/muls_add.py" target="_blank">查看源码</a></div><div class="file-desc-real">乘加 Triton kernel（57 行）。与 mul_add.py 内容相同的重复实现（muls_add_kernel/muls_add_triton），历史遗留副本。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">muls_add_kernel</span><span class="item-desc">[19行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">muls_add_triton</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\penalty.py<a class="src-link" href="../src-viewer.html?file=ops/triton/penalty.py" target="_blank">查看源码</a></div><div class="file-desc-real">采样惩罚 Triton kernel（162 行）。apply_all_penalties_kernel 一次性施加重复/频率/出现三类惩罚（就地修改 logits）；apply_penalties_triton 组织输入（prompt/output 掩码与 bin 计数）；_apply_all_penalties_triton 接受预计算计数的快速路径。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply_all_penalties_kernel</span><span class="item-desc">[63行] Apply repetition, frequency, and presence penalties to logits in place.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply_penalties_triton</span><span class="item-desc">[28行] Apply penalties to logits in place. Same interface as</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_all_penalties_triton</span><span class="item-desc">[33行] Apply all penalties given precomputed bin counts and masks.</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\reject_sample.py<a class="src-link" href="../src-viewer.html?file=ops/triton/reject_sample.py" target="_blank">查看源码</a></div><div class="file-desc-real">拒绝采样 Triton kernel 集（776 行）。覆盖投机解码验证采样的各分支：贪婪（rejection_greedy_sample_triton 及 spec_len_1 特例）、随机（rejection_random_sample_kernel 与 block verify 变体）、恢复 token 采样（sample_recovered_tokens_kernel）；expand_triton 把接受位置扩展到输出序列；bonus_renew 更新 bonus token；cal_grid_and_block_size 计算 launch 配置。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">cal_grid_and_block_size</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rejection_greedy_sample_spec_len_1_triton</span><span class="item-desc">[36行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bonus_renew</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rejection_greedy_sample_triton</span><span class="item-desc">[77行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rejection_random_sample_kernel</span><span class="item-desc">[182行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">expand_kernel</span><span class="item-desc">[27行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sample_recovered_tokens_kernel</span><span class="item-desc">[125行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rejection_greedy_sample_with_triton</span><span class="item-desc">[44行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">expand_triton</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rejection_random_sample_block_verify_kernel</span><span class="item-desc">[195行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 10 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\rms_norm.py<a class="src-link" href="../src-viewer.html?file=ops/triton/rms_norm.py" target="_blank">查看源码</a></div><div class="file-desc-real">RMSNorm Triton kernel（71 行）。triton_rms_kernel 按行计算 RMS 归一化；triton_q_rms 对 Q 张量归一化（q/norm 前处理用）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">triton_rms_kernel</span><span class="item-desc">[28行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">triton_q_rms</span><span class="item-desc">[32行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\rope.py<a class="src-link" href="../src-viewer.html?file=ops/triton/rope.py" target="_blank">查看源码</a></div><div class="file-desc-real">RoPE Triton kernel（431 行）。_triton_rope 对 q/k 应用旋转嵌入（双输入）、_triton_rope_siso 单输入变体（qk 拼接）；rope_forward_triton/rope_forward_triton_siso 为包装入口（支持 cos/sin 分离或 cos_sin_cache 合一）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_triton_rope</span><span class="item-desc">[154行] This triton kernel applies rotary embedding on q and k.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_triton_rope_siso</span><span class="item-desc">[73行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rope_forward_triton</span><span class="item-desc">[96行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rope_forward_triton_siso</span><span class="item-desc">[78行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\sfa_cp.py<a class="src-link" href="../src-viewer.html?file=ops/triton/sfa_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">SFA DCP 融合通信 kernel（425 行）。pack_sfa_dcp_output_lse 把跨步 SFA 输出与 FP32 LSE 打包进一个 HCCL 载荷（_pack_sfa_dcp_output_lse_kernel）；fused_sfa_dcp_lse_combine 解包并按 LSE 合并各 rank 输出（_fused_sfa_dcp_lse_combine_kernel）；sfa_dcp_a2a_fused_combine 串联打包 + 一次 HCCL All2All + 融合 LSE 合并；sfa_dcp_a2a_fused 注册为自定义算子（带 fake），_validate_sfa_dcp_inputs/_lse_pack_dim 做校验与类型选择。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pack_sfa_dcp_output_lse_kernel</span><span class="item-desc">[91行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fused_sfa_dcp_lse_combine_kernel</span><span class="item-desc">[102行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_lse_pack_dim</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_validate_sfa_dcp_inputs</span><span class="item-desc">[42行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pack_sfa_dcp_output_lse</span><span class="item-desc">[36行] Pack strided SFA output and FP32 LSE into one HCCL payload.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_sfa_dcp_lse_combine</span><span class="item-desc">[49行] Unpack one HCCL payload and merge rank outputs using their LSE.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sfa_dcp_a2a_fused_combine</span><span class="item-desc">[17行] Run stride-aware pack, one HCCL All2All, and fused LSE combine.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sfa_dcp_a2a_fused</span><span class="item-desc">[25行] Custom-op entry point for fused SFA DCP output post-processing.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sfa_dcp_a2a_fused_fake</span><span class="item-desc">[17行] Propagate output metadata for torch.compile without running HCCL.</span></div>
+<div class="item"><span class="item-type">(已列出全部 9 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\sparse_index_remap.py<a class="src-link" href="../src-viewer.html?file=ops/triton/sparse_index_remap.py" target="_blank">查看源码</a></div><div class="file-desc-real">稀疏索引重映射 Triton kernel（182 行）。remap_sparse_indices_triton 把全局视图的 topk 索引重映射到 DCP 本地视图（DCP 场景）；remap_sparse_indices_fused_kernel 融合重映射+按块紧凑+尾部预填，remap_sparse_indices_compact_gather_kernel 按块序聚拢到行首。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remap_sparse_indices_fused_kernel</span><span class="item-desc">[53行] Fused remap + per-chunk compaction + output tail pre-fill.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remap_sparse_indices_compact_gather_kernel</span><span class="item-desc">[22行] Gather chunks to the row front in chunk order.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remap_sparse_indices_triton</span><span class="item-desc">[76行] Triton replacement for the torch implementation in</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\triton_utils.py<a class="src-link" href="../src-viewer.html?file=ops/triton/triton_utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">Triton 工具（66 行）。_resolve_triton_ascend_op 解析 triton_ascend 算子；init_device_properties_triton 初始化设备属性；get_aicore_num/get_vectorcore_num 查询 AI Core/向量核数量（供 kernel 调优）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_resolve_triton_ascend_op</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">init_device_properties_triton</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_aicore_num</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_vectorcore_num</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\activation\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/activation/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.activation 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\activation\swiglu_quant.py<a class="src-link" href="../src-viewer.html?file=ops/triton/activation/swiglu_quant.py" target="_blank">查看源码</a></div><div class="file-desc-real">SwiGLU+量化融合 Triton kernel（102 行）。_swiglu_quant_kernel 按 group_list 分组做 SwiGLU 并量化输出（out+scale）；swiglu_quant 包装入口（支持 group_list 类型选择与按需量化）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_swiglu_quant_kernel</span><span class="item-desc">[56行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">swiglu_quant</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\activation\swiglustep.py<a class="src-link" href="../src-viewer.html?file=ops/triton/activation/swiglustep.py" target="_blank">查看源码</a></div><div class="file-desc-real">SwigluStep 激活 Triton kernel（130 行）。_swiglustep_kernel 实现融合 SwigluStep：silu(gate).clamp(max=limit) * up.clamp(±limit)；swiglustep_forward_triton 为入口。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_swiglustep_kernel</span><span class="item-desc">[38行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">swiglustep_forward_triton</span><span class="item-desc">[46行] Fused SwigluStep: silu(gate).clamp(max=limit) * up.clamp(±limit).</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_invariant\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_invariant/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.batch_invariant 子包标记。该包提供批不变算子（同输入不同 batch 下逐位一致），供 batch_invariant 模式使用。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_invariant\matmul.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_invariant/matmul.py" target="_blank">查看源码</a></div><div class="file-desc-real">批不变矩阵乘（448 行）。持久化 kernel：matmul_bias_persistent_kernel/matmul_persistent（x@y+bias）、linear_persistent_kernel/linear_persistent（x@y^T，固定 grid 保证归约顺序一致）；对外批不变接口：mm/bmm/addmm/matmul/linear_batch_invariant。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">matmul_bias_persistent_kernel</span><span class="item-desc">[74行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">matmul_persistent</span><span class="item-desc">[75行] Implement matrix multiplication with optional bias using Triton: x @ y + bias (if bias is not None)</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">linear_persistent_kernel</span><span class="item-desc">[67行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">linear_persistent</span><span class="item-desc">[103行] Implement matrix multiplication with Triton: x @ y^T</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mm_batch_invariant</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bmm_batch_invariant</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">addmm_batch_invariant</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">matmul_batch_invariant</span><span class="item-desc">[56行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">linear_batch_invariant</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 9 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_invariant\mean.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_invariant/mean.py" target="_blank">查看源码</a></div><div class="file-desc-real">批不变 mean（173 行）。mean_kernel 沿单维求均值的 Triton kernel（固定归约顺序）；mean_dim 为 torch.mean 的单维 Triton 实现；mean_batch_invariant 批不变包装。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mean_kernel</span><span class="item-desc">[43行] Kernel for computing mean along a single dimension.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mean_dim</span><span class="item-desc">[85行] Triton implementation of torch.mean with single dimension reduction.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mean_batch_invariant</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_invariant\rmsnorm.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_invariant/rmsnorm.py" target="_blank">查看源码</a></div><div class="file-desc-real">批不变 RMSNorm（153 行）。_rms_norm_kernel 对二维输入沿末维 RMS 归一化（固定 grid）；rms_norm Triton 实现；rms_norm_batch_invariant 批不变包装。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rms_norm_kernel</span><span class="item-desc">[54行] Compute RMS normalization along the last dimension of a 2D tensor.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rms_norm</span><span class="item-desc">[52行] Compute RMS normalization using Triton kernel with fixed grid size.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rms_norm_batch_invariant</span><span class="item-desc">[19行] Batch-invariant wrapper for RMS normalization.</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\batch_invariant\softmax.py<a class="src-link" href="../src-viewer.html?file=ops/triton/batch_invariant/softmax.py" target="_blank">查看源码</a></div><div class="file-desc-real">批不变 softmax（38 行）。softmax_batch_invariant 提供批不变的 softmax 实现（固定归约顺序保证逐位一致）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">softmax_batch_invariant</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.fla 子包标记。该包是 Flash Linear Attention（线性注意力）kernel 集，服务 Gated DeltaNet 类模型。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\chunk.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/chunk.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA chunk 前向主入口（386 行）。chunk_gated_delta_rule_fwd 执行分块门控增量规则前向；ChunkGatedDeltaRuleFunction 为 autograd Function；chunk_gated_delta_rule 对外入口（q/k/v/g/beta/scale）。</div>
+<div class="file-classes">类: ChunkGatedDeltaRuleFunction</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd</span><span class="item-desc">[189行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[32行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule</span><span class="item-desc">[128行] Args:</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\chunk_delta_h.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/chunk_delta_h.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 状态传递 kernel（244 行）。chunk_gated_delta_rule_fwd_h_blockdim64（blockdim64 配置）计算每 chunk 的隐状态传递 h；chunk_gated_delta_rule_fwd_h 为包装（支持 initial_state 与最终状态输出）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_kernel_h_blockdim64</span><span class="item-desc">[147行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_h</span><span class="item-desc">[66行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\chunk_delta_hupdate.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/chunk_delta_hupdate.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 状态增量更新 kernel（219 行）。chunk_gated_delta_rule_fwd_kernel_hupdate_blockdim64 按变长序列（cu_seqlens/chunk_offsets）增量更新隐状态；chunk_gated_delta_rule_fwd_hupdate 为包装。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_kernel_hupdate_blockdim64</span><span class="item-desc">[130行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_hupdate</span><span class="item-desc">[61行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\chunk_o.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/chunk_o.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 输出计算 kernel（163 行）。chunk_fwd_kernel_o 用 chunk 状态 h 计算注意力输出 o；chunk_fwd_o 为包装（含 scale）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_fwd_kernel_o</span><span class="item-desc">[84行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_fwd_o</span><span class="item-desc">[52行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\chunk_scaled_dot_kkt.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/chunk_scaled_dot_kkt.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA KKT 内积 kernel（155 行）。chunk_scaled_dot_kkt_fwd_kernel 计算 beta·K·K^T（chunk 内三角矩阵 A）；chunk_scaled_dot_kkt_fwd 包装（按 cu_seqlens/chunk_indices 变长处理）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_scaled_dot_kkt_fwd_kernel</span><span class="item-desc">[61行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_scaled_dot_kkt_fwd</span><span class="item-desc">[66行] Compute beta * K * K^T.</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\cumsum.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/cumsum.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 门控累计和 kernel（144 行）。chunk_local_cumsum_scalar_kernel 计算 chunk 内标量门控 g 的局部累计和；chunk_local_cumsum_scalar/chunk_local_cumsum 包装（支持反向与 scale）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_scalar_kernel</span><span class="item-desc">[53行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_scalar</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\fused_qkvzba_split_reshape.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/fused_qkvzba_split_reshape.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 融合拆分 kernel（225 行）。fused_qkvzba_split_reshape_cat_kernel 一次 kernel 完成 mixed_qkvz/mixed_ba 的拆分与重排（产出 mixed_qkv/z/b/a）；fused_qkvzba_split_reshape 包装（按 QK/V 头数与头维度配置）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_qkvzba_split_reshape_cat_kernel</span><span class="item-desc">[121行] Fused kernel to split and reshape mixed QKVZ and BA tensors.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_qkvzba_split_reshape_cat</span><span class="item-desc">[82行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\l2norm.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/l2norm.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA L2 归一化 kernel（66 行）。l2norm_fwd_kernel2_loop 沿头维做 L2 归一化；l2norm_fwd 包装（可指定输出 dtype）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">l2norm_fwd_kernel2_loop</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">l2norm_fwd</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\layernorm_guard.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/layernorm_guard.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA LayerNorm kernel（198 行）。layer_norm_fwd_kernel 单遍 LayerNorm（带残差）；_layer_norm_fwd/LayerNormFn 包装为函数式接口，作为 FLA 管线的守卫实现。</div>
+<div class="file-classes">类: LayerNormFn</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_norm_fwd_kernel</span><span class="item-desc">[70行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_layer_norm_fwd</span><span class="item-desc">[63行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[38行] attention 前向入口</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\solve_tril.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/solve_tril.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 三角矩阵求逆 kernel（404 行）。solve_tril_16x16_kernel 求 16×16 块 (I+A)^-1；merge_16x16_to_32x32/64x64_inverse_kernel 逐级合并为大块逆矩阵；solve_tril 对外入口（变长 cu_seqlens 支持）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">solve_tril_16x16_kernel</span><span class="item-desc">[113行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">merge_16x16_to_32x32_inverse_kernel</span><span class="item-desc">[60行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">merge_16x16_to_64x64_inverse_kernel</span><span class="item-desc">[126行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">solve_tril</span><span class="item-desc">[74行] Compute the inverse of the matrix I + A</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\utils.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA 工具（133 行）。prepare_lens/prepare_chunk_indices/prepare_final_chunk_indices/prepare_chunk_offsets/prepare_update_chunk_offsets 预计算变长序列的 chunk 元数据；input_guard 装饰器保证输入连续并按输入设置设备；safe_exp 数值安全指数；_clear_ssm_states_kernel/clear_ssm_states 按行清零 SSM 状态。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_lens</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_chunk_indices</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_final_chunk_indices</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_chunk_offsets</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_update_chunk_offsets</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">input_guard</span><span class="item-desc">[30行] A decorator to make sure all input tensors are contiguous and set the device based on input tensors.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">wrapper</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">safe_exp</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_clear_ssm_states_kernel</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">clear_ssm_states</span><span class="item-desc">[36行] Zero out specific rows for the SSM states</span></div>
+<div class="item"><span class="item-type">(已列出全部 10 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\fla\wy_fast.py<a class="src-link" href="../src-viewer.html?file=ops/triton/fla/wy_fast.py" target="_blank">查看源码</a></div><div class="file-desc-real">FLA W/U 重计算 kernel（143 行）。recompute_w_u_fwd_kernel 计算 chunk 的 W（状态修正）与 U（值投影）；recompute_w_u_fwd 包装（含 g_cumsum 与 A 输入）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">recompute_w_u_fwd_kernel</span><span class="item-desc">[75行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">recompute_w_u_fwd</span><span class="item-desc">[46行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.kda 子包标记。该包是 Kimi KDA（delta attention）专用 kernel 集，与 fla 包对应但按 KDA 门控（gk 逐维门控）定制。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\chunk_delta_h.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/chunk_delta_h.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA 状态传递 kernel（328 行）。chunk_gated_delta_rule_fwd_kernel_h_blockdim64_kda 计算带逐维门控 gk 的 chunk 隐状态；chunk_gated_delta_rule_fwd_h_kda 包装（支持 initial_state）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_kernel_h_blockdim64_kda</span><span class="item-desc">[232行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gated_delta_rule_fwd_h_kda</span><span class="item-desc">[59行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\cumsum.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/cumsum.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA 累计和 kernel（274 行）。chunk_local_cumsum_scalar_kernel/chunk_local_cumsum_vector_kernel 分别处理标量与向量门控的 chunk 内累计和；chunk_local_cumsum 为统一入口（按输入形状分派）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_scalar_kernel</span><span class="item-desc">[53行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_scalar</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_vector_kernel</span><span class="item-desc">[70行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum_vector</span><span class="item-desc">[38行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_local_cumsum</span><span class="item-desc">[41行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\fused_recurrent_kda.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/fused_recurrent_kda.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA 融合递归 kernel（158 行）。fused_recurrent_gated_delta_rule_fwd_kernel 实现 decode 期逐步递归计算（q/k/v/g/beta 单步状态更新与输出）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_recurrent_gated_delta_rule_fwd_kernel</span><span class="item-desc">[135行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\kda.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/kda.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA kernel 总集（1332 行）。递归路径：fused_recurrent_kda_fwd/fused_recurrent_kda；chunk 路径：chunk_kda_scaled_dot_kkt_fwd（intra_sub_inter/intra_sub_intra 两级 kernel 计算 beta·K·K^T）、recompute_w_u_fwd、chunk_gla_fwd_o_gk（输出计算）、chunk_kda_fwd/chunk_kda 组装；门控归一化：layer_norm_gated_fwd 系列 kernel 与 rms_norm_gated（gated activation）；kda_gate_fwd_kernel/fused_kda_gate 融合门控（g/A/g_bias/beta/threshold）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_recurrent_kda_fwd</span><span class="item-desc">[75行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_recurrent_kda</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_norm_gated_fwd_kernel</span><span class="item-desc">[69行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_norm_gated_fwd_kernel1</span><span class="item-desc">[65行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_norm_gated_fwd</span><span class="item-desc">[77行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rms_norm_gated</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_inter</span><span class="item-desc">[143行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_intra</span><span class="item-desc">[88行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_kda_scaled_dot_kkt_fwd</span><span class="item-desc">[82行] Compute beta * K * K^T.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">recompute_w_u_fwd_kernel</span><span class="item-desc">[137行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">recompute_w_u_fwd</span><span class="item-desc">[45行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gla_fwd_kernel_o</span><span class="item-desc">[103行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_gla_fwd_o_gk</span><span class="item-desc">[39行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">grid</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_kda_fwd</span><span class="item-desc">[77行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">chunk_kda</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">kda_gate_fwd_kernel</span><span class="item-desc">[58行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_kda_gate</span><span class="item-desc">[45行] Forward pass for KDA gate:</span></div>
+<div class="item"><span class="item-type">(已列出全部 18 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\l2norm.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/l2norm.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA L2 归一化 kernel（100 行）。l2norm_fwd_persistent_kernel（持久化）与 l2norm_fwd_tiled_kernel（分块）两种实现；l2norm_fwd 按 use_tiled_kernel 选择。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">l2norm_fwd_persistent_kernel</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">l2norm_fwd_tiled_kernel</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">l2norm_fwd</span><span class="item-desc">[48行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\solve_tril.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/solve_tril.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA 三角矩阵求逆 kernel（402 行）。solve_tril_16x16_kernel_kda、merge_16x16_to_32x32/64x64_inverse_kernel_kda 与 fla 版对应；solve_tril_kda 对外入口。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">solve_tril_16x16_kernel_kda</span><span class="item-desc">[48行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">merge_16x16_to_32x32_inverse_kernel_kda</span><span class="item-desc">[79行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">merge_16x16_to_64x64_inverse_kernel_kda</span><span class="item-desc">[174行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">solve_tril_kda</span><span class="item-desc">[51行] Compute the inverse of the matrix I + A</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kda\utils.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kda/utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">KDA 工具（97 行）。tensor_cache 装饰器按张量对象身份缓存派生元数据；prepare_lens/prepare_chunk_indices/prepare_chunk_offsets 预计算变长元数据；input_guard 连续性与设备守卫。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">tensor_cache</span><span class="item-desc">[26行] Cache recent tensor-derived metadata keyed by tensor object identity.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">wrapper</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_lens</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_chunk_indices</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_chunk_offsets</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">input_guard</span><span class="item-desc">[30行] A decorator to make sure all input tensors are contiguous and set the device based on input tensors.</span></div>
+<div class="item"><span class="item-type">(已列出全部 6 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kimi_k3\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kimi_k3/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.kimi_k3 子包标记：Kimi K3 专用 Triton 融合 kernel。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\kimi_k3\attention_residual.py<a class="src-link" href="../src-viewer.html?file=ops/triton/kimi_k3/attention_residual.py" target="_blank">查看源码</a></div><div class="file-desc-real">K3 注意力残差混合融合 kernel（116 行）。_apply_attn_res_kernel 在设备端计算 K3 的学习型残差流 softmax 混合（prefix_sum/block_residual/proj/norm 参与）；apply_attn_res 包装（按有效块数裁剪）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_attn_res_kernel</span><span class="item-desc">[56行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply_attn_res</span><span class="item-desc">[39行] Return K3's learned softmax mixture of residual streams.</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\linearnorm\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/linearnorm/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.linearnorm 子包标记。该包实现 QKV 分裂+RMSNorm+RoPE 的融合 kernel 族。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\linearnorm\split_qkv_rmsnorm_mrope.py<a class="src-link" href="../src-viewer.html?file=ops/triton/linearnorm/split_qkv_rmsnorm_mrope.py" target="_blank">查看源码</a></div><div class="file-desc-real">分裂+RMSNorm+mRoPE 融合 kernel（427 行）。split_qkv_rmsnorm_mrope_kernel 一次完成 QKV 分裂、Q/K 各自 RMSNorm 与多模态 mrope 旋转；triton_split_qkv_rmsnorm_mrope 注册为自定义算子（带 fake）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_mrope_kernel</span><span class="item-desc">[251行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">triton_split_qkv_rmsnorm_mrope</span><span class="item-desc">[85行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">triton_split_qkv_rmsnorm_mrope_fake</span><span class="item-desc">[50行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\linearnorm\split_qkv_rmsnorm_rope.py<a class="src-link" href="../src-viewer.html?file=ops/triton/linearnorm/split_qkv_rmsnorm_rope.py" target="_blank">查看源码</a></div><div class="file-desc-real">分裂+RMSNorm+RoPE 融合 kernel（390 行）。split_qkv_rmsnorm_rope_kernel 融合 QKV 分裂、Q/K RMSNorm（带 bias）与 RoPE；split_qkv_rmsnorm_rope_impl 为实现入口（带 fake），按 cos_sin_cache 与 positions 查表旋转。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_kernel</span><span class="item-desc">[236行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_impl</span><span class="item-desc">[81行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_impl_fake</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py<a class="src-link" href="../src-viewer.html?file=ops/triton/linearnorm/split_qkv_rmsnorm_rope_simt.py" target="_blank">查看源码</a></div><div class="file-desc-real">SIMT 版分裂+RMSNorm+RoPE kernel（386 行）。与上一文件功能相同但走 SIMT 路径：precompute_rope_cos_sin_kernel 预计算 cos/sin、split_qkv_rmsnorm_rope_simt_kernel 融合主 kernel；适用于不同代际硬件的指令集差异。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precompute_rope_cos_sin_kernel</span><span class="item-desc">[28行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_simt_kernel</span><span class="item-desc">[217行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_simt_impl</span><span class="item-desc">[82行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_rmsnorm_rope_simt_impl_fake</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\linearnorm\split_qkv_tp_rmsnorm_rope.py<a class="src-link" href="../src-viewer.html?file=ops/triton/linearnorm/split_qkv_tp_rmsnorm_rope.py" target="_blank">查看源码</a></div><div class="file-desc-real">TP 分裂+RMSNorm+RoPE kernel（376 行）。两段 kernel：_split_qkv_and_compute_local_qk_var_kernel（Grid Stride + 批量加载 + 预计算倒数）做 QKV 分裂并计算本地 QK 方差、_apply_global_rmsnorm_kernel 用全局方差完成归一化与旋转；split_qkv_tp_rmsnorm_rope_impl 为入口（TP 分片下跨 rank 两段式归一化）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_qkv_and_compute_local_qk_var_kernel</span><span class="item-desc">[87行] Grid Stride Loop + batch loading + precomputed reciprocal.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_global_rmsnorm_kernel</span><span class="item-desc">[123行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_tp_rmsnorm_rope_impl</span><span class="item-desc">[79行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_qkv_tp_rmsnorm_rope_impl_fake</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 4 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\mamba\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/mamba/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.mamba 子包标记。该包含 Mamba/线性注意力混合模型的 Triton kernel。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\mamba\causal_conv1d.py<a class="src-link" href="../src-viewer.html?file=ops/triton/mamba/causal_conv1d.py" target="_blank">查看源码</a></div><div class="file-desc-real">因果卷积辅助 kernel（14 行）。extract_last_width 提取每序列卷积窗口末位值（decode 期因果卷积的增量输出）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extract_last_width</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\mamba\lightning_attn.py<a class="src-link" href="../src-viewer.html?file=ops/triton/mamba/lightning_attn.py" target="_blank">查看源码</a></div><div class="file-desc-real">lightning attention NPU kernel（627 行）。BailingMoE 线性注意力的 NPU 实现：_fwd_diag_kernel 对角块注意力和 _fwd_none_diag_kernel 非对角块（KV 状态参与）、_fwd_kv_parallel/_fwd_kv_reduce 计算 KV 状态并行与归约（含 KV_HISTORY）；lightning_attention_npu 为前向入口（ed 衰减、block_size 分块、kv_history 状态）；AscendLightningAttentionKernel 暴露 jit_linear_forward_prefix 供 prefill 前缀复用。</div>
+<div class="file-classes">类: _attention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fwd_diag_kernel</span><span class="item-desc">[112行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fwd_kv_parallel</span><span class="item-desc">[103行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fwd_kv_reduce</span><span class="item-desc">[61行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fwd_none_diag_kernel</span><span class="item-desc">[68行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[156行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">lightning_attention_npu</span><span class="item-desc">[38行] lightning attention forward pass (NPU-friendly).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">jit_linear_forward_prefix</span><span class="item-desc">[30行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 7 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\mamba\postprocess.py<a class="src-link" href="../src-viewer.html?file=ops/triton/mamba/postprocess.py" target="_blank">查看源码</a></div><div class="file-desc-real">Mamba 后处理 kernel 集（429 行）。包含 Mamba 混合模型推理后处理的 Triton kernel（状态整理与输出变换等，服务于 GDN/Mamba 管线末端）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">postprocess_mamba_fused_kernel</span><span class="item-desc">[203行] Fused GPU kernel for postprocess_mamba that computes decisions AND performs</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\spec_decode\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/spec_decode/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.spec_decode 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\spec_decode\ngram.py<a class="src-link" href="../src-viewer.html?file=ops/triton/spec_decode/ngram.py" target="_blank">查看源码</a></div><div class="file-desc-real">NGram 投机解码 kernel（259 行）。ngram_spec_decode_kernel 在设备端从已生成 token 序列匹配 n-gram 并产出 draft token；triton_ngram_spec_decode 包装（含 discard 请求掩码、最小 n 配置）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ngram_spec_decode_kernel</span><span class="item-desc">[179行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">triton_ngram_spec_decode</span><span class="item-desc">[72行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\spec_decode\utils.py<a class="src-link" href="../src-viewer.html?file=ops/triton/spec_decode/utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">投机解码辅助 kernel（213 行）。prepare_inputs_padded_kernel 准备填充后的投机输入（合法 token 计数、待采样索引、拒绝数）；copy_and_expand_dflash_and_dspark_inputs_kernel 复制并展开 DFlash/DSpark 的输入（token/位置/slot）；dflash2_greedy_selector_walk_kernel 沿候选表贪心走选出最终 draft 序列。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_inputs_padded_kernel</span><span class="item-desc">[44行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">copy_and_expand_dflash_and_dspark_inputs_kernel</span><span class="item-desc">[109行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dflash2_greedy_selector_walk_kernel</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.v2 子包标记。该包服务 V2 运行器的专用 kernel。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\apply_grammar_bitmask.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/apply_grammar_bitmask.py" target="_blank">查看源码</a></div><div class="file-desc-real">语法掩码应用 kernel（110 行）。_apply_grammar_bitmask_kernel_impl 按语法约束位掩码屏蔽 logits 的非法 token；_ApplyGrammarBitmaskKernelLauncher 把上游逻辑 grid 映射到 Ascend VectorCore 启动网格（__getitem__ 适配）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_grammar_bitmask_kernel_impl</span><span class="item-desc">[41行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__getitem__</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">launch</span><span class="item-desc">[25行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 3 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\mamba\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/mamba/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.v2.mamba 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\mamba\precopy.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/mamba/precopy.py" target="_blank">查看源码</a></div><div class="file-desc-real">Mamba 状态预拷贝融合 kernel（178 行）。precopy_mamba_align_fused_kernel 按 block table 一次性拷贝多个 Mamba 状态块（_copy_mamba_state_block 单块拷贝，避免拷贝循环内指针转换），对齐 V2 运行器的状态布局。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_copy_mamba_state_block</span><span class="item-desc">[103行] Copy one Mamba state block without casting pointers in copy loops.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precopy_mamba_align_fused_kernel</span><span class="item-desc">[65行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\metrics\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/metrics/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.v2.metrics 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\metrics\num_nans.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/metrics/num_nans.py" target="_blank">查看源码</a></div><div class="file-desc-real">NaN 计数 kernel（39 行）。_num_nans_kernel 统计 logits 中的 NaN 数量；get_num_nans 为入口，用于数值健康监控。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_num_nans_kernel</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_num_nans</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 2 个函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\sample\__init__.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/sample/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">ops.triton.v2.sample 子包标记。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">ops\triton\v2\sample\fill_logprob_token_idx.py<a class="src-link" href="../src-viewer.html?file=ops/triton/v2/sample/fill_logprob_token_idx.py" target="_blank">查看源码</a></div><div class="file-desc-real">logprob token 索引填充 kernel（54 行）。_fill_logprob_token_ids_kernel 把采样 token 与 topk 索引填入 logprob 输出缓冲（带有效掩码），服务 V2 采样管线的 logprob 计算。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_fill_logprob_token_ids_kernel</span><span class="item-desc">[49行]</span></div>
+<div class="item"><span class="item-type">(已列出全部 1 个函数)</span></div>
+</div>
+</body>
+</html>

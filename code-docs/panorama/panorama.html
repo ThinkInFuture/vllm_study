@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend 全景图 - 源码结构索引</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;line-height:1.7;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+.nav{background:#fff;border-radius:12px;padding:12px 24px;margin-bottom:24px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.nav a{color:#666;text-decoration:none;padding:6px 14px;border-radius:8px;font-size:0.9rem;}
+.nav a:hover{background:#667eea;color:#fff;}
+h1{color:#333;font-size:1.6rem;margin:10px 0 4px 0;}
+.sub{color:#666;font-size:0.95rem;margin-bottom:24px;}
+.module{background:#fff;border-radius:12px;padding:22px 26px;margin:18px 0;box-shadow:0 2px 10px rgba(0,0,0,0.05);border-left:4px solid #667eea;}
+.module h2{margin:0 0 4px 0;font-size:1.25rem;color:#333;}
+.module h2 code{font-family:Consolas,monospace;color:#667eea;font-size:1.1rem;}
+.stats{color:#888;font-size:0.85rem;margin-bottom:10px;}
+.stats span{background:#eef1fb;color:#667eea;border-radius:4px;padding:1px 8px;margin-right:6px;font-size:0.8rem;}
+.module p{color:#555;font-size:0.92rem;margin:8px 0 12px 0;}
+.module a.enter{display:inline-block;background:#667eea;color:#fff;text-decoration:none;padding:6px 18px;border-radius:8px;font-size:0.88rem;font-weight:bold;}
+.module a.enter:hover{background:#5568d8;}
+.tip{background:#fffbe8;border-left:4px solid #e6b800;border-radius:8px;padding:12px 18px;font-size:0.88rem;color:#776c2a;margin:20px 0;}
+</style>
+</head>
+<body>
+<div class="nav">
+    <a href="../index.html">← 返回架构总览首页</a>
+    <span style="color:#999;font-size:0.85rem;">全景源码导航 · 457 个文件逐文件讲解</span>
+</div>
+<h1>vLLM Ascend 全景图 - 源码结构索引</h1>
+<p class="sub">共 736 个文件，6641 个函数，734 个类。每个模块子页面列出该模块全部文件（含文件级职责讲解）与每个函数的行数，文件名旁的「查看源码」可直达真实源码。</p>
+
+<div class="module">
+<h2>root <code>/</code>（根模块 + compilation 图编译）</h2>
+<p class="stats"><span>27 文件</span><span>515 函数</span><span>含 compilation/ 14 文件</span></p>
+<p>插件入口与全局基础设施：__init__.py 的平台/模型/connector 注册链路、platform.py 的 NPUPlatform 平台能力声明与配置校验、ascend_config.py 的 Ascend 配置中心（1473 行）、ascend_forward_context.py 的 forward 上下文与 MoE 通信方式选择、batch_invariant 批不变模式、cpu_binding 绑核、utils 工具集（1570 行，多流/NZ 变换/自定义算子环境）。compilation/ 子目录实现 torch.compile 编译器接口、ACL graph 捕获重放与图融合 pass（乘加、Norm+量化、QK-Norm+RoPE）。</p>
+<a class="enter" href="panorama-root.html">进入 root 模块 →</a>
+</div>
+
+<div class="module">
+<h2>core <code>core/</code>（定制调度器与 KV 规格）</h2>
+<p class="stats"><span>8 文件</span><span>18 类</span><span>155 函数</span></p>
+<p>vLLM-Ascend 定制调度器族：batch_job_aware_scheduler（批任务感知调度：作业分桶 + EWMA decode 长度预测 + KV 块预留）、dyntra_lb_scheduler（多实例动态负载均衡：KV 预取、请求迁入迁出）、recompute_scheduler（抢占请求重计算恢复）、short_request_first_scheduler（短请求优先三泳道队列 + 防饿死老化）、profiling_chunk_predictor（二次延迟模型动态 chunk）；kv_cache_interface 定义 NPU 专属 MLA/SFA KV cache 规格。</p>
+<a class="enter" href="panorama-core.html">进入 core 模块 →</a>
+</div>
+
+<div class="module">
+<h2>attention <code>attention/</code>（注意力后端）</h2>
+<p class="stats"><span>18 文件</span><span>55 类</span><span>412 函数</span></p>
+<p>全部注意力后端的 NPU 实现：attention_v1（通用 FlashAttention：FIA/PA 双路径 + INT8 KV 的 C8 变体）、mla_v1（DeepSeek MLA：prolog 融合预处理 + chunked prefill）、sfa_v1（稀疏 Flash Attention：lightning indexer + topk 选择）、dsa_v1 与 dsa_attn_kv_plan（DeepSeek-V4 稀疏注意力族与 A5 BF16 方案）、sfa_kv_offload（KV 卸载到 CPU）、utils 共享工具；context_parallel/ 子目录实现 DCP（decode 序列分片）与 PCP（prefill 上下文并行）的 GQA/MLA/SFA/DSA 四类变体。</p>
+<a class="enter" href="panorama-attention.html">进入 attention 模块 →</a>
+</div>
+
+<div class="module">
+<h2>ops <code>ops/</code>（自定义算子）</h2>
+<p class="stats"><span>111 文件</span><span>75 类</span><span>594 函数</span></p>
+<p>自定义算子层：linear/linear_op（并行线性层与可定制通信算子）、layernorm/rotary_embedding/activation/vocab_parallel_embedding（归一化、RoPE 族、激活、词嵌入与 logits 处理）、dsa/mla/gdn/kimi_kda（新型注意力算子入口）；fused_moe/ 实现 MoE 全链路——路由器（fused/grouped top-k）、token 分发器（MC2/AllGather/All2All）、共享与路由专家、量化 MLP、EPLB 映射；triton/ 是 NPU Triton kernel 库：FLA 线性注意力、KDA、Mamba、批不变算子、拒绝采样、采样惩罚、分裂+RMSNorm+RoPE 融合。</p>
+<a class="enter" href="panorama-ops.html">进入 ops 模块 →</a>
+</div>
+
+<div class="module">
+<h2>worker <code>worker/</code>（执行器）</h2>
+<p class="stats"><span>34 文件</span><span>27 类</span><span>349 函数</span></p>
+<p>推理执行层：worker.py 的 NPUWorker（设备生命周期、睡眠唤醒、权重传输引擎）、model_runner_v1.py（V1 运行器，全仓最大 5368 行）、v2/model_runner.py（V2 新架构运行器）、block_table/npu_input_batch（块表与输入批）、dcp_utils（DCP 元数据）、encoder_acl_graph（视觉编码器图捕获）；v2/sample/ 是 Triton 采样器族（温度/Gumbel/惩罚/logprob），v2/spec_decode/ 是 draft speculator 族（自回归/Eagle/DFlash/DSpark）与 ACL graph 管理器。</p>
+<a class="enter" href="panorama-worker.html">进入 worker 模块 →</a>
+</div>
+
+<div class="module">
+<h2>models <code>models/</code>（模型定义）</h2>
+<p class="stats"><span>26 文件</span><span>70 类</span><span>398 函数</span></p>
+<p>Ascend 定制模型实现：deepseek_v4/ 全家桶（主模型、lightning indexer、KV 压缩器、SWA 缓存、DSpark draft、MTP）、kimi_k3 系列（MoE/MLA 适配 + DSpark/MTP draft）、minimax_m3 系列（块稀疏注意力 + 多模态 + MSA NPU/Triton 算子）、qwen3_dflash2/dspark 与 llama_eagle3 系列 draft 模型、layer/attention 的 DSA 注意力层定义。__init__.py 的 register_model 把它们注册进 vLLM 模型注册表。</p>
+<a class="enter" href="panorama-models.html">进入 models 模块 →</a>
+</div>
+
+<div class="module">
+<h2>distributed <code>distributed/</code>（分布式通信）</h2>
+<p class="stats"><span>51 文件</span><span>909 函数</span></p>
+<p>分布式通信层：parallel_state 的 Ascend 专属通信组（MC2/OTP/LM head TP）、device_communicators 的 HCCL 直驱通信器、eplb/ 专家负载均衡（状态扩展 + FlashLB/SwiftBalancer/Default 三策略 + D2D 权重搬运）；kv_transfer/ 是最大板块——Mooncake 三代 connector（基础/混合/层级式）、AscendStore KV 池（后端抽象 + memcache/mooncake/yuanrong 三实现 + 层级复用布局）、CPU offload 系列（native/simple/recompute）、SFA PD 远端 D2H 传输；weight_transfer/ 提供 HCCL 与 NPU IPC 两种 RL 权重传输引擎。</p>
+<a class="enter" href="panorama-distributed.html">进入 distributed 模块 →</a>
+</div>
+
+<div class="module">
+<h2>rest <code>其余模块</code>（310P/量化/加载/patch 等）</h2>
+<p class="stats"><span>183 文件</span><span>1261 函数</span></p>
+<p>其余全部功能模块：_310p/（Atlas 310P 专属：注意力后端、GDN、采样器、量化 scheme、V1/V2 运行器）、device/（设备配置、硬件档案、1596 行设备算子适配器）、device_allocator/（内存池与睡眠唤醒）、lora/（Punica wrapper、MoE LoRA、BGMV/SGMV 算子）、model_executor/warmup（kernel 预热）、model_loader/（NetLoader 弹性加载 + RFork 种子 fork）、patch/（platform 22 个 + worker 17 个运行时 patch）、quantization/（ModelSlim/compressed-tensors/fp8 配置 + W4A4/W4A8/W8A8/wna16 全量化 scheme + TP 权重切换）、sample/ 与 spec_decode/（采样与 proposer 族）、xlite/（图运行时适配）。</p>
+<a class="enter" href="panorama-rest.html">进入 rest 模块 →</a>
+</div>
+
+<div class="tip">提示：各模块子页面中，点击文件名旁的「查看源码」会打开统一的源码查看页（语法高亮 + 行号 + 居中排版）；文档包内已附带源码数据，解压后双击 index.html 即可完整使用。</div>
+</body>
+</html>

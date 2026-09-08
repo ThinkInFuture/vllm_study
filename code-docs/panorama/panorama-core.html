@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend - 核心模块 API 参考</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;}
+.navbar{background:white;border-radius:12px;padding:15px 25px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.navbar-brand{font-size:1.2rem;font-weight:bold;color:#667eea;text-decoration:none;}
+.navbar-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap;}
+.navbar-nav a{color:#666;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;}
+.navbar-nav a:hover,.navbar-nav a.active{background:#667eea;color:white;}
+.page-header{text-align:center;margin-bottom:30px;}
+.page-header h1{font-size:1.8rem;color:#333;margin-bottom:5px;}
+.page-header p{color:#666;font-size:0.95rem;}
+.section{background:white;border-radius:12px;padding:25px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.section h2{color:#333;font-size:1.2rem;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #667eea;}
+.file-block{margin-bottom:25px;padding-left:20px;border-left:3px solid #e8ecf0;}
+.file-block:hover{border-left-color:#667eea;}
+.file-name{font-family:"Consolas",monospace;font-size:0.95rem;font-weight:bold;color:#667eea;margin-bottom:8px;display:block;}
+.file-desc{color:#888;font-size:0.85rem;margin-bottom:12px;line-height:1.4;}
+.item{display:flex;gap:10px;padding:4px 0;font-size:0.85rem;}
+.item-type{font-family:"Consolas",monospace;font-size:0.75rem;padding:1px 6px;border-radius:4px;white-space:nowrap;min-width:50px;text-align:center;}
+.type-class{background:#e8f5e9;color:#2e7d32;}
+.type-func{background:#e3f2fd;color:#1565c0;}
+.item-name{font-family:"Consolas",monospace;color:#333;min-width:220px;}
+.item-desc{color:#666;}
+footer{text-align:center;color:#999;padding:30px;font-size:0.85rem;}
+.file-desc-real{color:#444;font-size:0.88rem;margin-bottom:8px;line-height:1.7;background:#f8f9fc;border-radius:8px;padding:10px 12px;}
+.src-link{font-size:0.75rem;color:#fff;background:#667eea;border-radius:4px;padding:1px 8px;margin-left:8px;text-decoration:none;font-weight:normal;vertical-align:middle;}
+.src-link:hover{background:#5568d8;}
+.file-classes{color:#999;font-size:0.78rem;margin-bottom:10px;line-height:1.5;}
+.container{max-width:1200px;margin:0 auto;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="../index.html" class="navbar-brand">vLLM Ascend</a><ul class="navbar-nav"><li><a href="panorama.html">全景索引</a></li><li><a href="panorama-root.html">root</a></li><li><a class="active" href="panorama-core.html">core</a></li><li><a href="panorama-attention.html">attention</a></li><li><a href="panorama-ops.html">ops</a></li><li><a href="panorama-worker.html">worker</a></li><li><a href="panorama-models.html">models</a></li><li><a href="panorama-distributed.html">distributed</a></li><li><a href="panorama-rest.html">rest(其他)</a></li></ul></nav>
+<div class="page-header"><h1>vLLM Ascend · 核心模块 API 参考</h1><p>文件数: 8 | 函数条目: 136 | 每个文件含职责讲解，每个函数含 [代码行数]，文件名旁可跳转源码查看页</p></div><div class="file-block">
+<div class="file-name">core\__init__.py<a class="src-link" href="../src-viewer.html?file=core/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">core 子包的包标记文件，无实际代码。core 包收录 vLLM-Ascend 定制调度器族：批任务感知调度、DyntraLB 负载均衡调度、重计算调度、短请求优先调度、profiling 动态 chunk 预测，以及 NPU 专属 KV cache 规格定义。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">core\batch_job_aware_scheduler.py<a class="src-link" href="../src-viewer.html?file=core/batch_job_aware_scheduler.py" target="_blank">查看源码</a></div><div class="file-desc-real">面向离线/批量推理的批任务感知调度器（685 行）。核心思想：同一批任务（job）的请求被归入同一桶（RequestBucket，按 prefill 长度最佳适配 O(log n) 查找），调度时用 EWMA 估计每个 job 的 decode 长度（JobDecodeEstimator），并由 RunningBlockReserver 预测下一轮 running 循环的 KV 块需求，据此决定准入预算。主要类：JobNameParser（作业名解析缓存）、JobDecodeEstimator（decode 长度 EWMA 预测）、RunningBlockReserver（KV 块需求预留）、RequestBucket（按 prefill 长度分桶）、BatchJobAwareRequestQueue（作业分组排序 + 预留感知准入的请求队列）、BatchJobAwareScheduler/BatchJobAwareAsyncScheduler（调度器本体及异步变体）。_sort_jobs 按准入预算决定长任务/短任务谁优先。</div>
+<div class="file-classes">类: BatchJobAwareRequestQueue, BatchJobAwareScheduler, BatchJobAwareAsyncScheduler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[17行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">parse</span><span class="item-desc">[9行] 从 request_id 解析 #job_name[NAME]# 前缀</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remove</span><span class="item-desc">[21行] 从缓存移除一个 request_id</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">clear</span><span class="item-desc">[3行] 清空全部缓存</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">predict</span><span class="item-desc">[19行] 基于 EWMA 预测下一轮该 job 的 decode token 数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">observe</span><span class="item-desc">[31行] 观测真实 decode 长度，更新 EWMA</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_stats</span><span class="item-desc">[9行] 返回该 job 的统计信息</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_cdiv</span><span class="item-desc">[3行] 整数上除法</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">invalidate_cache</span><span class="item-desc">[3行] 失效 best-fit 缓存</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_reserve</span><span class="item-desc">[5行] 完成保留块计数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_one</span><span class="item-desc">[44行] 为单个请求计算所需 KV 块数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_all</span><span class="item-desc">[2行] 为请求列表汇总所需 KV 块数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">put</span><span class="item-desc">[13行] 将请求插入等待队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">peek_best_fit_request</span><span class="item-desc">[19行] 取出 KV 容量最匹配的请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_empty</span><span class="item-desc">[3行] 返回队列是否为空</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__len__</span><span class="item-desc">[2行] 返回队列长度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__bool__</span><span class="item-desc">[2行] 返回队列是否非空</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__iter__</span><span class="item-desc">[3行] 迭代队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">add_request</span><span class="item-desc">[10行] 添加新请求到队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepend_request</span><span class="item-desc">[2行] 将请求插到队列头部（优先调度）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepend_requests</span><span class="item-desc">[3行] 批量将请求插到队列头部（优先调度）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remove_request</span><span class="item-desc">[21行] Remove a specific request from the queue.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remove_requests</span><span class="item-desc">[3行] 批量移除多个请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">peek_request</span><span class="item-desc">[8行] 查看队首请求但不移除</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pop_request</span><span class="item-desc">[7行] 弹出队首请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_job_name</span><span class="item-desc">[2行] 取得请求的 job 名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_track_cold_start_req</span><span class="item-desc">[12行] Track a request as a cold-start request if applicable.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_or_create_job_bucket</span><span class="item-desc">[12行] Get or create a RequestBucket for a job.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_free_blocks</span><span class="item-desc">[2行] 释放请求占用的 KV block</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_admission_budget</span><span class="item-desc">[6行] Calculate admission budget in tokens.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_find_admittable</span><span class="item-desc">[23行] Return the highest‑priority admittable request, or ``None``.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_cold_start_request</span><span class="item-desc">[10行] Try to get a cold-start request with highest priority.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_collect_job_decode_info</span><span class="item-desc">[18行] Collect job decode length information.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_try_schedule_by_available_tokens</span><span class="item-desc">[21行] Schedule requests based on job decode length.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sort_jobs</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">schedule</span><span class="item-desc">[11行] Override to invalidate the block-reserve cache before each step.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_free_request</span><span class="item-desc">[7行] Observe the decode length for naturally stopped requests.</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\dyntra_lb_scheduler.py<a class="src-link" href="../src-viewer.html?file=core/dyntra_lb_scheduler.py" target="_blank">查看源码</a></div><div class="file-desc-real">DyntraLB 动态负载均衡调度器（1205 行）。用于多实例间按 KV cache 块数均衡负载：模块级函数提供块数估算（get_dyntra_lb_request_block_num）、诊断开关与调度摘要打印；DyntraLBPolicyMixin 是核心，实现完整请求生命周期策略——按调度顺序归并等待队列、阻塞请求提升、KV 远端预取（_run_lb_kv_prefetch，限制预取数为 2×running−len(running)）、迁入迁出块的应用（_apply_load_balance_modifications，freeze 时只出不进）、准入控制、被暂停请求的陈旧输出处理与多版本 vLLM 兼容层。DyntraLBScheduler 与 AsyncDyntraLBScheduler 把该 mixin 组合到标准调度器上。</div>
+<div class="file-classes">类: DyntraLBPolicyMixin, DyntraLBScheduler, AsyncDyntraLBScheduler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dyntra_lb_block_size</span><span class="item-desc">[6行] 返回 DyntraLB 负载均衡用的 KV 块大小</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dyntra_lb_request_block_num</span><span class="item-desc">[4行] 估算单个请求占用的 KV 块数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">diagnostics_enabled</span><span class="item-desc">[15行] 读 additional_config 中的诊断开关</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">print_scheduler_summary</span><span class="item-desc">[41行] 打印调度器当前状态摘要</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_schedulable_waiting</span><span class="item-desc">[2行] 判断请求是否处于可调度等待态</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[18行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_waiting_requests_in_schedule_order</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_refresh_blocked_waiting_requests</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_lb_kv_prefetch</span><span class="item-desc">[66行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare_dyntra_lb_step</span><span class="item-desc">[11行] Prepare requests for the next cross-rank load-balancing decision.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_load_balance_modifications</span><span class="item-desc">[40行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">req_blk_num</span><span class="item-desc">[2行] 计算请求占用的 KV 块数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_can_admit_waiting_request</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_scheduler_output_supports</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_has_pending_deliverable_output</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_connector_computed_blocks</span><span class="item-desc">[42行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_prefix_cache_stats</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_preempt_request</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_lb_pause_request</span><span class="item-desc">[14行] Pause a request for DyntraLB load balancing without freeing KV.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_handle_stopped_request</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_after_schedule</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_free_request</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">schedule</span><span class="item-desc">[778行] 调度入口</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\kv_cache_interface.py<a class="src-link" href="../src-viewer.html?file=core/kv_cache_interface.py" target="_blank">查看源码</a></div><div class="file-desc-real">NPU 专属 KV cache 规格定义（242 行）。为 MLA 类模型扩展 vLLM 的 AttentionSpec：AscendMLAAttentionSpec 携带 Ascend 特有布局元数据（scale_dim/scale_dtype/sparse C8/host 存储/alignment），并实现真实页大小计算（storage_block_size×heads×(head_size+scale)）与 DCP 分片下的最大内存估算；AscendSFAIndexerCacheSpec 为 SFA indexer 的 K/scale 缓存定义页大小；AscendSlidingWindowMLASpec 支持滑窗注意力以 MLA 格式存 KV。register_ascend_kv_cache_specs 把这些规格注册进 vLLM，get_storage_block_size 返回一个调度块对应的物理 token 行数。</div>
+<div class="file-classes">类: AscendMLAAttentionSpec, AscendSFAIndexerCacheSpec, AscendSlidingWindowMLASpec</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_storage_block_size</span><span class="item-desc">[9行] 返回 KV cache spec 的物理存储块大小</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">storage_block_size</span><span class="item-desc">[3行] Return the physical block size consumed by Ascend kernels.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">real_page_size_bytes</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unpadded_page_size_bytes</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">merge</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">max_memory_usage_bytes</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">page_size_bytes</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__post_init__</span><span class="item-desc">[2行] dataclass 后置初始化（计算派生字段）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_ascend_kv_cache_specs</span><span class="item-desc">[16行] 注册 Ascend 自定义 KV cache spec</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\profiling_chunk_predictor.py<a class="src-link" href="../src-viewer.html?file=core/profiling_chunk_predictor.py" target="_blank">查看源码</a></div><div class="file-desc-real">基于 profiling 的动态 chunk 大小预测器（465 行）。用二次延迟模型（a·len²+b·len+c）拟合 seq_len→执行耗时，从而在时延目标（target_latency）约束下动态决定每步调度的 token 数。ChunkSizePredictor 负责拟合与预测（支持带历史数据）；ProfilingChunkManager 管理整体生命周期：预热 profiling、判断就绪（is_ready/history_ready）、预测 chunk 大小、记录批次实测耗时反哺模型；模块级三个函数在调度与执行两端打点计时并把实测时间附着到输出上。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_start_profiling_chunk_timing</span><span class="item-desc">[10行] 开始计时一次 chunked prefill 的 profiling</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finish_profiling_chunk_timing</span><span class="item-desc">[9行] 结束计时并返回耗时（毫秒）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_attach_profiling_chunk_execution_time</span><span class="item-desc">[17行] 把耗时附加到 model runner output</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[20行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fit</span><span class="item-desc">[51行] Fit quadratic coefficients f(l) = al^2 + bl + c from data points.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fit_chunk</span><span class="item-desc">[47行] Fit time with chunks: f(C,H) = a*C(C+H) + b*C + c*H.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_target_latency</span><span class="item-desc">[18行] Set target latency based on base chunk size.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">f</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_time</span><span class="item-desc">[11行] Get time T based on current seq_lens, f(l) = al^2 + bl + c, f(L+x) - f(L) = T</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_time_with_history</span><span class="item-desc">[11行] Get time T based on current seq_lens, f(C,H) = a*C(C+H) + b*(C+H) + c = T</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">predict</span><span class="item-desc">[60行] Predict next chunk size x such that f(L+x) - f(L) = target_latency.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">predict_with_history</span><span class="item-desc">[64行] Predict next chunk size x using the history-aware model</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_ready</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">history_ready</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">predict_chunk_size</span><span class="item-desc">[15行] Predict optimal chunk size for given history length.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">predict_time</span><span class="item-desc">[10行] Get the consumed time of scheduled reqs for time_budget.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">record_batch_execution_time</span><span class="item-desc">[21行] Record batch execution time for online model refinement.</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\recompute_scheduler.py<a class="src-link" href="../src-viewer.html?file=core/recompute_scheduler.py" target="_blank">查看源码</a></div><div class="file-desc-real">重计算调度器（1426 行，core 包最大的文件）。解决抢占请求恢复问题：被抢占的请求不重新排队，而是按前缀缓存命中情况重算缺失部分。RecomputeScheduler.schedule 在标准调度流程上叠加：connector 前缀命中查询（含 hybrid/Mamba 多组特判与块钳制截断）、重计算请求信息维护（RecomputeReqInfo）、重计算完成的请求把输出补回（_add_recomputed_outputs）。数据类 RecomputeSchedulerConfig/PreemptedRequestData/RecomputeSchedulerOutput 支撑流程；AsyncRecomputeScheduler、DyntraLBRecomputeScheduler、AsyncDyntraLBRecomputeScheduler 通过多重继承组合异步调度与 DyntraLB 负载均衡。</div>
+<div class="file-classes">类: RecomputeSchedulerConfig, RecomputeSchedulerOutput, RecomputeScheduler, AsyncRecomputeScheduler, DyntraLBRecomputeScheduler, AsyncDyntraLBRecomputeScheduler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">initialize_from_config</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_computed_blocks_for_connector</span><span class="item-desc">[37行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_truncate_computed_blocks_for_connector</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_truncate_computed_blocks_with_mamba_clamp</span><span class="item-desc">[21行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_load_balance_modifications</span><span class="item-desc">[3行] Apply optional scheduling-policy changes before running requests.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_can_admit_waiting_request</span><span class="item-desc">[3行] Return whether an optional policy allows this waiting request.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_waiting_for_remote_kv</span><span class="item-desc">[25行] KV Connector: update request state after async recv is finished.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finish_recomputed_request</span><span class="item-desc">[18行] Finish a fallback-recomputed request through the normal abort path.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">schedule</span><span class="item-desc">[807行] 调度入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_kv_connector_meta</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_add_recomputed_outputs</span><span class="item-desc">[19行] Add terminal outputs for requests that must retry on prefill.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_from_output</span><span class="item-desc">[337行] 根据 ModelRunnerOutput 更新调度器状态</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[2行] 初始化类实例（绑定配置、参数、模块）</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\scheduler_profiling_chunk.py<a class="src-link" href="../src-viewer.html?file=core/scheduler_profiling_chunk.py" target="_blank">查看源码</a></div><div class="file-desc-real">ProfilingChunkScheduler（760 行）：把 profiling 动态 chunk 大小接入标准调度循环的调度器子类。初始化时做 profiling chunk 预热（run_profiling_chunk_init），schedule() 中把预测器给出的时延目标换算成时间预算叠加到 token 预算上，先调度 running 请求再处理等待队列；RPC 参数构建与延迟提取辅助方法用于把实测耗时回传预测器。</div>
+<div class="file-classes">类: ProfilingChunkScheduler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[47行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">run_profiling_chunk_init</span><span class="item-desc">[93行] Profile prefill latency using real model forward passes.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_rpc_kwargs</span><span class="item-desc">[18行] Build kwargs for collective_rpc, handling PP unique_reply_rank.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_extract_latency</span><span class="item-desc">[7行] Extract latency value from collective_rpc result.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">schedule</span><span class="item-desc">[520行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">core\short_request_first_scheduler.py<a class="src-link" href="../src-viewer.html?file=core/short_request_first_scheduler.py" target="_blank">查看源码</a></div><div class="file-desc-real">短请求优先（SRF）等待队列策略（384 行）。ShortRequestFirstRequestQueue 维护三条泳道：immediate（谓词命中，如恢复请求）、short（prompt≤阈值）、long；调度时 immediate 最优先，long 队首等待超过 long_max_wait 可越过 short 防饿死（带老化提升统计与退化告警：连续提升老 long 请求会触发一次性 warning）。is_recovery_request 判断恢复请求是否必须插队；install_short_request_first_waiting_queue 把 SRF 队列装到 FCFS 调度器上；ShortRequestFirstAsyncScheduler 为异步变体。</div>
+<div class="file-classes">类: ShortRequestFirstRequestQueue, ShortRequestFirstAsyncScheduler</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[12行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_queues</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_debug_logging_enabled</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_queue_name</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_log_stats</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_debug_state</span><span class="item-desc">[25行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">num_immediate_requests</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">num_short_requests</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">num_long_requests</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_classify_queue</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_long_head_wait_ms</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reset_degradation_streak</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reset_degradation_streak_if_short_queue_empty</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_schedulable_queue</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_request_id</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">add_request</span><span class="item-desc">[9行] 添加新请求到队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pop_request</span><span class="item-desc">[5行] 弹出队首请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_warn_degradation</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pop_request_from_queue</span><span class="item-desc">[23行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">peek_request</span><span class="item-desc">[8行] 查看队首请求但不移除</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepend_request</span><span class="item-desc">[10行] 将请求插到队列头部（优先调度）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepend_requests</span><span class="item-desc">[4行] 批量将请求插到队列头部（优先调度）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remove_request</span><span class="item-desc">[11行] 移除指定请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remove_requests</span><span class="item-desc">[21行] 批量移除多个请求</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__bool__</span><span class="item-desc">[2行] 返回队列是否非空</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__len__</span><span class="item-desc">[2行] 返回队列长度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__iter__</span><span class="item-desc">[4行] 迭代队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__contains__</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_clear_pin</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_pinned_queue</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_recovery_request</span><span class="item-desc">[7行] Return whether a request must resume ahead of fresh waiting work.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">install_short_request_first_waiting_queue</span><span class="item-desc">[30行] Install the SRF queue on a newly constructed FCFS scheduler.</span></div>
+</div>
+</body>
+</html>

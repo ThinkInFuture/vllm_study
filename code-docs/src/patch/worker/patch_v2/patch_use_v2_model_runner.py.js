@@ -1,0 +1,1 @@
+window.__SRC_SET("patch/worker/patch_v2/patch_use_v2_model_runner.py","# Reuse the platform patch. EngineCore subprocesses only load global/platform\n# patches, while workers also import this compatibility module.\nimport vllm_ascend.patch.platform.patch_use_v2_model_runner  # noqa: F401\n");

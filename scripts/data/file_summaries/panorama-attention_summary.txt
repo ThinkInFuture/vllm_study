@@ -1,0 +1,187 @@
+===== FILE: attention\__init__.py =====
+[0行]
+
+===== FILE: attention\attention_mask.py =====
+[70行]
+def _generate_attn_mask(max_seq_len, dtype): 
+class AttentionMaskBuilder:  | methods: __init__, get_attn_mask, get_splitfuse_attn_mask, get_attention_mask
+
+===== FILE: attention\attention_v1.py =====
+[2223行]
+class AscendAttentionBackend:  | methods: get_name, get_impl_cls, get_builder_cls, supports_pcp, get_kv_cache_shape, swap_blocks, copy_blocks, get_supported_kernel_block_sizes
+class AscendAttentionState:  | methods: 
+class AscendMetadata: Per-layer attention metadata for Ascend FlashAttention backend. | methods: 
+class AscendAttentionMetadataBuilder: Builder for constructing AscendMetadata from CommonAttentionMetadata. | methods: __init__, get_cudagraph_support, reorder_batch, _split_decodes_and_prefills, _build_backend_metadata, build, _finalize_pcp_metadata, build_for_graph_capture
+class AscendAttentionBackendImpl:  | methods: __init__, _graph_metadata_layer_name, update_graph_params, process_weights_after_loading, full_graph_fia, full_graph_fia_v2, full_graph_pa, _get_fia_params, forward_fused_infer_attention, _forward_fia_chunked_prefill_split, forward_paged_attention, _forward_encoder_attention, do_kv_cache_update, reshape_and_cache, _reshape_and_cache_pcp ...
+class AscendC8AttentionBackendImpl: Attention backend implementation for INT8 KV cache (C8/QuaRot) models. | methods: forward, _nz_5d_view, _prepare_c8_scales, _dequant_paged_kv_to_dense, _quantize_kv_to_int8, _forward_c8_decode, _forward_c8_chunked_prefill, _forward_c8_fused_infer_attention, _reshape_and_cache
+
+===== FILE: attention\dsa_attn_kv_plan.py =====
+[182行] module doc: Centralized DeepSeek-V4 attention-KV execution choices.
+def _supports_dsv4_compressed_cache(): 
+def resolve_dsv4_cache_dtype(cache_dtype, model_dtype): Return the KV cache dtype the platform should pin for DeepSeek-V4.
+def is_a5_bf16_kv_enabled(vllm_config): Return whether BF16 SparseFlashMla KV is enabled on A5.
+def get_dsv4_attn_kv_dtype(vllm_config): Return the attention KV dtype while preserving non-A5 behavior.
+class DsaAttnKvPlan: The attention-KV plan only; indexer KV remains independently FP8. | methods: get_dsa_sparse_attn_metadata_op, get_dsa_sparse_attn_metadata_kwargs, get_dsa_sparse_attn_op, get_dsa_sparse_attn_base_kwargs, add_dsa_sparse_attn_extra_kwargs, get_dsa_compressor_slot_mapping_format, format_dsa_slot_mapping, dsa_kv_compress_scatter
+def get_dsa_attn_kv_plan(vllm_config): Return the explicit A5 BF16 or upstream-compatible FP8 DSA plan.
+
+===== FILE: attention\dsa_v1.py =====
+[1709行]
+def dsv4_dsa_overlap_stream(): 
+def _is_w8a8_dynamic(linear): True iff ``linear`` is wired up with ``AscendW8A8DynamicLinearMethod``.
+def _has_weight_scale(linear): 
+def _dsa_layout_kv(vllm_config): 
+def _dsa_swa_only_cmp_ratio(compress_ratio, vllm_config): BF16 SWA-only attention takes no compressed stream; otherwise keep main's value.
+class AscendDSABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_scale_shape, get_impl_cls, get_supported_kernel_block_sizes
+class AscendDSAC4Backend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC128Backend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSASWABackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC4StateBackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC128StateBackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAReqMetadata: Unified metadata for all requests in one attention invocation. | methods: 
+class AscendDSAMetadata: Metadata for MLACommon. | methods: 
+class AscendDSALayerMetadata:  | methods: 
+def _require_req_metadata(metadata): 
+def get_dspark_sparse_sas_window(vllm_config): 
+def _aligned_dspark_index_width(window_size, block_size, alignment): 
+def build_dspark_swa_indices(block_table, num_speculative_tokens, window_size, block_size, query_start_loc, seq_lens): Build DSpark non-causal visible slot ids for a paged SWA cache.
+class AscendDSAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _init_hadamard, get_cudagraph_support, reorder_batch, set_num_actual_tokens, _num_compressor_metadata_rows, build_for_cudagraph_capture, build, _build_sas_metadata, _build_qli_metadata, build_req_metadata, build_for_drafting, build_req_metadata_for_drafting, build_for_graph_capture
+class AscendDSAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _get_layer_metadata, update_graph_params, process_weights_after_loading, _forward_o_proj, _prepare_caches_before_attention, _get_o_proj_input_shape, forward, _mla_prolog_single_stream, _mla_prolog_multistream, _maybe_update_compressed_caches_and_select_topk, _forward_attention
+
+===== FILE: attention\fa3_v1.py =====
+[144行]
+class AscendFABackend:  | methods: __init__, get_name, get_impl_cls, get_builder_cls, get_kv_cache_shape, get_supported_kernel_block_sizes
+class AscendFAImpl:  | methods: __init__, _flash_attn_with_kvcache, forward_impl
+
+===== FILE: attention\indexer.py =====
+[93行]
+class AscendSFAIndexerBackend: Placeholder backend for split SFA indexer cache layers. | methods: get_impl_cls, supports_pcp, get_name, get_builder_cls, get_kv_cache_shape, get_supported_kernel_block_sizes
+class AscendSFAIndexerMetadataBuilder: Cache-only metadata builder for split SFA indexer cache layers. | methods: __init__, get_cudagraph_support, build
+
+===== FILE: attention\mla_v1.py =====
+[2087行]
+def _npu_mla_prolog_v3_no_rope(): Call the AscendC MLA prolog with optional RoPE inputs omitted.
+class AscendMLABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_impl_cls, get_supported_kernel_block_sizes
+class ChunkedContextMetadata: Metadata for chunked context handling in MLA attention. | methods: 
+class AscendMLAPrefillMetadata: Prefill Specific Metadata for Ascend | methods: 
+class AscendMLADecodeMetadata: Decode-specific metadata for Ascend MLA attention. | methods: 
+class AscendMLAMetadata: Metadata for MLACommon. | methods: __post_init__
+class AscendMLAPCPMetadata: MLA metadata needed to write the complete PCP prefill KV cache. | methods: 
+class AscendMLAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, determine_chunked_prefill_workspace_size, get_cudagraph_support, reorder_batch, pad_actual_seq_len_q_mtp_enable_pad, pad_actual_seq_len_q_mtp_disable_pad, set_num_actual_tokens, build, build_chunked_metadata, get_block_table_size, build_prefill_metadata, build_decode_metadata, build_for_graph_capture
+class AscendMLAPCPMetadataBuilder: Build rank-local MLA metadata while retaining PCP cache-write slots. | methods: __init__, build
+class DecodeMLAPreprocessResult:  | methods: 
+class PrefillMLAPreprocessResult:  | methods: 
+class AscendMLAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, update_graph_params, _v_up_proj, _v_up_proj_batch_major, _q_proj_and_k_up_proj, process_weights_after_loading, _load_fa_quant_scales, _process_weights_for_fused, get_context_seq_len_npu, _reorg_kvcache, _compute_prefill_context, _forward_prefill, _exec_kv_no_rope, exec_kv_decode, exec_kv_prefill ...
+class AscendMLAPCPImpl: MRV2 MLA implementation for Prefill Context Parallelism. | methods: _get_num_prefill_kv_tokens, exec_kv_prefill
+
+===== FILE: attention\sfa_kv_offload.py =====
+[470行] module doc: Standalone SFA backend for Sparse KV offload.
+def _check_device_kv_cache_exist(): 
+class AscendSFAKVOffloadMetadataBuilder: Fills the offload-specific SFA metadata (decode split + request ids). | methods: __init__, _populate_offload_metadata, build, build_for_drafting
+class AscendSFAKVOffloadImpl: SFA implementation that routes main MLA K/V through the CPU pool. | methods: __init__, _resolve_preprocess_type, _cpu_cache_pair, _resident_views, _offload_layer_name, _is_decode_only, _pad_to_input_tokens, _in_graph_runtime, forward, _compute_kv_only, exec_kv, _execute_sparse_flash_attention_process
+
+===== FILE: attention\sfa_v1.py =====
+[1742行]
+class PreprocessType:  | methods: 
+def _get_indexer_types(configs): 
+def _has_shared_indexer_layers(configs): 
+def _get_config_bool(configs, attr): 
+class AscendSFABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_impl_cls, get_supported_kernel_block_sizes
+class AscendSFAMetadata: Metadata for MLACommon. | methods: 
+class SFAForwardContext: Parallel-layout inputs consumed by the shared SFA forward template. | methods: 
+class AscendSFAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _prepare_parallel_metadata, _update_parallel_slot_mapping, determine_chunked_prefill_workspace_size, get_cudagraph_support, reorder_batch, build, build_for_drafting, _build_with_metadata_view, _build, build_for_graph_capture
+class AscendSFAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, kv_cache_indexer_k_idx, kv_cache_indexer_scale_idx, update_graph_params, process_weights_after_loading, _get_layer_quant_method, _resolve_preprocess_type, _try_enable_type, _get_fused_type_unsupported_reasons, _process_weights_for_fused_prolog_v3, _process_weights_for_fused_mlapo, forward_mha, forward_mqa, rope_single, exec_kv ...
+def custom_kv_rmsnorm_rope(kv, gamma, cos, sin, kv_lora_rank, qk_rope_head_dim): 
+
+===== FILE: attention\sparse_flash_mla.py =====
+[62行]
+def _get_sparse_flash_mla_ops(): Load SparseFlashMla operators without importing vllm_ascend.ops.
+def _add_compressed_kv_lengths(kwargs): 
+def sparse_flash_mla_metadata(): Adapt existing DSA metadata kwargs to SparseFlashMla BF16 KV.
+def sparse_flash_mla(q): Adapt existing DSA attention kwargs to SparseFlashMla BF16 KV.
+
+===== FILE: attention\utils.py =====
+[565行]
+def get_or_register_attention_buffer(vllm_config, layer_names, name, factory): Return a shared non-persistent buffer owned by attention modules.
+def build_valid_topk_mask(topk_indices, seq_len_thresholds): Mask padding and unwritten tail-block positions in SFA top-k rows.
+def get_sfa_qsfa_packed_head_dim(kv_lora_rank, qk_rope_head_dim, tile_size): 
+class PagedAttentionGraphParam: Mark PA params when PA and FIA share one graph replay list. | methods: __iter__
+def update_paged_attention_graph_param(update_stream, handle, event, param, block_table, seq_lens): 
+def cache_graph_workspace(graph_params, num_tokens, candidate_workspace): 
+def needs_layer_aware_fia_graph_replay(): 
+def ascend_chunked_prefill_workspace_size(vllm_config): 
+def using_paged_attention(runtime_shape, vllm_config, head_size): 
+def enable_dcp(): 
+def enable_pcp(): 
+class AscendDCPMetadata: Per-batch metadata required by decode context parallelism. | methods: 
+class AscendCommonAttentionMetadata: Per-batch attention metadata, shared across layers and backends. | methods: unpadded
+def filter_chunked_req_indices(seq_len, mask_for_non_zero_chunk): filter the reqs which are doing real chunk_prefill.
+def split_decodes_and_prefills(common_attn_metadata, decode_threshold, require_uniform, treat_short_extends_as_decodes): Assuming a reordered batch, finds the boundary between prefill and decode
+def wait_for_kv_layer_from_connector(layer_name): 
+def maybe_save_kv_layer_to_connector(layer_name, kv_cache_layer): 
+def notify_kv_cache_written(layer_name): Notify the connector that the paged KV cache for ``layer_name`` has been
+def round_up(val, align): 
+def trans_rope_weight(weight, rope_dim): 
+def transdata(nd_mat, block_size): 
+def enabling_mlapo(vllm_config): 
+
+===== FILE: attention\context_parallel\__init__.py =====
+[0行]
+
+===== FILE: attention\context_parallel\attention_cp.py =====
+[610行]
+class AscendMetadataForPrefill: GQA prefill metadata used only by DCP. | methods: 
+class AscendMetadataForDecode: GQA decode metadata used only by DCP. | methods: 
+class AscendAttentionDCPMetadata: GQA metadata fields used only by the DCP execution path. | methods: 
+class AscendAttentionDCPMetadataBuilder: Build attention metadata for decode context parallelism. | methods: _split_decodes_and_prefills, _get_chunked_req_mask, _build_backend_metadata
+class AscendAttentionDCPImpl:  | methods: update_graph_params, _forward_decode_dcp, _update_chunk_attn_out_lse_with_current_attn_out_lse, _prefill_query_all_gather, _compute_prefill_context, _load_kv_for_chunk, _gather_global_context_output, _update_global_context_output, forward_impl
+
+===== FILE: attention\context_parallel\common_cp.py =====
+[233行]
+def get_dcp_local_seq_lens(seq_lens, dcp_size, interleave_size): Return the interleave-aware KV length of every DCP rank.
+class DCPMetadataBuilderMixin: Shared DCP metadata access for backend-specific metadata builders. | methods: __init__, _require_dcp_metadata, _get_dcp_context_lens, _get_dcp_rank_context_lens
+class DCPImplMixin: Shared DCP group lifecycle and collectives for attention backends. | methods: __init__, _dcp_all_gather, _dcp_all_gather_fragments, _merge_dcp_attention_output
+def _process_attn_out_lse(attn_output, softmax_lse): 
+def _npu_attention_update(head_size, attn_out_lse): 
+def _npu_attn_out_lse_update(attn_lse_mask, attn_lse_nomask, attn_out_mask, attn_out_nomask): 
+def _out_lse_reshape(attn_out, attn_lse): 
+def _update_out_and_lse(out_list, lse_list): LSE_final = log(sum(exp(LSE_i))), O_final = sum(exp(LSE_i - LSE_final) * O_i)
+
+===== FILE: attention\context_parallel\dsa_cp.py =====
+[2291行]
+def hadamard_transform_ref(x, hadamard, scale): 
+def rotate_activation(x, hadamard): 
+class DSACPMetadata: Context-parallel metadata for sequence-sharded DSA execution. | methods: 
+class AscendDSAReqMetadata: Unified per-request metadata — combines fields formerly split into | methods: 
+class AscendDSAMetadata: Metadata for MLACommon. | methods: 
+class AscendDSACPLayerMetadata:  | methods: 
+class AscendDSACPMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, get_cudagraph_support, build, build_for_drafting, build_req_metadata_for_drafting, _num_compressor_metadata_rows, _ensure_device_local_metadata, build_req_metadata, _build_local_token_metadata, _get_cmp_seqlens_for_metadata, _build_sas_metadata, _build_qli_metadata, build_for_graph_capture
+class AscendDSACPImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _get_layer_metadata, _compute_compressor_metadata, process_weights_after_loading, _get_tp_weight_switch_method, _enable_linear_tp_weight_switch, _enable_o_proj_tp_full_weight_switch, _maybe_all_gather_o_proj_full_weight, _switch_o_proj_to_full_weight, _switch_o_proj_to_tp_weight, _apply_wo_b, _get_batched_wo_a_weight, _get_batched_wo_a_scale, _split_full_hidden_states_for_cp, _gather_cp_output ...
+class AscendDSAPCPMetadata: Rank-local DSA metadata with its canonical cache-update view. | methods: from_local_metadata
+class AscendDSAPCPMetadataBuilder: Build rank-local attention and canonical global cache metadata. | methods: __init__, get_cudagraph_support, _build_global_common_attn_metadata, _build_local_common_attn_metadata, _build_local_dsa_metadata, _build_global_dsa_metadata, build
+class AscendDSAPCPImpl: Run batched global DSA cache updates before rank-local PCP attention. | methods: __init__, _gather_and_restore_hidden_states, _update_global_swa_cache, _update_global_compressor_cache, _update_global_indexer_cache, _prepare_caches_before_attention, _get_o_proj_input_shape
+
+===== FILE: attention\context_parallel\mla_cp.py =====
+[529行]
+class DCPChunkedContextMetadata: MLA chunk metadata for DCP-local context shards. | methods: 
+class AscendMLADCPDecodeMetadata: MLA decode metadata fields used only by DCP. | methods: 
+class AscendMlaDCPMetadataBuilder: Build MLA metadata for decode context parallelism. | methods: __init__, build_chunked_metadata, build_decode_metadata
+class AscendMlaDCPImpl: NOTE: Please read the comment at the top of the file before trying to | methods: update_graph_params, get_context_seq_len_npu, reorg_decode_q, _forward_decode, _reorg_kvcache
+
+===== FILE: attention\context_parallel\sfa_cp.py =====
+[1315行]
+class AscendSFAPCPImpl:  | methods: _get_sfa_kv_slot_mapping, exec_kv, _write_indexer_cache
+class DSACPContext:  | methods: 
+class AscendSFADSACPMetadata: SFA metadata fields used only by the DSA-CP execution path. | methods: 
+class DCPGatherContext: State needed to finish an async fused DCP KV all-gather. | methods: 
+class DCPContext:  | methods: 
+class AscendSFADCPMetadata: SFA metadata fields used only by the DCP execution path. | methods: 
+class AscendSFADSADCPMetadata: SFA metadata for the combined DSA-CP and DCP execution path. | methods: 
+class AscendSFADSACPMetadataBuilder: Adds TP-token-sharded DSA-CP metadata to the shared SFA builder. | methods: __init__, _prepare_parallel_metadata, _update_parallel_slot_mapping
+class AscendSFADSACPImpl: SFA implementation for DSA-CP token sharding in the TP group. | methods: __init__, process_weights_after_loading, _get_fused_type_unsupported_reasons, _parallel_query_gather_dim, _prepare_native_hidden_states, _get_parallel_forward_context, exec_kv, _prepare_kv_for_parallel, _store_parallel_kv, _enable_o_proj_tp_full_weight_switch, _get_o_proj_linear_method, _apply_o_proj_full_weight, _finalize_o_proj
+class AscendSFADCPMetadataBuilder:  | methods: __init__, _get_dcp_local_seq_lens, _get_dcp_local_block_table, _ensure_replicated_view_buffers, _build_block_table_replicated_view, _build_slot_mapping_replicated_view, _build_compact_kv_gather_metadata, _build_with_metadata_view, build_for_graph_capture
+class AscendSFADCPImpl:  | methods: __init__, _has_prefill, _record_dcp_kv_gather_context, _start_dcp_gather, _finish_dcp_gather, _all_gather_dim_async, _remap_sparse_indices, _merge_dcp_outputs, _start_dcp_query_gather, _record_query_gather_context, _get_sfa_kv_slot_mapping, _store_parallel_kv, _execute_sparse_flash_attention_process
+class AscendSFADSADCPMetadataBuilder: Composes DCP's outer KV view with DSA-CP token sharding. | methods: __init__
+class AscendSFADSADCPImpl: Composes DCP collectives around the DSA-CP SFA implementation. | methods: 
+def resolve_sfa_metadata_builder(): Resolve one SFA metadata builder from the two independent CP switches.
+def resolve_sfa_impl(vllm_config): Resolve one SFA implementation from the two independent CP switches.
+

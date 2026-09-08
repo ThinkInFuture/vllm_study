@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用说明 - vLLM Ascend 文档</title>
+    <link rel="stylesheet" href="../assets/styles.css">
+    <style>
+        .usage-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .usage-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .usage-section h3 {
+            color: #333;
+            margin: 20px 0 10px 0;
+            font-size: 1.2rem;
+        }
+        
+        .usage-section p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .usage-section ul {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        .usage-section ul li {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .step-list li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 40px;
+            margin-bottom: 20px;
+        }
+        
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .file-structure {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        
+        .file-structure .folder {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .file-structure .file {
+            color: #555;
+            margin-left: 20px;
+        }
+        
+        .note-box {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+            border-radius: 0 10px 10px 0;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .note-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .note-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .button-example {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            margin: 5px;
+            transition: transform 0.2s ease;
+        }
+        
+        .button-example:hover {
+            transform: scale(1.05);
+        }
+    .container{max-width:1200px;margin:0 auto;padding:0 20px;}</style>
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>使用说明</h1>
+            <p>如何使用vLLM Ascend项目文档系统</p>
+        </header>
+        
+        <div class="usage-section">
+            <h2>文档结构</h2>
+            <p>本项目文档采用HTML静态页面实现，包含以下文件：</p>
+            
+            <div class="file-structure">
+                <div class="folder">📁 code-docs/</div>
+                <div class="file">📄 index.html - 架构总览页面</div>
+                <div class="file">📄 core.html - 核心模块页面</div>
+                <div class="file">📄 models.html - 模型定义页面（待创建）</div>
+                <div class="file">📄 attention.html - 注意力机制页面（待创建）</div>
+                <div class="file">📄 ops.html - 自定义算子页面（待创建）</div>
+                <div class="file">📄 worker.html - 工作节点页面（待创建）</div>
+                <div class="file">📄 distributed.html - 分布式页面（待创建）</div>
+                <div class="file">📄 quantization.html - 量化页面（待创建）</div>
+                <div class="file">📄 patch.html - 补丁模块页面（待创建）</div>
+                <div class="file">📄 styles.css - 通用样式文件</div>
+                <div class="file">📄 navigation.js - 导航脚本</div>
+            </div>
+        </div>
+        
+        <div class="usage-section">
+            <h2>使用步骤</h2>
+            <ol class="step-list">
+                <li>
+                    <h3>打开文档</h3>
+                    <p>在浏览器中打开 <code>index.html</code> 文件，即可查看项目架构总览。</p>
+                </li>
+                <li>
+                    <h3>浏览模块</h3>
+                    <p>点击总览页面中的模块卡片，可以跳转到对应的模块详情页面。</p>
+                </li>
+                <li>
+                    <h3>使用导航</h3>
+                    <p>每个页面顶部都有导航栏，可以快速切换到其他模块页面。</p>
+                </li>
+                <li>
+                    <h3>查看代码</h3>
+                    <p>在模块详情页面中，可以查看相关代码示例和文件结构。</p>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="usage-section">
+            <h2>页面示例</h2>
+            <p>以下是一些页面按钮示例：</p>
+            
+            <a href="../index.html" class="button-example">架构总览</a>
+            <a href="core.html" class="button-example">核心模块</a>
+            <a href="models.html" class="button-example">模型定义</a>
+            <a href="attention.html" class="button-example">注意力机制</a>
+            <a href="ops.html" class="button-example">自定义算子</a>
+            <a href="worker.html" class="button-example">工作节点</a>
+            <a href="distributed.html" class="button-example">分布式</a>
+            <a href="quantization.html" class="button-example">量化</a>
+            <a href="patch.html" class="button-example">补丁模块</a>
+        </div>
+        
+        <div class="note-box">
+            <h4>注意事项</h4>
+            <p>
+                1. 目前只有 <code>index.html</code> 和 <code>core.html</code> 页面已创建，其他模块页面需要后续补充。<br>
+                2. 所有页面都使用了统一的样式和导航系统，保持一致性。<br>
+                3. 可以根据需要添加更多内容，如代码示例、API文档等。
+            </p>
+        </div>
+        
+        <div class="usage-section">
+            <h2>扩展文档</h2>
+            <p>如需添加新的模块页面，请按照以下步骤操作：</p>
+            <ul>
+                <li>复制 <code>core.html</code> 文件作为模板</li>
+                <li>修改页面标题和内容</li>
+                <li>更新导航脚本中的页面配置</li>
+                <li>在总览页面中添加对应的模块卡片</li>
+            </ul>
+        </div>
+        
+        <footer>
+            <p>vLLM Ascend Plugin | 为华为昇腾NPU优化的大语言模型推理引擎</p>
+        </footer>
+    </div>
+    
+    <script src="../assets/navigation.js"></script>
+</body>
+</html>

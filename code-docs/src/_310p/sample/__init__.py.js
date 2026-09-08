@@ -1,0 +1,1 @@
+window.__SRC_SET("_310p/sample/__init__.py","from vllm_ascend._310p.sample.sampler import AscendSampler310\n\n__all__ = [\"AscendSampler310\"]\n");

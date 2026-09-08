@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>需求故事 · KDA 门控投影融合与双流重叠 - vLLM Ascend</title>
+<link rel="stylesheet" href="../assets/highlight/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root { --accent:#667eea; --text:#333; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial,'Microsoft YaHei',sans-serif; background:#f5f7fa; color:var(--text); line-height:1.7; padding:20px; }
+body>* { max-width:1200px !important; margin-left:auto !important; margin-right:auto !important; }
+.nav { background:#fff; border-radius:12px; padding:12px 24px; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.nav a { color:#666; text-decoration:none; padding:5px 12px; border-radius:8px; font-size:.88rem; }
+.nav a:hover { background:var(--accent); color:#fff; }
+h1 { font-size:1.55rem; margin:6px 0 4px; }
+h2 { font-size:1.25rem; margin:28px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+.subtitle { color:#666; margin-bottom:20px; font-size:.95rem; }
+.card { background:#fff; border-radius:12px; padding:18px 22px; margin:14px 0; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+.badge { display:inline-block; border-radius:6px; padding:2px 10px; font-size:.8rem; font-weight:bold; margin-right:6px; }
+.b-purple { background:#f0e3ff; color:#8250df; }
+.b-yellow { background:#fff8c5; color:#9a6700; }
+.b-red { background:#ffebe9; color:#cf222e; }
+.b-green { background:#dafbe1; color:#1a7f37; }
+.fig-caption { font-weight:bold; color:var(--accent); margin:14px 0 6px; }
+.mermaid { overflow-x:auto; padding-bottom:4px; }
+pre { background:#f6f8fa; border-radius:8px; padding:14px 16px; overflow-x:auto; line-height:1.5; font-size:.85rem; }
+code { font-family:Consolas,monospace; }
+pre code { background:transparent; padding:0; }
+p code, li code { background:#eef1f5; color:#be5026; padding:1px 5px; border-radius:4px; font-size:.85em; }
+.diff-add { color:#1a7f37; background:rgba(218,251,225,.6); display:inline-block; width:100%; }
+table { width:100%; border-collapse:collapse; margin:10px 0; }
+th, td { border:1px solid #e3e8ef; padding:7px 10px; font-size:.88rem; text-align:left; vertical-align:top; }
+th { background:#f0f2fb; }
+footer { text-align:center; color:#999; padding:26px; font-size:.82rem; }
+.linklist li { margin:6px 0; }
+.linklist a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="nav">
+    <a href="../index.html">← 架构总览</a>
+    <span style="color:#999;font-size:.85rem;">需求故事 · 一个 HTML 讲清一个需求</span>
+    <a href="stories.html">需求故事目录</a>
+</div>
+
+<h1>KDA 门控投影融合与双流重叠</h1>
+<p class="subtitle">
+<span class="badge b-purple">Kimi K3</span>
+<span class="badge b-yellow">性能优化</span>
+<span class="badge b-red">PR #15416</span>
+<span class="badge b-green">已合入 main</span>
+作者 Dawn952 · 2026-09-04 · 改动 4 文件 +597/-52</p>
+
+<h2>一、需求背景</h2>
+<div class="card">
+<p>Kimi K3 的 KDA 注意力在昇腾上采用 <strong>mixed-precision 全秩门控布局</strong>（W8A8 MXFP8 量化 + FP32 门控）。
+优化前，一层的门控路径要跑<strong>一连串小算子</strong>，而且全部排在主流程<strong>串行</strong>执行：</p>
+<ul>
+<li><code>in_proj_qkvgfab</code>：QKV 大矩阵乘（Cube 重活）</li>
+<li><code>in_proj_gfab</code>：门控侧 f_a / f_b 两个独立小投影 + beta / 输出门控</li>
+<li><code>_prepare_beta</code>：对 beta 现场 <code>float().sigmoid()</code>（每步重复做）</li>
+</ul>
+<p><strong>问题</strong>：小算子多 → 每个 kernel 都有启动开销；全串行 → QKV 大矩阵乘执行时，
+门控侧的小算子在旁边<strong>干等</strong>，Cube/Vector 单元没有被喂满。一层看起来不大，30 层叠起来就是可观的时延浪费。</p>
+</div>
+
+<h2>二、相关流程</h2>
+<div class="card">
+<p><strong>改动前</strong>（下面这段代码来自当前文档附带的源码，即改动前版本，
+点 <a href="../src-viewer.html?file=ops/kimi_kda.py" style="color:#667eea;">查看 ops/kimi_kda.py 全文</a>）：
+两个投影顺序调用、beta 现场激活，全部主流串行。</p>
+</div>
+<div class="fig-caption">代码 · 改动前的 forward 门控路径（ops/kimi_kda.py:145）</div>
+<pre><code class="language-python">def forward(
+    self,
+    hidden_states: torch.Tensor,
+    positions: torch.Tensor,
+) -&gt; torch.Tensor:
+    if self.uses_mixed_projection:
+        num_tokens = hidden_states.size(0)
+        mixed_qkv = self.in_proj_qkvgfab(hidden_states)[0]
+        projected_gfab = self.in_proj_gfab(hidden_states)[0]
+        split_sizes = [
+            self.local_projection_size,
+            self.head_dim,
+            self.local_num_heads,
+        ]
+        if self.in_proj_padding:
+            split_sizes.append(self.in_proj_padding)
+        g_proj_states, f_a, beta = projected_gfab.split(split_sizes, dim=-1)[:3]
+        beta = beta.unsqueeze(0)
+
+        g1 = self.f_b_proj(f_a)[0]
+        g1 = rearrange(g1, &quot;n (h d) -&gt; 1 n h d&quot;, d=self.head_dim)
+        g2 = rearrange(g_proj_states, &quot;... (h d) -&gt; ... h d&quot;, d=self.head_dim)
+        core_attn_out = torch.empty(
+            (1, num_tokens, self.local_num_heads, self.head_dim),
+            dtype=hidden_states.dtype,
+            device=hidden_states.device,</code></pre>
+
+<div class="fig-caption">图1 · 改动前：门控路径全部串行在主流</div>
+<div class="mermaid">
+sequenceDiagram
+    participant M as 主流（一个 KDA 层内）
+    M->>M: in_proj_qkvgfab：QKV 大矩阵乘（Cube）
+    M->>M: in_proj_gfab：f_a / f_b 门控投影（小算子，干等 QKV 完）
+    M->>M: beta 现场 float().sigmoid()（每步重复）
+    M->>M: npu_causal_conv1d_custom
+    M->>M: chunk_kda_fwd / recurrent_kda
+    Note over M: 全串行：QKV 跑的时候门控侧闲置
+</div>
+
+<div class="card">
+<p><strong>改动后</strong>把门控侧整体搬到一个<strong>辅助流</strong>，与主流的两次大矩阵乘<strong>两阶段重叠</strong>，
+并用四个事件保证顺序安全（hidden_states_ready 分叉 → bfg_projection_ready 串行两块 Cube 乘 →
+quant_ready 门控侧的 beta 向量活等主流量化完 → bfg_ready 汇合）：</p>
+</div>
+<div class="fig-caption">图2 · 改动后：双流两阶段重叠（四事件调度）</div>
+<div class="mermaid">
+sequenceDiagram
+    participant Main as 主流
+    participant Aux as 辅助流（门控侧）
+    Main->>Main: DynamicQuant（MXFP8 量化）
+    Main-->>Aux: ① hidden_states_ready 分叉
+    Aux->>Aux: fused_bfg_proj 门控大投影（一次 GEMM）
+    Aux-->>Main: ② bfg_projection_ready（两块 Cube 乘保持串行）
+    Main->>Main: QKV GEMM（Cube）
+    Main-->>Aux: ③ quant_ready
+    Aux->>Aux: B/F/G 拆分 + beta FP32 sigmoid + gate reshape（小算子重叠期）
+    Aux-->>Main: ④ bfg_ready 汇合（KDA 消费前必须到齐）
+    Main->>Main: conv → chunk_kda_fwd / recurrent_kda
+    Note over Main,Aux: QKV 大乘与门控小算子并行；汇合点后无任何辅流操作
+</div>
+
+<h2>三、需求改动</h2>
+<div class="card">
+<p>PR #15416 共改 4 个文件（<code>ops/kimi_kda.py</code> +282 行为主，
+<code>models/kimi_k3.py</code> 16 行接线，另有 2 个测试文件）。
+核心改动三点：</p>
+<table>
+<tr><th>#</th><th>改动</th><th>解决什么</th></tr>
+<tr><td>1</td><td><strong>权重预组合</strong>：checkpoint 加载后离线算 <code>f_proj = f_b_proj @ f_a_proj</code>（_maybe_fuse_f_proj）</td><td>两个小投影 GEMM → 合成一个，少一次 kernel、少一次中间张量</td></tr>
+<tr><td>2</td><td><strong>BFG 打包</strong>：beta + F 投影 + 输出门控打包成一个 FP32 的 <code>fused_bfg_proj</code>（_KDAFusedBFGLinear）</td><td>门控侧多次小 GEMM → 一次 GEMM</td></tr>
+<tr><td>3</td><td><strong>双流重叠</strong>：_run_overlapped_qkv_bfg 把门控侧搬到辅助流，与主流 DynamicQuant / QKV GEMM 两阶段重叠（四事件调度）</td><td>主流大乘不再让门控小算子干等；图捕获时辅流严格 join，ACL graph 安全</td></tr>
+</table>
+</div>
+
+<div class="fig-caption">改动①+② · 权重预组合（加载后离线融合）—— 摘自 commit 222677fc7 diff</div>
+<pre><code class="language-python">    def _maybe_fuse_f_proj(self) -&gt; None:
+        if not self._f_a_loaded or not self._f_b_loaded:
+            return
+        output_dim = getattr(self.weight, &quot;output_dim&quot;, None)
+        if output_dim is None:
+            raise ValueError(&quot;KDA fused f_proj requires an output-sharded parameter&quot;)
+        shard_offset = sum(self.output_sizes[:_F_PROJ_SHARD_ID]) // self.tp_size
+        shard_size = self.output_sizes[_F_PROJ_SHARD_ID] // self.tp_size
+        param_shard = self.weight.narrow(output_dim, shard_offset, shard_size)
+        fused_weight = torch.matmul(
+            self.f_b_weight.float(),
+            self.f_a_weight.float(),
+        ).to(dtype=param_shard.dtype)
+        if fused_weight.shape != param_shard.shape:
+            raise ValueError(
+                &quot;KDA composed f_proj shape mismatch: &quot;
+                f&quot;expected {tuple(param_shard.shape)}, got {tuple(fused_weight.shape)}&quot;
+            )
+        param_shard.copy_(fused_weight)
+ 
+ 
+ def _zero_padded_output(</code></pre>
+
+<div class="fig-caption">改动③ · 双流重叠核心 _run_overlapped_qkv_bfg（新增函数，含四事件调度）</div>
+<pre><code class="language-python">    def _run_overlapped_qkv_bfg(
+        self,
+        hidden_states: torch.Tensor,
+    ) -&gt; tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        &quot;&quot;&quot;Fork BFG work to an auxiliary stream and join it back to main.&quot;&quot;&quot;
+        main_stream = torch.npu.current_stream()
+        bfg_stream = _kda_bfg_stream()
+
+        hidden_states_ready = main_stream.record_event()
+        hidden_states.record_stream(bfg_stream)
+        with npu_stream_switch(bfg_stream):
+            bfg_stream.wait_event(hidden_states_ready)
+            fused_bfg = self._project_bfg(hidden_states)
+            bfg_projection_ready = bfg_stream.record_event()
+
+        quantized_qkv = self._quantize_fused_qkv(hidden_states)
+        quant_ready = main_stream.record_event()
+
+        # Stage 1 join: DynamicQuant on main overlaps the BFG GEMM on the
+        # auxiliary stream, but the two Cube matmuls remain serialized.
+        main_stream.wait_event(bfg_projection_ready)
+        mixed_qkv = self._matmul_fused_qkv(quantized_qkv)
+
+        with npu_stream_switch(bfg_stream):
+            # Stage 2: after both first-stage branches complete, overlap the
+            # QKV Cube matmul with beta&#x27;s FP32 conversion and sigmoid vector
+            # work. Split and reshape the F/output gates here as well so all
+            # BFG output handling occurs after the QKV matmul is enqueued.
+            bfg_stream.wait_event(quant_ready)
+            beta, g1, g2 = self._postprocess_bfg(fused_bfg)
+            bfg_ready = bfg_stream.record_event()
+
+        for tensor in (beta, g1, g2):
+            tensor.record_stream(main_stream)
+        # bfg_ready is the auxiliary stream tail. Joining that exact event is
+        # required for multi-stream ACL graph capture as well as eager reuse.
+        main_stream.wait_event(bfg_ready)
+        return mixed_qkv, beta, g1, g2
+
+    def _project_bfg(
+        self,
+        hidden_states: torch.Tensor,</code></pre>
+
+<div class="card">
+<p><strong>配套小改动</strong>：<code>_prepare_beta</code> 增加 <code>is_preprocessed</code> 标记——
+辅助流已做过 sigmoid，主路径只做切片；普通上游 raw beta 仍走原 FP32 sigmoid 路径，两条路互不影响。
+上游普通 <code>in_proj_qkvgfab</code> 路径保持不变，只有 mixed-precision 全秩门控布局走新逻辑。</p>
+</div>
+
+<h2>四、相关链接</h2>
+<div class="card">
+<ul class="linklist">
+<li>GitHub Commit：<a href="https://github.com/vllm-project/vllm-ascend/commit/222677fc719c7014879b161ed1dd3ed3276d7a5d" target="_blank">222677fc7 · [Performance][KDA] Compose and overlap gate projections on main</a></li>
+<li>GitHub PR：<a href="https://github.com/vllm-project/vllm-ascend/pull/15416" target="_blank">#15416</a>
+（前代 <a href="https://github.com/vllm-project/vllm-ascend/pull/15168" target="_blank">#15168</a>，本 PR 剔除了其中无关的 mla_v1.py 改动）</li>
+<li>改动前源码（文档附带）：<a href="../src-viewer.html?file=ops/kimi_kda.py" target="_blank">ops/kimi_kda.py 查看器</a> ·
+<a href="../src-viewer.html?file=models/kimi_k3.py" target="_blank">models/kimi_k3.py 查看器</a></li>
+<li>文件级讲解：<a href="../panorama/panorama-ops.html" target="_blank">panorama-ops（ops 模块）</a> ·
+<a href="../panorama/panorama-models.html" target="_blank">panorama-models（models 模块）</a></li>
+<li>背景知识：<a href="../compare/kimi-k3-platform-compare.html" target="_blank">K3 三平台对比专题（9.2 时序 / 9.3 KDA 源码）</a> ·
+<a href="../detailed/attention.html" target="_blank">注意力模块详解</a></li>
+<li>流水线入口：<a href="https://github.com/vllm-project/vllm-ascend/actions/workflows/schedule_nightly_test_a3.yaml" target="_blank">Nightly-A3</a>
+（workflow id 228664976）</li>
+</ul>
+</div>
+
+<footer>vLLM Ascend 需求故事 · 数据来源：commit 222677fc7 与文档附带源码 · <a href="../index.html" style="color:#667eea;">返回总览</a></footer>
+
+<script>
+mermaid.initialize({ startOnLoad:true, theme:'base', themeVariables:{ background:'#ffffff', primaryColor:'#f0e3ff', primaryTextColor:'#1f2328', primaryBorderColor:'#8250df', lineColor:'#656d76', fontSize:'16px' }, flowchart:{ useMaxWidth:false }, sequence:{ actorMargin:60, mirrorActors:false, useMaxWidth:false } });
+</script>
+<script src="../assets/highlight/highlight.min.js"></script>
+<script>
+try { document.querySelectorAll("pre code.language-python").forEach(function(el) { hljs.highlightElement(el); }); } catch(e) {}
+</script>
+</body>
+</html>

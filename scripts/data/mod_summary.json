@@ -1,0 +1,32 @@
+{
+  "root": {
+    "files": 530,
+    "classes": 489,
+    "functions": 4733
+  },
+  "core": {
+    "files": 8,
+    "classes": 18,
+    "functions": 155
+  },
+  "attention": {
+    "files": 18,
+    "classes": 55,
+    "functions": 412
+  },
+  "ops": {
+    "files": 111,
+    "classes": 75,
+    "functions": 594
+  },
+  "worker": {
+    "files": 43,
+    "classes": 27,
+    "functions": 349
+  },
+  "models": {
+    "files": 26,
+    "classes": 70,
+    "functions": 398
+  }
+}

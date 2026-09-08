@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vLLM Ascend 源码讲解</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.7;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .navbar {
+            background: white;
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar-brand {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .navbar-nav {
+            display: flex;
+            gap: 12px;
+            list-style: none;
+        }
+        
+        .navbar-nav a {
+            color: #666;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .navbar-nav a:hover,
+        .navbar-nav a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .page-header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .page-header p {
+            color: #666;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .section h2 {
+            color: #333;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .section h3 {
+            color: #667eea;
+            font-size: 1.15rem;
+            margin: 25px 0 12px 0;
+        }
+        
+        .section p {
+            color: #555;
+            margin-bottom: 12px;
+        }
+        
+        .mermaid-box {
+            background: #fafbfc;
+            border: 1px solid #e8ecf0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        
+        .mermaid-box .label {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+        
+        pre.mermaid {
+            margin: 0;
+            display: inline-block;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 10px;
+            padding: 18px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+        
+        .code-block .file {
+            color: #667eea;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .code-block .cls { color: #4ec9b0; }
+        
+        .note {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            border-radius: 0 8px 8px 0;
+            padding: 14px 18px;
+            margin: 15px 0;
+        }
+        
+        .note h4 {
+            color: #667eea;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        
+        .note p {
+            color: #555;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        .file-tree {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 18px;
+            margin: 15px 0;
+            font-family: 'Consolas', monospace;
+            font-size: 0.88rem;
+            line-height: 1.8;
+        }
+        
+        .file-tree .dir { color: #667eea; font-weight: bold; }
+        .file-tree .file { color: #555; }
+        
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 15px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .two-col { grid-template-columns: 1fr; }
+        }
+        
+        .col-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .col-box h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .col-box ul {
+            padding-left: 18px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+        
+        .col-box li {
+            margin-bottom: 4px;
+        }
+        
+        footer {
+            text-align: center;
+            color: #999;
+            padding: 30px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="source-guide.html" class="active">源码讲解</a></li>
+            <li><a href="core.html">核心模块</a></li>
+            <li><a href="usage.html">使用说明</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>vLLM Ascend 源码讲解</h1>
+        <p>结合流程图与源码，逐模块解析项目实现</p>
+    </header>
+
+    <!-- ==================== 第1章 项目文件结构 ==================== -->
+    <div class="section">
+        <h2>一、项目文件结构</h2>
+        <p>vLLM Ascend 是 vLLM 的硬件插件，核心代码位于 <code>vllm_ascend/</code> 目录。</p>
+
+        <div class="file-tree">
+<span class="dir">vllm_ascend/</span>
+├── <span class="file">__init__.py</span>          # 插件入口，注册NPU平台
+├── <span class="file">platform.py</span>          # NPUPlatform类定义
+├── <span class="file">envs.py</span>              # 环境变量集中管理
+├── <span class="file">ascend_config.py</span>     # Ascend配置解析
+├── <span class="file">utils.py</span>             # 通用工具函数
+├── <span class="dir">core/</span>                # 核心模块（调度、KV缓存）
+├── <span class="dir">models/</span>              # 模型定义
+├── <span class="dir">attention/</span>           # 注意力后端
+├── <span class="dir">ops/</span>                 # 自定义算子
+├── <span class="dir">worker/</span>              # Worker执行器
+├── <span class="dir">distributed/</span>         # 分布式通信
+├── <span class="dir">quantization/</span>        # 量化支持
+├── <span class="dir">patch/</span>               # 上游补丁
+├── <span class="dir">compilation/</span>         # 编译与图优化
+├── <span class="dir">sample/</span>              # 采样器
+├── <span class="dir">lora/</span>                # LoRA适配器
+├── <span class="dir">spec_decode/</span>         # 投机解码
+├── <span class="dir">device/</span>              # 设备管理
+├── <span class="dir">model_loader/</span>        # 模型加载器
+├── <span class="dir">profiler/</span>            # 性能分析
+└── <span class="dir">_310p/</span>               # Atlas 300I Duo 兼容层
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">目录功能关系</div>
+            <pre class="mermaid">
+graph LR
+    A[vllm_ascend] --> B[core]
+    A --> C[models]
+    A --> D[attention]
+    A --> E[ops]
+    A --> F[worker]
+    A --> G[distributed]
+    A --> H[quantization]
+    A --> I[patch]
+    A --> J[compilation]
+            </pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第2章 插件入口 ==================== -->
+    <div class="section">
+        <h2>二、插件入口 __init__.py</h2>
+        <p>vLLM 通过 <code>register()</code> 函数发现并加载硬件插件。</p>
+
+        <div class="mermaid-box">
+            <div class="label">插件注册流程</div>
+            <pre class="mermaid">
+graph TD
+    A[vLLM Engine启动] --> B[扫描插件]
+    B --> C[调用 register]
+    C --> D[返回 NPUPlatform 路径]
+    D --> E[实例化 NPUPlatform]
+    E --> F[NPU设备可用]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/__init__.py</div>
+<pre>
+<span class="kw">def</span> <span class="fn">register</span>():
+    <span class="cmt">"""Register the NPU platform."""</span>
+    <span class="kw">return</span> <span class="str">"vllm_ascend.platform.NPUPlatform"</span>
+
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    <span class="kw">from</span> .models <span class="kw">import</span> register_model
+    register_model()
+
+<span class="kw">def</span> <span class="fn">register_model_loader</span>():
+    <span class="kw">from</span> .model_loader.netloader <span class="kw">import</span> register_netloader
+    register_netloader()
+</pre>
+        </div>
+
+        <div class="note">
+            <h4>说明</h4>
+            <p>register() 返回类路径字符串，vLLM 会动态导入该类并实例化，完成 NPU 平台注册。后续 register_model、register_model_loader 等分别注册模型和加载器。</p>
+        </div>
+    </div>
+
+    <!-- ==================== 第3章 NPUPlatform ==================== -->
+    <div class="section">
+        <h2>三、NPUPlatform 平台类</h2>
+        <p><code>platform.py</code> 是插件核心，继承自 vLLM 的 <code>Platform</code> 基类。</p>
+
+        <div class="mermaid-box">
+            <div class="label">NPUPlatform 关键方法</div>
+            <pre class="mermaid">
+graph TD
+    A[NPUPlatform] --> B[check_and_update_config]
+    A --> C[get_attn_backend_cls]
+    A --> D[import_kernels]
+    A --> E[pre_register_and_update]
+    A --> F[get_device_name]
+    A --> G[get_current_memory_usage]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/platform.py</div>
+<pre>
+<span class="kw">class</span> <span class="cls">NPUPlatform</span>(Platform):
+    _enum = PlatformEnum.OOT
+    device_name: str = <span class="str">"npu"</span>
+    device_type: str = <span class="str">"npu"</span>
+    ray_device_key: str = <span class="str">"NPU"</span>
+    device_control_env_var: str = <span class="str">"ASCEND_RT_VISIBLE_DEVICES"</span>
+    simple_compile_backend: str = <span class="str">"eager"</span>
+
+    supported_quantization: list[str] = [
+        ASCEND_QUANTIZATION_METHOD,
+        COMPRESSED_TENSORS_METHOD,
+        FP8_METHOD,
+    ]
+</pre>
+        </div>
+
+        <h3>3.1 配置检查流程</h3>
+        <p><code>check_and_update_config</code> 是最重要的方法，在引擎启动时被调用。</p>
+
+        <div class="mermaid-box">
+            <div class="label">check_and_update_config 执行步骤</div>
+            <pre class="mermaid">
+graph TD
+    A[开始] --> B[配置日志]
+    B --> C[验证并行配置]
+    C --> D[自动检测量化]
+    D --> E[修复不兼容参数]
+    E --> F[初始化Ascend配置]
+    F --> G[更新编译模式]
+    G --> H[设置Worker类]
+    H --> I[验证SP/DCP一致性]
+    I --> J[设置NPU分配器]
+    J --> K[完成]
+            </pre>
+        </div>
+
+        <h3>3.2 注意力后端选择</h3>
+        <p>根据模型特性自动选择最优注意力后端。</p>
+
+        <div class="mermaid-box">
+            <div class="label">注意力后端选择逻辑</div>
+            <pre class="mermaid">
+graph TD
+    A[get_attn_backend_cls] --> B{use_mla?}
+    B -->|Yes| C{use_sparse?}
+    B -->|No| D[AscendAttentionBackend]
+    C -->|Yes| E[AscendSFABackend]
+    C -->|No| F[AscendMLABackend]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/platform.py - 后端映射</div>
+<pre>
+backend_map = {
+    (True, False, False):  <span class="str">"vllm_ascend.attention.mla_v1.AscendMLABackend"</span>,
+    (False, False, False): <span class="str">"vllm_ascend.attention.attention_v1.AscendAttentionBackend"</span>,
+    (True, True, False):   <span class="str">"vllm_ascend.attention.sfa_v1.AscendSFABackend"</span>,
+    (True, False, True):   <span class="str">"vllm_ascend.attention.dsa_v1.AscendDSABackend"</span>,
+}
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第4章 环境变量管理 ==================== -->
+    <div class="section">
+        <h2>四、环境变量管理 envs.py</h2>
+        <p>所有环境变量集中在 <code>envs.py</code> 管理，禁止在代码中硬编码。</p>
+
+        <div class="mermaid-box">
+            <div class="label">环境变量使用流程</div>
+            <pre class="mermaid">
+graph TD
+    A[代码中需要配置] --> B[import envs]
+            B --> C[envs.VLLM_ASCEND_XXX]
+            C --> D[返回配置值]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/envs.py</div>
+<pre>
+<span class="kw">import</span> os
+
+env_variables = {
+    <span class="cmt"># 是否启用NZ格式（默认启用）</span>
+    <span class="str">"VLLM_ASCEND_ENABLE_NZ"</span>: <span class="kw">lambda</span>: int(os.getenv(<span class="str">"VLLM_ASCEND_ENABLE_NZ"</span>, <span class="str">"1"</span>)),
+
+    <span class="cmt"># 是否启用图融合优化</span>
+    <span class="str">"VLLM_ASCEND_ENABLE_FUSION"</span>: <span class="kw">lambda</span>: int(os.getenv(<span class="str">"VLLM_ASCEND_ENABLE_FUSION"</span>, <span class="str">"1"</span>)),
+
+    <span class="cmt"># 调试模式开关</span>
+    <span class="str">"VLLM_ASCEND_DEBUG"</span>: <span class="kw">lambda</span>: int(os.getenv(<span class="str">"VLLM_ASCEND_DEBUG"</span>, <span class="str">"0"</span>)),
+}
+</pre>
+        </div>
+
+        <div class="note">
+            <h4>规范要求</h4>
+            <p>新增环境变量必须：1) 使用 VLLM_ASCEND_ 前缀；2) 在 env_variables 中定义并注释；3) 提供默认值。</p>
+        </div>
+    </div>
+
+    <!-- ==================== 第5章 模型注册 ==================== -->
+    <div class="section">
+        <h2>五、模型注册机制</h2>
+        <p>Ascend 插件为特定模型提供优化实现，通过注册机制接入 vLLM。</p>
+
+        <div class="mermaid-box">
+            <div class="label">模型注册流程</div>
+            <pre class="mermaid">
+graph TD
+    A[register_model] --> B[注册 KimiK3]
+    A --> C[注册 DeepSeekV4]
+    A --> D[注册 MiniMaxM3]
+    A --> E[注册 Qwen3变体]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py</div>
+<pre>
+<span class="kw">from</span> vllm <span class="kw">import</span> ModelRegistry
+
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    ModelRegistry.register_model(
+        <span class="str">"KimiLinearForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+    )
+    ModelRegistry.register_model(
+        <span class="str">"DeepseekV4ForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_v4.model:AscendDeepseekV4ForCausalLM"</span>,
+    )
+    ModelRegistry.register_model(
+        <span class="str">"MiniMaxM3SparseForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.minimax_m3:MiniMaxM3SparseForCausalLM"</span>,
+    )
+</pre>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">已注册模型列表</div>
+            <pre class="mermaid">
+graph TD
+    A[已注册模型] --> B[KimiLinearForCausalLM]
+    A --> C[DeepseekV4ForCausalLM]
+    A --> D[MiniMaxM3SparseForCausalLM]
+    A --> E[Qwen3DSparkModel]
+    A --> F[DeepSeekMTPModel]
+    A --> G[Eagle3LlamaForCausalLM]
+            </pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第6章 注意力后端 ==================== -->
+    <div class="section">
+        <h2>六、注意力后端 attention/</h2>
+        <p>attention 目录包含多种 NPU 优化的注意力实现。</p>
+
+        <div class="file-tree">
+<span class="dir">attention/</span>
+├── <span class="file">attention_v1.py</span>    # 标准注意力
+├── <span class="file">mla_v1.py</span>          # MLA多头潜在注意力
+├── <span class="file">sfa_v1.py</span>          # SFA稀疏注意力
+├── <span class="file">dsa_v1.py</span>          # DSA动态稀疏注意力
+├── <span class="file">fa3_v1.py</span>          # Flash Attention 3
+├── <span class="file">attention_mask.py</span>  # 注意力掩码
+├── <span class="file">indexer.py</span>         # 索引器
+└── <span class="file">utils.py</span>           # 工具函数
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">注意力后端继承关系</div>
+            <pre class="mermaid">
+graph TD
+    A[AttentionBackend] --> B[AscendAttentionBackend]
+    A --> C[AscendMLABackend]
+    A --> D[AscendSFABackend]
+    A --> E[AscendDSABackend]
+    A --> F[AscendFABackend]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/attention/attention_v1.py</div>
+<pre>
+<span class="kw">class</span> <span class="cls">AscendAttentionBackend</span>(AttentionBackend):
+    <span class="cmt">"""标准注意力后端，适用于普通Transformer模型"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vllm_config: VllmConfig):
+        <span class="kw">self</span>.vllm_config = vllm_config
+        <span class="kw">self</span>.block_size = vllm_config.cache_config.block_size
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, ...):
+        <span class="cmt"># NPU注意力前向计算</span>
+        ...
+</pre>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">标准注意力计算流程</div>
+            <pre class="mermaid">
+graph TD
+    A[输入Q/K/V] --> B[计算注意力分数]
+    B --> C[应用注意力掩码]
+            C --> D[Softmax归一化]
+            D --> E[加权求和]
+            E --> F[输出结果]
+            </pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第7章 自定义算子 ==================== -->
+    <div class="section">
+        <h2>七、自定义算子 ops/</h2>
+        <p>ops 目录包含 NPU 优化的自定义算子实现。</p>
+
+        <div class="file-tree">
+<span class="dir">ops/</span>
+├── <span class="file">activation.py</span>      # 激活函数(SiLU等)
+├── <span class="file">layernorm.py</span>       # LayerNorm/RMSNorm
+├── <span class="file">linear.py</span>          # 线性层
+├── <span class="file">rotary_embedding.py</span> # 旋转位置编码
+├── <span class="file">mla.py</span>             # MLA专用算子
+├── <span class="file">fused_moe/</span>         # MoE融合算子
+├── <span class="file">triton/</span>            # Triton内核
+└── <span class="file">register_custom_ops.py</span> # 算子注册
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">自定义算子分类</div>
+            <pre class="mermaid">
+graph TD
+    A[自定义算子] --> B[注意力相关]
+    A --> C[归一化]
+    A --> D[激活函数]
+    A --> E[位置编码]
+    A --> F[线性层]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/ops/layernorm.py</div>
+<pre>
+<span class="kw">class</span> <span class="cls">AscendRMSNorm</span>(torch.nn.Module):
+    <span class="cmt">"""NPU优化的RMSNorm实现"""</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x: torch.Tensor) -> torch.Tensor:
+        <span class="cmt"># 使用NPU专用内核计算RMSNorm</span>
+        <span class="kw">return</span> rms_norm_npu(x, <span class="kw">self</span>.weight, <span class="kw">self</span>.eps)
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第8章 Worker执行器 ==================== -->
+    <div class="section">
+        <h2>八、Worker执行器 worker/</h2>
+        <p>Worker 负责模型的实际执行，是推理的核心组件。</p>
+
+        <div class="file-tree">
+<span class="dir">worker/</span>
+├── <span class="file">worker.py</span>              # Worker入口
+├── <span class="file">model_runner_v1.py</span>     # V1模型运行器
+├── <span class="dir">v2/</span>                    # V2模型运行器
+│   └── <span class="file">model_runner.py</span>
+├── <span class="file">npu_input_batch.py</span>     # NPU输入批处理
+├── <span class="file">block_table.py</span>         # 块表管理
+└── <span class="file">utils.py</span>               # 工具函数
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">Worker初始化流程</div>
+            <pre class="mermaid">
+graph TD
+    A[Worker启动] --> B[加载配置]
+    B --> C[初始化NPU设备]
+    C --> D[加载模型权重]
+    D --> E[初始化注意力后端]
+    E --> F[分配KV缓存]
+    F --> G[就绪]
+            </pre>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">推理执行流程</div>
+            <pre class="mermaid">
+graph TD
+    A[接收请求] --> B[预处理Token]
+    B --> C[构建注意力元数据]
+    C --> D[模型前向传播]
+    D --> E[采样输出Token]
+            E --> F{是否结束?}
+            F -->|No| D
+            F -->|Yes| G[返回结果]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/worker/model_runner_v1.py</div>
+<pre>
+<span class="kw">class</span> <span class="cls">NPUModelRunner</span>(GPUModelRunner):
+    <span class="cmt">"""NPU模型运行器，继承自GPU实现并适配NPU"""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vllm_config: VllmConfig):
+        <span class="kw">super</span>().__init__(vllm_config)
+        <span class="kw">self</span>.device = torch.device(<span class="str">"npu"</span>)
+
+    <span class="kw">def</span> <span class="fn">execute_model</span>(self, ...):
+        <span class="cmt"># 在NPU上执行模型前向</span>
+        ...
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第9章 分布式通信 ==================== -->
+    <div class="section">
+        <h2>九、分布式通信 distributed/</h2>
+        <p>distributed 目录实现多NPU间的通信和协调。</p>
+
+        <div class="file-tree">
+<span class="dir">distributed/</span>
+├── <span class="file">kv_transfer.py</span>          # KV缓存传输
+├── <span class="file">weight_transfer.py</span>      # 权重传输
+├── <span class="dir">device_communicators/</span>    # 设备通信器
+│   └── <span class="file">npu_communicator.py</span>
+└── <span class="file">parallel.py</span>             # 并行工具
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">分布式推理架构</div>
+            <pre class="mermaid">
+graph TD
+    A[分布式推理] --> B[张量并行 TP]
+    A --> C[流水线并行 PP]
+    A --> D[数据并行 DP]
+    B --> E[NPU通信器]
+    C --> E
+    D --> E
+            </pre>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">KV缓存传输流程</div>
+            <pre class="mermaid">
+graph TD
+    A[P节点-预填充] --> B[生成KV缓存]
+            B --> C[序列化KV数据]
+            C --> D[传输到D节点]
+            D --> E[D节点-解码]
+            E --> F[返回结果]
+            </pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第10章 量化支持 ==================== -->
+    <div class="section">
+        <h2>十、量化支持 quantization/</h2>
+        <p>量化模块提供多种模型量化方案，提升推理效率。</p>
+
+        <div class="file-tree">
+<span class="dir">quantization/</span>
+├── <span class="file">ascend_quant.py</span>      # Ascend专用量化
+├── <span class="file">fp8.py</span>              # FP8量化
+├── <span class="file">compressed_tensors.py</span> # 压缩张量
+└── <span class="file">utils.py</span>            # 量化工具
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">量化方法选择</div>
+            <pre class="mermaid">
+graph TD
+    A[量化检测] --> B{模型格式?}
+    B -->|FP8| C[AscendFp8Config]
+    B -->|压缩张量| D[AscendCompressedTensorsConfig]
+    B -->|Ascend格式| E[AscendModelSlimConfig]
+            </pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第11章 补丁机制 ==================== -->
+    <div class="section">
+        <h2>十一、补丁机制 patch/</h2>
+        <p>patch 目录包含对上游 vLLM 的补丁，用于适配 NPU 特性。</p>
+
+        <div class="file-tree">
+<span class="dir">patch/</span>
+├── <span class="dir">platform/</span>        # 平台级补丁
+├── <span class="dir">worker/</span>          # 工作节点补丁
+└── <span class="file">patch_utils.py</span>   # 补丁工具
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">补丁应用流程</div>
+            <pre class="mermaid">
+graph TD
+    A[引擎启动] --> B[adapt_patch]
+            B --> C[加载平台补丁]
+            C --> D[加载Worker补丁]
+            D --> E[完成适配]
+            </pre>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/utils.py</div>
+<pre>
+<span class="kw">def</span> <span class="fn">adapt_patch</span>(is_global_patch: bool = False):
+    <span class="cmt">"""应用Ascend适配补丁"""</span>
+    <span class="kw">from</span> vllm_ascend.patch <span class="kw">import</span> apply_patches
+    apply_patches(is_global_patch)
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 第12章 编译优化 ==================== -->
+    <div class="section">
+        <h2>十二、编译优化 compilation/</h2>
+        <p>compilation 目录实现 NPU 专用的编译和图优化。</p>
+
+        <div class="file-tree">
+<span class="dir">compilation/</span>
+├── <span class="file">acl_graph.py</span>          # ACL图模式
+├── <span class="file">compiler_interface.py</span>  # 编译器接口
+├── <span class="file">graph_fusion_pass_manager.py</span> # 图融合
+└── <span class="file">piecewise.py</span>          # 分段编译
+        </div>
+
+        <div class="mermaid-box">
+            <div class="label">编译流程</div>
+            <pre class="mermaid">
+graph TD
+    A[模型代码] --> B[Torch编译]
+            B --> C[图优化Pass]
+            C --> D[图融合]
+            D --> E[生成NPU内核]
+            E --> F[ACL图执行]
+            </pre>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin 源码讲解 | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: 'basis'
+        }
+    });
+</script>
+</body>
+</html>

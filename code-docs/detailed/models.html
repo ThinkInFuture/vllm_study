@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型定义 - vLLM Ascend</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.2rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar-nav { display: flex; gap: 12px; list-style: none; }
+        .navbar-nav a { color: #666; text-decoration: none; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
+        .navbar-nav a:hover, .navbar-nav a.active { background: #667eea; color: white; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #333; margin-bottom: 8px; }
+        .page-header p { color: #666; }
+        .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section h2 { color: #333; font-size: 1.4rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .section h3 { color: #667eea; font-size: 1.15rem; margin: 25px 0 12px 0; }
+        .section p { color: #555; margin-bottom: 12px; }
+        .mermaid-box { background: #fafbfc; border: 1px solid #e8ecf0; border-radius: 10px; padding: 20px; margin: 20px 0; }
+        .mermaid-box .chart-label { color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 15px; text-align: center; }
+        .mermaid-box .chart-content { text-align: center; overflow-x: auto; }
+        .code-block { background: #1e1e1e; border-radius: 10px; padding: 18px; margin: 15px 0; overflow-x: auto; }
+        .code-block .filename { color: #667eea; font-size: 0.85rem; margin-bottom: 10px; display: block; font-family: 'Consolas', monospace; }
+        .code-block pre { margin: 0; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; color: #d4d4d4; }
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .code-block .cls { color: #4ec9b0; }
+        .note { background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 15px 0; }
+        .note h4 { color: #667eea; margin-bottom: 6px; font-size: 0.95rem; }
+        .note p { color: #555; margin: 0; font-size: 0.9rem; }
+        .file-tree { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; font-family: 'Consolas', monospace; font-size: 0.95rem; line-height: 2; overflow-x: auto; white-space: pre; }
+        .file-tree .dir { color: #667eea; font-weight: bold; }
+        .file-tree .file { color: #555; }
+        .step-box { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; }
+        .step-box h4 { color: #333; margin-bottom: 10px; }
+        .step-box p { color: #555; margin-bottom: 8px; }
+        .step-box ul { padding-left: 20px; color: #555; }
+        .step-box li { margin-bottom: 5px; }
+        .highlight { background: #fff3cd; padding: 2px 5px; border-radius: 3px; }
+        footer { text-align: center; color: #999; padding: 30px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="source-guide.html">源码讲解</a></li>
+            <li><a href="core.html">核心模块</a></li>
+            <li><a href="models.html" class="active">模型定义</a></li>
+            <li><a href="attention.html">注意力</a></li>
+            <li><a href="ops.html">算子</a></li>
+            <li><a href="worker.html">执行器</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>模型定义 (models/)</h1>
+        <p>深入理解模型注册机制和各模型实现</p>
+    </header>
+
+    <!-- ==================== 1. 模块概述 ==================== -->
+    <div class="section">
+        <h2>一、模块概述</h2>
+        <p>models目录是vLLM Ascend的模型注册中心，负责将NPU优化的模型注册到vLLM，使其可被加载和执行。</p>
+        
+        <div class="step-box">
+            <h4>核心职责</h4>
+            <ul>
+                <li>定义模型注册入口函数 <code>register_model()</code></li>
+                <li>将模型名称映射到具体的模型类</li>
+                <li>支持多种模型架构（DeepSeek、Kimi、MiniMax、Qwen等）</li>
+                <li>支持投机解码的草稿模型</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ==================== 1.5 模块上下游关系 ==================== -->
+    <div class="section">
+        <h2>一、模块上下游关系</h2>
+        
+        <p>models模块是vLLM Ascend插件的核心模块之一，它负责将NPU优化的模型注册到vLLM的模型注册表中。理解这个模块的关键在于明白它在什么时候被调用，以及它与其他模块如何协作。</p>
+
+        <h3>1.1 调用时机</h3>
+        <p>models模块的注册函数会在vLLM引擎启动时被自动调用。整个流程是这样的：首先vLLM启动并扫描已安装的插件，然后调用插件的register_model函数，最后将所有NPU优化的模型注册到全局的ModelRegistry中。这样当用户请求推理时，vLLM就能找到对应的NPU优化模型。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图1：models模块在什么时候被调用</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant User as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant Engine as vLLM Engine
+    participant Registry as ModelRegistry
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant Plugin as Ascend插件
+    end
+    
+    Engine->>Plugin: 启动时调用register_model
+    Plugin->>Registry: 注册模型
+    Note over Registry: 所有模型已注册
+    
+    User->>Engine: 请求推理
+    Engine->>Registry: 查找模型类
+    Registry-->>Engine: 返回类路径
+    Engine->>Engine: 动态导入并实例化
+    Engine-->>User: 返回推理结果
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">关键源码位置</div>
+<pre>
+<span class="cmt"># 1. vLLM启动时调用插件注册（vllm/plugins/）</span>
+<span class="cmt"># 扫描已安装的插件，调用register函数</span>
+
+<span class="cmt"># 2. vllm-ascend插件注册（vllm_ascend/platform.py）</span>
+<span class="kw">class</span> <span class="cls">NPUPlatform</span>(Platform):
+    <span class="kw">def</span> <span class="fn">register</span>():
+        <span class="kw">return</span> NPUPlatform
+
+<span class="cmt"># 3. 模型注册（vllm_ascend/models/__init__.py）</span>
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    ModelRegistry.register_model(
+        <span class="str">"KimiLinearForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+    )
+
+<span class="cmt"># 4. vLLM查找模型（vllm/v1/engine/llm_engine.py）</span>
+model_cls_path = ModelRegistry.get_model_class(model_name)
+</pre>
+        </div>
+
+        <h3>1.2 与其他模块的关系</h3>
+        <p>models模块与多个模块存在依赖关系。它依赖ops模块提供的自定义算子（如RMSNorm、激活函数等），依赖attention模块提供的注意力后端（如MLA、SFA等），还依赖quantization模块提供的量化支持。同时，models模块为worker模块提供模型类，worker模块负责实际执行推理。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图2：models模块的上下游关系</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[models模块] -->|提供模型类| B[worker模块]
+    A -->|使用算子| C[ops模块]
+    A -->|使用注意力| D[attention模块]
+    A -->|使用量化| E[quantization模块]
+    
+    F[platform模块] -->|注册插件| A
+    G[vLLM Engine] -->|调用注册| A
+    
+    B -->|执行推理| H[NPU设备]
+    C -->|加速计算| H
+    D -->|注意力计算| H
+    
+    style A fill:#667eea,color:#fff
+    style B fill:#764ba2,color:#fff
+    style C fill:#f093fb,color:#fff
+    style D fill:#4facfe,color:#fff
+    style E fill:#43e97b,color:#fff
+                </pre>
+            </div>
+        </div>
+
+        <h3>1.3 数据流向</h3>
+        <p>数据在模型加载和执行过程中的流向是：首先从HuggingFace的模型配置中获取model_type，然后在ModelRegistry中查找对应的类路径，接着动态导入模块并获取模型类，之后实例化模型并加载预训练权重，最后将模型对象传递给Worker模块执行推理。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图3：模型加载和执行的数据流向</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[HuggingFace配置] -->|model_type| B[ModelRegistry]
+    B -->|类路径| C[动态导入]
+    C -->|模型类| D[实例化模型]
+    D -->|加载权重| E[预训练权重]
+    D -->|模型对象| F[Worker]
+    F -->|前向传播| G[NPU执行]
+    G -->|输出| H[推理结果]
+                </pre>
+            </div>
+        </div>
+
+        <h3>1.4 完整生命周期</h3>
+        <p>模型的完整生命周期从开发者编写模型代码开始，经过注册、加载、执行等多个阶段。注册阶段将模型添加到ModelRegistry中；加载阶段根据用户指定的模型名称查找并实例化模型；执行阶段接收推理请求并进行前向传播；最后模型可以被多次复用执行推理。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图4：模型的完整生命周期</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant Dev as 开发者
+    participant User as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant Reg as ModelRegistry
+    participant Worker as Worker
+    end
+    participant NPU as NPU设备
+    
+    Dev->>Reg: 编写并注册模型
+    Note over Reg: 模型已注册
+    
+    User->>Worker: 请求推理
+    Worker->>Reg: 查找模型类
+    Reg-->>Worker: 返回类路径
+    Worker->>Worker: 动态导入并加载权重
+    
+    loop 多次推理
+        User->>Worker: 发送推理请求
+        Worker->>NPU: 前向传播
+        NPU-->>Worker: 输出结果
+        Worker-->>User: 返回推理结果
+    end
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">关键源码位置</div>
+<pre>
+<span class="cmt"># 1. 模型注册（vllm_ascend/models/__init__.py）</span>
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    ModelRegistry.register_model(<span class="str">"模型名称"</span>, <span class="str">"模块路径:类名"</span>)
+
+<span class="cmt"># 2. ModelRegistry存储（vllm/models/registry.py）</span>
+<span class="kw">class</span> <span class="cls">ModelRegistry</span>:
+    _models = {}  <span class="cmt"># 存储模型名称到类路径的映射</span>
+    
+    @staticmethod
+    <span class="kw">def</span> <span class="fn">get_model_class</span>(model_name):
+        <span class="kw">return</span> _models.get(model_name)
+
+<span class="cmt"># 3. Worker查找并加载模型（vllm/v1/worker/gpu_worker.py）</span>
+<span class="kw">class</span> <span class="cls">Worker</span>:
+    <span class="kw">def</span> <span class="fn">load_model</span>(self, model_name):
+        model_cls_path = ModelRegistry.get_model_class(model_name)
+        <span class="cmt"># 动态导入并实例化</span>
+        model = import_and_instantiate(model_cls_path)
+        <span class="kw">return</span> model
+
+<span class="cmt"># 4. NPU上前向传播（vllm_ascend/worker/model_runner_v1.py）</span>
+<span class="kw">class</span> <span class="cls">NPUModelRunner</span>:
+    <span class="kw">def</span> <span class="fn">execute</span>(self, input_ids):
+        <span class="kw">return</span> self.model(input_ids)
+</pre>
+        </div>
+
+        <h3>1.5 时序图详解</h3>
+        <p>下面的时序图详细展示了从vLLM启动到完成一次推理请求的完整过程。可以看到，models模块在启动阶段完成注册，在推理阶段提供模型类给Worker使用。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图5：完整调用时序图</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant E as vLLM Engine
+    participant R as ModelRegistry
+    participant W as Worker
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant P as Ascend插件
+    participant M as 模型类
+    end
+    participant N as NPU
+    
+    E->>P: 初始化插件
+    P->>R: 调用register_model()
+    
+    U->>E: 发送推理请求
+    E->>W: 创建Worker
+    W->>R: 查找模型
+    R-->>W: 返回类路径
+    W->>M: 动态导入并实例化
+    M->>M: 加载权重
+    W->>N: 执行推理
+    N-->>W: 返回结果
+    W-->>U: 返回推理结果
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">完整调用链源码位置</div>
+<pre>
+<span class="cmt"># 1. vLLM Engine初始化（vllm/v1/engine/llm_engine.py）</span>
+<span class="kw">class</span> <span class="cls">LLMEngine</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vllm_config):
+        <span class="cmt"># 初始化插件，调用register_model</span>
+        self.executor = Executor(vllm_config)
+
+<span class="cmt"># 2. 插件注册（vllm_ascend/platform.py）</span>
+<span class="kw">class</span> <span class="cls">NPUPlatform</span>(Platform):
+    @staticmethod
+    <span class="kw">def</span> <span class="fn">register</span>():
+        <span class="kw">return</span> NPUPlatform
+
+<span class="cmt"># 3. 模型注册（vllm_ascend/models/__init__.py）</span>
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    ModelRegistry.register_model(<span class="str">"模型名"</span>, <span class="str">"模块:类"</span>)
+
+<span class="cmt"># 4. Worker加载模型（vllm/v1/worker/gpu_worker.py）</span>
+<span class="kw">class</span> <span class="cls">Worker</span>:
+    <span class="kw">def</span> <span class="fn">init_device</span>(self):
+        model_cls = ModelRegistry.get_model_class(model_name)
+        self.model = model_cls(config)
+
+<span class="cmt"># 5. NPU执行推理（vllm_ascend/worker/model_runner_v1.py）</span>
+<span class="kw">class</span> <span class="cls">NPUModelRunner</span>:
+    <span class="kw">def</span> <span class="fn">execute</span>(self, input_ids):
+        <span class="kw">return</span> self.model(input_ids)
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 2. 文件结构 ==================== -->
+    <div class="section">
+        <h2>二、文件结构</h2>
+        
+        <pre class="file-tree"><span class="dir">models/</span>
+├── <span class="file">__init__.py</span>              # 模型注册入口（核心文件）
+├── <span class="dir">deepseek_v4/</span>            # DeepSeek V4模型目录
+│   ├── <span class="file">model.py</span>           # 主模型实现
+│   ├── <span class="file">mtp.py</span>             # 多token预测模型
+│   └── <span class="file">dspark.py</span>          # DSpark草稿模型
+├── <span class="file">deepseek_mtp.py</span>         # DeepSeek MTP实现
+├── <span class="dir">minimax_m3/</span>             # MiniMax M3模型目录
+├── <span class="file">kimi_k3.py</span>              # Kimi K3主模型
+├── <span class="file">kimi_k3_mtp.py</span>          # Kimi K3 MTP模型
+├── <span class="file">kimi_k3_dspark.py</span>       # Kimi K3 DSpark草稿模型
+├── <span class="file">qwen3_dspark.py</span>         # Qwen3 DSpark草稿模型
+├── <span class="file">qwen3_dflash2.py</span>        # Qwen3 DFlash2草稿模型
+├── <span class="file">llama_eagle3.py</span>         # LLaMA Eagle3草稿模型
+├── <span class="file">llama_eagle3_vwn.py</span>     # LLaMA Eagle3 VWN变体
+└── <span class="dir">layer/</span>                  # 共享层实现</pre>
+    </div>
+
+    <!-- ==================== 3. 注册机制详解 ==================== -->
+    <div class="section">
+        <h2>三、注册机制详解</h2>
+        
+        <h3>3.1 注册流程</h3>
+        <div class="mermaid-box">
+            <div class="chart-label">图6：模型注册完整流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[vLLM启动] --> B[调用插件register_model]
+    B --> C[遍历所有模型]
+    C --> D[调用ModelRegistry.register_model]
+    D --> E[存储模型名称和类路径映射]
+    E --> F[用户请求模型时]
+    F --> G[根据名称查找类路径]
+    G --> H[动态导入模型类]
+    H --> I[实例化模型]
+                </pre>
+            </div>
+        </div>
+
+        <h3>3.2 register_model() 函数</h3>
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py</div>
+<pre>
+<span class="kw">from</span> vllm <span class="kw">import</span> ModelRegistry
+
+<span class="cmt"># 这是模型注册的入口函数</span>
+<span class="cmt"># vLLM启动时会自动调用此函数</span>
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    <span class="cmt"># 注册Kimi K3因果语言模型</span>
+    <span class="cmt"># 参数1: 模型名称（用于HuggingFace配置匹配）</span>
+    <span class="cmt"># 参数2: 模型类的完整路径（用于动态导入）</span>
+    ModelRegistry.register_model(
+        <span class="str">"KimiLinearForCausalLM"</span>,  <span class="cmt"># 模型名称</span>
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,  <span class="cmt"># 类路径</span>
+    )
+</pre>
+        </div>
+
+        <div class="note">
+            <h4>关键点</h4>
+            <p><strong>模型名称</strong>：必须与HuggingFace模型配置中的 <code>model_type</code> 或架构名称匹配。<br>
+            <strong>类路径</strong>：格式为 <code>模块路径:类名</code>，vLLM会动态导入这个类。</p>
+        </div>
+    </div>
+
+    <!-- ==================== 4. 模型注册详解 ==================== -->
+    <div class="section">
+        <h2>四、模型注册详解</h2>
+        
+        <h3>4.1 Kimi K3 系列</h3>
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py - Kimi K3注册</div>
+<pre>
+<span class="cmt"># KimiLinearForCausalLM - 主模型</span>
+<span class="cmt"># 用于文本生成任务</span>
+ModelRegistry.register_model(
+    <span class="str">"KimiLinearForCausalLM"</span>,
+    <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+)
+
+<span class="cmt"># KimiK3ForCausalLM - 兼容性别名</span>
+<span class="cmt"># 用于旧版本checkpoint的兼容</span>
+ModelRegistry.register_model(
+    <span class="str">"KimiK3ForCausalLM"</span>,
+    <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+)
+
+<span class="cmt"># KimiK3ForConditionalGeneration - 条件生成模型</span>
+<span class="cmt"># 用于多模态任务（如图文理解）</span>
+ModelRegistry.register_model(
+    <span class="str">"KimiK3ForConditionalGeneration"</span>,
+    <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiK3ForConditionalGeneration"</span>,
+)
+</pre>
+        </div>
+
+        <h3>4.2 DeepSeek V4 系列</h3>
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py - DeepSeek V4注册</div>
+<pre>
+<span class="cmt"># DeepseekV4ForCausalLM - DeepSeek V4主模型</span>
+<span class="cmt"># 支持MLA多头潜在注意力</span>
+ModelRegistry.register_model(
+    <span class="str">"DeepseekV4ForCausalLM"</span>,
+    <span class="str">"vllm_ascend.models.deepseek_v4.model:AscendDeepseekV4ForCausalLM"</span>,
+)
+
+<span class="cmt"># DeepSeekV4MTPModel - 多token预测模型</span>
+<span class="cmt"># 用于投机解码的草稿模型</span>
+ModelRegistry.register_model(
+    <span class="str">"DeepSeekV4MTPModel"</span>,
+    <span class="str">"vllm_ascend.models.deepseek_v4.mtp:DeepSeekV4MTP"</span>,
+)
+
+<span class="cmt"># DSparkDraftModel - DSpark草稿模型</span>
+<span class="cmt"># 用于分布式投机解码</span>
+ModelRegistry.register_model(
+    <span class="str">"DSparkDraftModel"</span>,
+    <span class="str">"vllm_ascend.models.deepseek_v4.dspark:DSparkDeepseekV4ForCausalLM"</span>,
+)
+</pre>
+        </div>
+
+        <h3>4.3 MiniMax M3 系列</h3>
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py - MiniMax M3注册</div>
+<pre>
+<span class="cmt"># MiniMaxM3SparseForCausalLM - 稀疏模型</span>
+<span class="cmt"># 使用MoE混合专家架构</span>
+ModelRegistry.register_model(
+    <span class="str">"MiniMaxM3SparseForCausalLM"</span>,
+    <span class="str">"vllm_ascend.models.minimax_m3:MiniMaxM3SparseForCausalLM"</span>,
+)
+
+<span class="cmt"># MiniMaxM3SparseForConditionalGeneration - 条件生成</span>
+<span class="cmt"># 用于多模态任务</span>
+ModelRegistry.register_model(
+    <span class="str">"MiniMaxM3SparseForConditionalGeneration"</span>,
+    <span class="str">"vllm_ascend.models.minimax_m3:MiniMaxM3SparseForConditionalGeneration"</span>,
+)
+</pre>
+        </div>
+
+        <h3>4.4 投机解码模型</h3>
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py - 投机解码模型注册</div>
+<pre>
+<span class="cmt"># DeepSeekMTPModel - DeepSeek多token预测</span>
+<span class="cmt"># 用于Eagle3投机解码</span>
+ModelRegistry.register_model(
+    <span class="str">"DeepSeekMTPModel"</span>,
+    <span class="str">"vllm_ascend.models.deepseek_mtp:AscendDeepSeekMTP"</span>,
+)
+
+<span class="cmt"># Qwen3DSparkModel - Qwen3 DSpark模型</span>
+<span class="cmt"># 用于Qwen3的分布式投机解码</span>
+ModelRegistry.register_model(
+    <span class="str">"Qwen3DSparkModel"</span>,
+    <span class="str">"vllm_ascend.models.qwen3_dspark:AscendQwen3DSparkForCausalLM"</span>,
+)
+
+<span class="cmt"># DFlash2DraftModel - DFlash2草稿模型</span>
+<span class="cmt"># 用于Qwen3的Flash投机解码</span>
+ModelRegistry.register_model(
+    <span class="str">"DFlash2DraftModel"</span>,
+    <span class="str">"vllm_ascend.models.qwen3_dflash2:DFlash2Qwen3ForCausalLM"</span>,
+)
+
+<span class="cmt"># Eagle3LlamaForCausalLM - LLaMA Eagle3</span>
+<span class="cmt"># 用于LLaMA模型的Eagle3投机解码</span>
+ModelRegistry.register_model(
+    <span class="str">"Eagle3LlamaForCausalLM"</span>,
+    <span class="str">"vllm_ascend.models.llama_eagle3:AscendEagle3LlamaForCausalLM"</span>,
+)
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 5. 模型分类 ==================== -->
+    <div class="section">
+        <h2>五、模型分类</h2>
+        
+        <p>models模块中注册的模型按用途可以分为三大类：主模型（CausalLM）、条件生成模型（ConditionalGeneration）和投机解码模型（MTP/DSpark/Draft）。主模型用于标准的文本生成任务；条件生成模型用于多模态任务，如图文理解；投机解码模型用于加速推理，通过草稿模型预测多个token，然后由主模型验证。</p>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图7：第一层 - 按用途分类</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[已注册模型] --> B[主模型]
+    A --> C[条件生成模型]
+    A --> D[投机解码模型]
+    
+    B -->|标准生成| B1[文本生成]
+    C -->|多模态| C1[图文理解]
+    D -->|加速推理| D1[草稿预测+验证]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图8：第二层 - 按模型系列分类</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    B[主模型] --> B1[Kimi系列]
+    B --> B2[DeepSeek系列]
+    B --> B3[MiniMax系列]
+    
+    C[条件生成模型] --> C1[Kimi系列]
+    C --> C2[MiniMax系列]
+    
+    D[投机解码模型] --> D1[Kimi系列]
+    D --> D2[DeepSeek系列]
+    D --> D3[Qwen系列]
+    D --> D4[LLaMA系列]
+                </pre>
+            </div>
+        </div>
+
+        <h3>图9：第三层 - 具体模型函数</h3>
+        
+        <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0;">
+            <h4 style="color: #667eea; margin-bottom: 15px;">主模型（CausalLM）</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #e8ecf0;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">模型名称</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">类路径</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">说明</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">KimiLinearForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">kimi_k3:AscendKimiLinearForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Kimi K3主模型</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">KimiK3ForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">kimi_k3:AscendKimiLinearForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Kimi K3兼容别名</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepseekV4ForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_v4.model:AscendDeepseekV4ForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeek V4主模型</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">MiniMaxM3SparseForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">minimax_m3:MiniMaxM3SparseForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">MiniMax M3稀疏模型</td>
+                </tr>
+            </table>
+
+            <h4 style="color: #667eea; margin-bottom: 15px;">条件生成模型（ConditionalGeneration）</h4>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <tr style="background: #e8ecf0;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">模型名称</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">类路径</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">说明</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">KimiK3ForConditionalGeneration</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">kimi_k3:AscendKimiK3ForConditionalGeneration</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Kimi K3多模态</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">MiniMaxM3SparseForConditionalGeneration</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">minimax_m3:MiniMaxM3SparseForConditionalGeneration</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">MiniMax M3多模态</td>
+                </tr>
+            </table>
+
+            <h4 style="color: #667eea; margin-bottom: 15px;">投机解码模型（MTP/DSpark/Draft）</h4>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="background: #e8ecf0;">
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">模型名称</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">类路径</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">说明</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">KimiK3MTPModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">kimi_k3_mtp:AscendKimiK3MTP</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Kimi K3 MTP</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">K3DSparkModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">kimi_k3_dspark:AscendK3DSparkForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Kimi K3 DSpark</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeekV4MTPModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_v4.mtp:DeepSeekV4MTP</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeek V4 MTP</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DSparkDraftModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_v4.dspark:DSparkDeepseekV4ForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeek V4 DSpark</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeekMTPModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_mtp:AscendDeepSeekMTP</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeek MTP</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepseekV32MTPModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_mtp:AscendDeepSeekMTP</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DeepSeek V32 MTP</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">GlmMoeDsaForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">deepseek_mtp:AscendGlmMoeDsaForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">GLM MoE DSA</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Qwen3DSparkModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">qwen3_dspark:AscendQwen3DSparkForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Qwen3 DSpark</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">DFlash2DraftModel</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">qwen3_dflash2:DFlash2Qwen3ForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Qwen3 DFlash2</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">Eagle3LlamaForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">llama_eagle3:AscendEagle3LlamaForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">LLaMA Eagle3</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">LlamaForCausalLMVwnEagle3</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; font-family: monospace; font-size: 0.85rem;">llama_eagle3_vwn:Eagle3VwnLlamaForCausalLM</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">LLaMA Eagle3 VWN</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ==================== 6. 模型加载流程 ==================== -->
+    <div class="section">
+        <h2>六、模型加载流程</h2>
+        
+        <p>模型加载是models模块的核心功能之一。当用户指定一个模型名称时，vLLM会按照以下流程加载模型：首先在ModelRegistry中查找模型名称对应的类路径，然后使用Python的importlib动态导入模块，接着获取模型类并实例化，最后加载预训练权重完成模型初始化。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图10：模型加载完整流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[用户请求模型] --> B[查找注册表]
+            B --> C{找到模型?}
+            C -->|是| D[获取类路径]
+            C -->|否| E[报错: 模型不支持]
+            D --> F[动态导入模块]
+            F --> G[获取模型类]
+            G --> H[实例化模型]
+            H --> I[加载权重]
+            I --> J[模型就绪]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图11：模型加载时序图</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    box rgb(255,243,205) 上游vLLM
+    participant E as vLLM Engine
+    participant R as ModelRegistry
+    end
+    box rgb(212,237,218) 本项目vllm-ascend
+    participant M as 模型模块
+    end
+    participant W as 权重文件
+    
+    U->>E: 指定模型名称
+    E->>R: 查找模型
+    R-->>E: 返回类路径
+    E->>M: 动态导入
+    M-->>E: 返回模型类
+    E->>M: 实例化模型
+    E->>W: 加载预训练权重
+    W-->>E: 返回权重
+    E-->>U: 模型就绪
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">模型加载关键源码</div>
+<pre>
+<span class="cmt"># 1. ModelRegistry查找（vllm/models/registry.py）</span>
+<span class="kw">class</span> <span class="cls">ModelRegistry</span>:
+    @staticmethod
+    <span class="kw">def</span> <span class="fn">get_model_class</span>(model_name):
+        <span class="cmt"># 返回类路径字符串，如 "vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>
+        <span class="kw">return</span> _models[model_name]
+
+<span class="cmt"># 2. 动态导入（vllm/v1/worker/gpu_worker.py）</span>
+<span class="kw">import</span> importlib
+module_path, class_name = model_cls_path.split(<span class="str">":"</span>)
+module = importlib.import_module(module_path)
+model_cls = getattr(module, class_name)
+
+<span class="cmt"># 3. 实例化模型（vllm_ascend/models/kimi_k3.py）</span>
+<span class="kw">class</span> <span class="cls">AscendKimiLinearForCausalLM</span>(torch.nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, config):
+        <span class="kw">super</span>().__init__()
+        <span class="kw">self</span>.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
+        <span class="kw">self</span>.layers = nn.ModuleList([...])
+        <span class="kw">self</span>.norm = RMSNorm(config.hidden_size)
+
+<span class="cmt"># 4. 加载权重（vllm_ascend/models/kimi_k3.py）</span>
+<span class="kw">def</span> <span class="fn">load_weights</span>(self, weights_path):
+    state_dict = torch.load(weights_path)
+    <span class="kw">self</span>.load_state_dict(state_dict)
+</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>加载步骤详解</h4>
+            <ul>
+                <li><strong>步骤1</strong>：用户指定模型名称（如 "KimiLinearForCausalLM"）</li>
+                <li><strong>步骤2</strong>：在ModelRegistry中查找对应的类路径</li>
+                <li><strong>步骤3</strong>：使用Python的importlib动态导入模块</li>
+                <li><strong>步骤4</strong>：从模块中获取模型类</li>
+                <li><strong>步骤5</strong>：实例化模型并加载预训练权重</li>
+                <li><strong>步骤6</strong>：模型可用于推理</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ==================== 7. 模型类结构 ==================== -->
+    <div class="section">
+        <h2>七、模型类结构</h2>
+        
+        <p>每个模型类都继承自torch.nn.Module，包含初始化函数和前向传播函数。初始化函数负责定义模型的各个层（如嵌入层、注意力层、FFN层等），前向传播函数负责定义数据在这些层之间的流动方式。不同模型的结构可能有所不同，但基本框架是相似的。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图12：模型类继承关系</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[torch.nn.Module] --> B[基座模型类]
+    B --> C[AscendKimiLinearForCausalLM]
+    B --> D[AscendDeepseekV4ForCausalLM]
+    B --> E[AscendMiniMaxM3SparseForCausalLM]
+    B --> F[AscendQwen3DSparkForCausalLM]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图13：模型类内部结构</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[模型类] --> B[__init__ 初始化]
+    A --> C[forward 前向传播]
+    
+    B --> B1[嵌入层 Embedding]
+    B --> B2[注意力层 Attention]
+    B --> B3[FFN层 FeedForward]
+    B --> B4[归一化层 RMSNorm]
+    
+    C --> C1[输入嵌入]
+    C --> C2[循环处理每层]
+    C --> C3[输出归一化]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图14：不同模型的功能对比</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[模型功能] --> B[注意力机制]
+    A --> C[稀疏计算]
+    A --> D[投机解码]
+    
+    B --> B1[MLA 多头潜在注意力]
+    B --> B2[标准MHA]
+    
+    C --> C1[MoE 混合专家]
+    C --> C2[动态稀疏]
+    
+    D --> D1[MTP 多token预测]
+    D --> D2[DSpark]
+    D --> D3[Draft]
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">模型类基本结构（以Kimi K3为例）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">AscendKimiLinearForCausalLM</span>(torch.nn.Module):
+    <span class="str">"""Kimi K3因果语言模型的NPU优化实现"""</span>
+    
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, config):
+        <span class="kw">super</span>().__init__()
+        <span class="cmt"># 初始化模型层</span>
+        <span class="kw">self</span>.embed_tokens = nn.Embedding(...)
+        <span class="kw">self</span>.layers = nn.ModuleList([...])
+        <span class="kw">self</span>.norm = RMSNorm(...)
+        
+    <span class="kw">def</span> <span class="fn">forward</span>(self, input_ids, positions, ...):
+        <span class="cmt"># 前向传播</span>
+        hidden_states = <span class="kw">self</span>.embed_tokens(input_ids)
+        <span class="kw">for</span> layer <span class="kw">in</span> <span class="kw">self</span>.layers:
+            hidden_states = layer(hidden_states, ...)
+        <span class="kw">return</span> hidden_states
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 8. 完整源码 ==================== -->
+    <div class="section">
+        <h2>八、完整源码</h2>
+        
+        <p>models/__init__.py文件是models模块的入口文件，它定义了register_model函数，该函数负责将所有NPU优化的模型注册到vLLM的ModelRegistry中。每个注册调用包含两个参数：模型名称和类路径（格式为"模块路径:类名"）。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图15：源码模块结构</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[models/__init__.py] --> B[register_model函数]
+    
+    B --> C[Kimi系列注册]
+    B --> D[DeepSeek系列注册]
+    B --> E[MiniMax系列注册]
+    B --> F[Qwen系列注册]
+    B --> G[LLaMA系列注册]
+    
+    C --> C1[KimiLinearForCausalLM]
+    C --> C2[KimiK3ForCausalLM]
+    C --> C3[KimiK3ForConditionalGeneration]
+    C --> C4[KimiK3MTPModel]
+    C --> C5[K3DSparkModel]
+    
+    D --> D1[DeepseekV4ForCausalLM]
+    D --> D2[DeepSeekV4MTPModel]
+    D --> D3[DSparkDraftModel]
+    D --> D4[DeepSeekMTPModel]
+    D --> D5[DeepseekV32MTPModel]
+    D --> D6[GlmMoeDsaForCausalLM]
+    
+    E --> E1[MiniMaxM3SparseForCausalLM]
+    E --> E2[MiniMaxM3SparseForConditionalGeneration]
+    
+    F --> F1[Qwen3DSparkModel]
+    F --> F2[DFlash2DraftModel]
+    
+    G --> G1[Eagle3LlamaForCausalLM]
+    G --> G2[LlamaForCausalLMVwnEagle3]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图16：类路径解析流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[类路径字符串] -->|分割| B[模块路径]
+    A -->|分割| C[类名]
+    
+    B -->|动态导入| D[Python模块]
+    D -->|获取类| E[模型类对象]
+    
+    E -->|注册| F[ModelRegistry]
+                </pre>
+            </div>
+        </div>
+        
+        <div class="code-block">
+<div class="filename">vllm_ascend/models/__init__.py - 完整源码</div>
+<pre>
+<span class="kw">from</span> vllm <span class="kw">import</span> ModelRegistry
+
+
+<span class="kw">def</span> <span class="fn">register_model</span>():
+    <span class="cmt"># ==================== Kimi K3 系列 ====================</span>
+    <span class="cmt"># 主模型：用于文本生成</span>
+    ModelRegistry.register_model(
+        <span class="str">"KimiLinearForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+    )
+    <span class="cmt"># 兼容性别名：用于旧版本checkpoint</span>
+    ModelRegistry.register_model(
+        <span class="str">"KimiK3ForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiLinearForCausalLM"</span>,
+    )
+    <span class="cmt"># 条件生成模型：用于多模态任务</span>
+    ModelRegistry.register_model(
+        <span class="str">"KimiK3ForConditionalGeneration"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3:AscendKimiK3ForConditionalGeneration"</span>,
+    )
+    <span class="cmt"># MTP模型：用于投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"KimiK3MTPModel"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3_mtp:AscendKimiK3MTP"</span>,
+    )
+    <span class="cmt"># DSpark草稿模型：用于分布式投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"K3DSparkModel"</span>,
+        <span class="str">"vllm_ascend.models.kimi_k3_dspark:AscendK3DSparkForCausalLM"</span>,
+    )
+
+    <span class="cmt"># ==================== DeepSeek V4 系列 ====================</span>
+    <span class="cmt"># 主模型：支持MLA多头潜在注意力</span>
+    ModelRegistry.register_model(
+        <span class="str">"DeepseekV4ForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_v4.model:AscendDeepseekV4ForCausalLM"</span>,
+    )
+    <span class="cmt"># MTP模型：用于投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"DeepSeekV4MTPModel"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_v4.mtp:DeepSeekV4MTP"</span>,
+    )
+    <span class="cmt"># DSpark草稿模型：用于分布式投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"DSparkDraftModel"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_v4.dspark:DSparkDeepseekV4ForCausalLM"</span>,
+    )
+
+    <span class="cmt"># ==================== MiniMax M3 系列 ====================</span>
+    <span class="cmt"># 稀疏模型：使用MoE混合专家架构</span>
+    ModelRegistry.register_model(
+        <span class="str">"MiniMaxM3SparseForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.minimax_m3:MiniMaxM3SparseForCausalLM"</span>,
+    )
+    <span class="cmt"># 条件生成模型：用于多模态任务</span>
+    ModelRegistry.register_model(
+        <span class="str">"MiniMaxM3SparseForConditionalGeneration"</span>,
+        <span class="str">"vllm_ascend.models.minimax_m3:MiniMaxM3SparseForConditionalGeneration"</span>,
+    )
+
+    <span class="cmt"># ==================== 投机解码模型 ====================</span>
+    <span class="cmt"># DeepSeek MTP：用于Eagle3投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"DeepSeekMTPModel"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_mtp:AscendDeepSeekMTP"</span>,
+    )
+    ModelRegistry.register_model(
+        <span class="str">"DeepseekV32MTPModel"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_mtp:AscendDeepSeekMTP"</span>,
+    )
+    ModelRegistry.register_model(
+        <span class="str">"GlmMoeDsaForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.deepseek_mtp:AscendGlmMoeDsaForCausalLM"</span>,
+    )
+    <span class="cmt"># LLaMA Eagle3：用于LLaMA的投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"LlamaForCausalLMVwnEagle3"</span>,
+        <span class="str">"vllm_ascend.models.llama_eagle3_vwn:Eagle3VwnLlamaForCausalLM"</span>,
+    )
+    ModelRegistry.register_model(
+        <span class="str">"Eagle3LlamaForCausalLM"</span>,
+        <span class="str">"vllm_ascend.models.llama_eagle3:AscendEagle3LlamaForCausalLM"</span>,
+    )
+    <span class="cmt"># Qwen3 DSpark：用于Qwen3的分布式投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"Qwen3DSparkModel"</span>,
+        <span class="str">"vllm_ascend.models.qwen3_dspark:AscendQwen3DSparkForCausalLM"</span>,
+    )
+    <span class="cmt"># Qwen3 DFlash2：用于Qwen3的Flash投机解码</span>
+    ModelRegistry.register_model(
+        <span class="str">"DFlash2DraftModel"</span>,
+        <span class="str">"vllm_ascend.models.qwen3_dflash2:DFlash2Qwen3ForCausalLM"</span>,
+    )
+</pre>
+        </div>
+    </div>
+
+    <!-- ==================== 九、最佳实践 ==================== -->
+    <div class="section">
+        <h2>九、最佳实践</h2>
+        
+        <p>在使用models模块时，有一些最佳实践需要遵循。首先，注册模型时要确保模型名称的唯一性，避免重复注册；其次，类路径要使用绝对路径，确保动态导入的正确性；最后，要为每个模型添加清晰的注释，说明模型的用途和特点。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图17：模型注册最佳实践流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[开始注册新模型] --> B[定义模型名称]
+    B --> C[确定类路径]
+    C --> D[添加注释说明]
+    D --> E[调用register_model]
+    E --> F{注册成功?}
+    F -->|是| G[完成注册]
+    F -->|否| H[检查名称唯一性]
+    H --> I[检查类路径正确性]
+    I --> E
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图18：模型选择决策流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[用户需求] --> B{任务类型?}
+    
+    B -->|文本生成| C[选择主模型]
+    B -->|多模态| D[选择条件生成模型]
+    B -->|加速推理| E[选择投机解码模型]
+    
+    C --> C1{模型系列?}
+    C1 -->|Kimi| C2[KimiLinearForCausalLM]
+    C1 -->|DeepSeek| C3[DeepseekV4ForCausalLM]
+    C1 -->|MiniMax| C4[MiniMaxM3SparseForCausalLM]
+    
+    D --> D1{模型系列?}
+    D1 -->|Kimi| D2[KimiK3ForConditionalGeneration]
+    D1 -->|MiniMax| D3[MiniMaxM3SparseForConditionalGeneration]
+    
+    E --> E1{加速方案?}
+    E1 -->|MTP| E2[DeepSeekV4MTPModel]
+    E1 -->|DSpark| E3[DSparkDraftModel]
+    E1 -->|Eagle3| E4[Eagle3LlamaForCausalLM]
+                </pre>
+            </div>
+        </div>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图19：调试和排错流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[模型加载失败] --> B[检查模型名称]
+    B --> C{名称正确?}
+    C -->|否| D[修改模型名称]
+    C -->|是| E[检查类路径]
+    
+    E --> F{类路径正确?}
+    F -->|否| G[修正类路径]
+    F -->|是| H[检查模块导入]
+    
+    H --> I{导入成功?}
+    I -->|否| J[检查依赖安装]
+    I -->|是| K[检查模型类定义]
+    
+    K --> L{类定义正确?}
+    L -->|否| M[修正模型类]
+    L -->|是| N[检查权重文件]
+                </pre>
+            </div>
+        </div>
+
+        <div class="step-box">
+            <h4>注册新模型步骤</h4>
+            <ol>
+                <li>在models目录下创建模型实现文件</li>
+                <li>在__init__.py的register_model函数中添加注册调用</li>
+                <li>确保模型名称全局唯一</li>
+                <li>使用完整的类路径（模块路径:类名）</li>
+                <li>添加注释说明模型用途</li>
+                <li>测试模型加载和推理</li>
+            </ol>
+        </div>
+
+        <div class="step-box">
+            <h4>常见问题及解决方案</h4>
+            <ul>
+                <li><strong>问题1</strong>：模型名称重复 - 解决：检查并修改模型名称</li>
+                <li><strong>问题2</strong>：类路径错误 - 解决：检查模块路径和类名是否正确</li>
+                <li><strong>问题3</strong>：模块导入失败 - 解决：检查依赖是否安装，路径是否正确</li>
+                <li><strong>问题4</strong>：模型类不存在 - 解决：检查模型类是否正确定义和导出</li>
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        themeVariables: { fontSize: '16px', fontFamily: 'Arial, sans-serif' }
+    });
+</script>
+</body>
+</html>

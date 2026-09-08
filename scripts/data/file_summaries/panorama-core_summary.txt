@@ -1,0 +1,63 @@
+===== FILE: core\__init__.py =====
+[0行]
+
+===== FILE: core\batch_job_aware_scheduler.py =====
+[685行] module doc: Batch-Job-Aware Scheduler for vLLM v1
+class JobNameParser: Job name parser with caching for better performance. | methods: __init__, parse, remove, clear
+class _JobStat: Per‑job running statistics. | methods: __init__
+class JobDecodeEstimator: Per‑job decode‑length estimator with EWMA. | methods: __init__, predict, observe, get_stats
+def _cdiv(a, b): Ceiling division: smallest integer >= a/b.
+class RunningBlockReserver: Predict the KV‑block demand of the next running‑loop pass. | methods: __init__, invalidate_cache, predict, _finalize_reserve, _compute_one, _compute_all
+class RequestBucket: Request bucket based on prefill length, supports O(log n) best-fit search. | methods: __init__, put, peek_best_fit_request, remove, is_empty, __len__, __bool__, __iter__
+class BatchJobAwareRequestQueue: Request queue with job‑grouped sorting and reserve‑aware admission. | methods: __init__, add_request, prepend_request, prepend_requests, remove_request, remove_requests, peek_request, pop_request, _get_job_name, _track_cold_start_req, _get_or_create_job_bucket, _free_blocks, _admission_budget, _find_admittable, _get_cold_start_request ...
+class BatchJobAwareScheduler: Batch‑job‑aware scheduler for offline / batched inference workloads. | methods: __init__, schedule, _free_request
+class BatchJobAwareAsyncScheduler: Batch-job-aware + asynchronous scheduling, combined via multiple inhernce. | methods: 
+
+===== FILE: core\dyntra_lb_scheduler.py =====
+[1205行]
+def get_dyntra_lb_block_size(scheduler): Return the effective attention block size used as DyntraLB load unit.
+def get_dyntra_lb_request_block_num(scheduler, request): Estimate a request's attention KV-cache blocks for load balancing.
+def diagnostics_enabled(vllm_config): Read the diagnostic toggle independently of DyntraLB activation.
+def print_scheduler_summary(scheduler, scheduler_output): 
+class DyntraLBPolicyMixin: Provide DyntraLB planning and request-lifecycle policy to a scheduler. | methods: __init__, _waiting_requests_in_schedule_order, _refresh_blocked_waiting_requests, _run_lb_kv_prefetch, prepare_dyntra_lb_step, _apply_load_balance_modifications, _can_admit_waiting_request, _scheduler_output_supports, _has_pending_deliverable_output, _get_connector_computed_blocks, _record_prefix_cache_stats, _preempt_request, _lb_pause_request, _handle_stopped_request, _update_after_schedule ...
+class DyntraLBScheduler:  | methods: schedule
+class AsyncDyntraLBScheduler: DyntraLB scheduler with vLLM's asynchronous scheduling semantics. | methods: 
+
+===== FILE: core\kv_cache_interface.py =====
+[242行]
+def get_storage_block_size(kv_cache_spec): Return the physical token rows represented by one scheduler block.
+class AscendMLAAttentionSpec: MLA cache spec with Ascend-specific layout metadata. | methods: storage_block_size, real_page_size_bytes, unpadded_page_size_bytes, merge, max_memory_usage_bytes
+class AscendSFAIndexerCacheSpec: KV cache spec for SFA indexer K/scale cache. | methods: page_size_bytes, real_page_size_bytes, merge
+class AscendSlidingWindowMLASpec: Sliding window attention with MLA cache format. | methods: __post_init__, storage_block_size, real_page_size_bytes, merge
+def register_ascend_kv_cache_specs(): 
+
+===== FILE: core\profiling_chunk_predictor.py =====
+[465行] module doc: Profiling-based Dynamic Chunk Size Predictor.
+def _start_profiling_chunk_timing(profiling_config, scheduler_output): 
+def _finish_profiling_chunk_timing(profiling_config, execution_start_time): 
+def _attach_profiling_chunk_execution_time(profiling_config, model_runner, output): 
+class ChunkSizePredictor: Predictor for dynamic chunk size based on quadratic latency model. | methods: __init__, fit, fit_chunk, set_target_latency, get_time, get_time_with_history, predict, predict_with_history
+class ProfilingChunkManager: Manager for profiling-based dynamic chunk sizing. | methods: __init__, is_ready, history_ready, predict_chunk_size, predict_time, record_batch_execution_time
+
+===== FILE: core\recompute_scheduler.py =====
+[1426行]
+class RecomputeSchedulerConfig:  | methods: initialize_from_config
+class PreemptedRequestData:  | methods: 
+class RecomputeReqInfo:  | methods: 
+class RecomputeSchedulerOutput:  | methods: 
+class RecomputeScheduler:  | methods: _get_computed_blocks_for_connector, _truncate_computed_blocks_for_connector, _truncate_computed_blocks_with_mamba_clamp, _apply_load_balance_modifications, _can_admit_waiting_request, _update_waiting_for_remote_kv, _finish_recomputed_request, schedule, _build_kv_connector_meta, _add_recomputed_outputs, update_from_output
+class AsyncRecomputeScheduler:  | methods: __init__
+class DyntraLBRecomputeScheduler:  | methods: 
+class AsyncDyntraLBRecomputeScheduler:  | methods: 
+
+===== FILE: core\scheduler_profiling_chunk.py =====
+[760行] module doc: Scheduler subclass with profiling-based dynamic chunk sizing.
+class ProfilingChunkScheduler: Scheduler with profiling-based dynamic chunk sizing. | methods: __init__, run_profiling_chunk_init, _build_rpc_kwargs, _extract_latency, schedule
+
+===== FILE: core\short_request_first_scheduler.py =====
+[384行]
+class ShortRequestFirstRequestQueue: Three-lane waiting queue with short-request priority and simple aging. | methods: __init__, _queues, _debug_logging_enabled, _queue_name, _maybe_log_stats, _debug_state, num_immediate_requests, num_short_requests, num_long_requests, _classify_queue, _long_head_wait_ms, _reset_degradation_streak, _reset_degradation_streak_if_short_queue_empty, _select_schedulable_queue, _request_id ...
+def is_recovery_request(request): Return whether a request must resume ahead of fresh waiting work.
+def install_short_request_first_waiting_queue(scheduler): Install the SRF queue on a newly constructed FCFS scheduler.
+class ShortRequestFirstAsyncScheduler: Async scheduler that installs the ShortRequestFirst waiting queue. | methods: __init__
+

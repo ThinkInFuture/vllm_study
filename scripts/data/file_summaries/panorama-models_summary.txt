@@ -1,0 +1,257 @@
+===== FILE: models\__init__.py =====
+[56行]
+def register_model(): 
+
+===== FILE: models\deepseek_mtp.py =====
+[81行]
+class AscendDeepSeekMTP:  | methods: __init__, forward, _maybe_set_own_lm_head, load_weights, _rewrite_spec_layer_name
+class AscendGlmMoeDsaForCausalLM:  | methods: load_weights
+
+===== FILE: models\kimi_k3.py =====
+[871行] module doc: Kimi K3 model adapters for vLLM 0.27 on Ascend.
+def _apply_ascend_attn_res(prefix_sum, block_residual, proj, norm, num_valid_blocks): Apply Kimi's canonical learned residual mixture with native ops.
+class AscendKimiMoE: Kimi K3 MoE assembled from the standard vLLM MoE interfaces. | methods: __init__, forward
+class AscendKimiMLAAttention: Extend vLLM's generic Kimi MLA only for DSpark RoPE metadata. | methods: __init__, _attention_layer, is_vl_first_layer, layer_name, impl, kv_cache, kv_cache_dtype, _k_scale, forward
+class AscendKimiDecoderLayer: Upstream Kimi decoder structure with Ascend attention backends. | methods: __init__, _run_self_attn, forward_attn_residual
+class AscendKimiLinearModel: Kimi text model assembled from the Ascend decoder layer. | methods: __init__, load_weights, forward
+class AscendKimiLinearForCausalLM: Causal-LM wrapper retaining vLLM 0.27 state/cache interfaces. | methods: __init__, set_dspark_aux_capture_materialized
+class AscendKimiK3MultiModalProjector: Kimi projector with the optional ModelSlim output rotation. | methods: __init__, forward
+class AscendKimiK3ForConditionalGeneration: Upstream Kimi K3 multimodal wrapper with Ascend text/projector layers. | methods: __init__, set_dspark_aux_capture_materialized
+
+===== FILE: models\kimi_k3_dspark.py =====
+[364行] module doc: Kimi K3 MLA DSpark draft model for Ascend.
+def _uses_causal_draft_attention(config): 
+class AscendK3DSparkDecoderLayer:  | methods: __init__, forward
+class AscendK3DSparkModel:  | methods: __init__, precompute_and_store_context_kv, forward
+class AscendK3DSparkForCausalLM:  | methods: __init__, get_draft_attn_causal, load_weights, embed_input_ids
+
+===== FILE: models\kimi_k3_mtp.py =====
+[93行] module doc: Kimi K3 MTP draft model for Ascend.
+class AscendKimiK3MultiTokenPredictorLayer:  | methods: __init__
+class AscendKimiK3MultiTokenPredictor:  | methods: __init__
+class AscendKimiK3MTP:  | methods: __init__
+
+===== FILE: models\llama_eagle3.py =====
+[140行]
+def get_embedding_tensor(directory_path): Scans the directory and returns the first tensor found that contains 'embed' in its key.
+def _find_safetensors_weight(model_path, weight_names): Locate one target tensor without loading unrelated checkpoint shards.
+def load_quarot_target_layer(layer, target_model_path, weight_names, rotation, label): Load one target vocab shard into the draft's unrotated hidden basis.
+def compute_rotation_matrix3(Q): Anti-rotate matrix for 3 layers of hidden_states.
+class AscendEagle3LlamaForCausalLM:  | methods: __init__, load_weights
+
+===== FILE: models\llama_eagle3_vwn.py =====
+[257行]
+def _linear(inp, out, vc, qc, pfx): 
+class PreVwnLayerV1:  | methods: __init__, forward
+class VwnLlamaDecoderLayer:  | methods: __init__, forward
+class VwnLlamaModel:  | methods: __init__, forward
+class Eagle3VwnLlamaForCausalLM:  | methods: __init__, compute_logits, combine_hidden_states
+
+===== FILE: models\qwen3_dflash2.py =====
+[309行]
+def _grouped_conv(hidden_states, delta, base, block_size, num_groups, group_size): 
+class DFlashGroupedConv:  | methods: __init__, _convolve, prepare, finish
+class DFlash2Qwen3DecoderLayer:  | methods: __init__, forward
+def _score_edges(predecessor_table, successor_table, candidate_ids, unary_logits, hidden, anchor_token_ids): 
+class CandidateSelector:  | methods: __init__, forward
+class DFlash2Qwen3Model:  | methods: __init__, embed_input_ids
+class DFlash2Qwen3ForCausalLM:  | methods: __init__, compute_candidates
+
+===== FILE: models\qwen3_dspark.py =====
+[173行]
+def process_weight(linear_weight, rotation_weight): 
+class DSparkConfidenceHead:  | methods: __init__, forward
+class AscendQwen3DSparkForCausalLM:  | methods: __init__, _get_confidence_relative_name, compute_confidence, load_weights
+
+===== FILE: models\deepseek_v4\__init__.py =====
+[0行]
+
+===== FILE: models\deepseek_v4\compressor.py =====
+[238行]
+class AscendCompressorStateCache:  | methods: __init__, get_kv_cache_spec, forward, get_attn_backend
+class AscendCompressorMetadata: Request metadata for the compressed KV and compressor state caches. | methods: 
+class Compressor:  | methods: __init__, _compute_metadata, forward
+
+===== FILE: models\deepseek_v4\dspark.py =====
+[547行] module doc: DeepSeek V4 DSpark draft model for Ascend.
+def _apply_dsv4_rope(rotary_emb, positions, x): 
+def _get_dspark_num_mtp_layers(config): 
+class DSparkMarkovHead:  | methods: __init__, embed, bias
+class DSparkConfidenceHead:  | methods: __init__, forward
+class DeepseekV4DSparkModel:  | methods: __init__, get_draft_kv_cache_layer_names, combine_hidden_states, _project_shared_kv, _store_standard_swa_kv, precompute_and_store_context_kv, forward, hc_head, markov_embed, markov_bias, compute_logits, get_expert_mapping
+class DSparkDeepseekV4ForCausalLM:  | methods: __init__, set_moe_parameters, forward, compute_draft_logits, map_draft_to_target, compute_logits, markov_embed, markov_bias, compute_confidence, get_draft_kv_cache_layer_names, combine_hidden_states, precompute_and_store_context_kv, load_weights, _remap_dspark_name
+
+===== FILE: models\deepseek_v4\indexer.py =====
+[718行]
+def hadamard_linear(x, hadamard): 
+def hadamard_scale(out, x_shape, dim, scale): Scale and reshape the output of hadamard_linear.
+def rotate_activation(x, hadamard): 
+def _is_w8a8_dynamic(linear): True iff ``linear`` is wired up with ``AscendW8A8DynamicLinearMethod``.
+class AscendDeepseekV4IndexerCache:  | methods: __init__, get_kv_cache_spec, forward, get_attn_backend
+class AscendIndexerMetadata:  | methods: 
+class IndexerOverlapPlan: Main-attention compressor work scheduled around Indexer selection. | methods: 
+class AscendIndexerOps:  | methods: __init__, unpack_dsa_indexer_kv_cache, quantize_query, quantize_key_and_update_cache, update_scale_cache, select_topk, quantize_update_cache_and_select_topk
+class DeepseekV4Indexer:  | methods: __init__, _get_indexer_cache_metadata, update_cache, _get_cached_topk_indices, _update_cached_topk_indices, forward, _cv_compute_query_and_update_cache_multistream, _select_topk_multistream, _indexer_qkv_prepare, _select_topk_serial
+
+===== FILE: models\deepseek_v4\model.py =====
+[1280行]
+class AscendDeepseekV4SWACache:  | methods: __init__, get_kv_cache_spec, forward, get_attn_backend
+def precompute_freqs_cis_cpu(dim, seqlen, original_seq_len, base, factor, beta_fast): Precomputes frequency-based complex exponential values for rotary positional embeddings.
+def apply_rotary_emb(x, freqs_cis, inverse): Applies rotary positional embeddings to the input tensor.
+def get_spec_layer_idx_from_weight_name(config, weight_name): 
+class DeepseekV2MLP:  | methods: __init__, forward
+class DeepseekV4MoE:  | methods: __init__, forward
+def yarn_get_mscale(scale, mscale): 
+def _get_llama_4_scaling(original_max_position_embeddings, scaling_beta, positions): 
+class DeepseekV4Attention:  | methods: __init__, forward
+class DeepseekV2DecoderLayer:  | methods: __init__, hc_pre, hc_post, forward
+class DeepseekV4Model:  | methods: __init__, embed_input_ids, hc_head, forward
+class DeepseekV2MixtureOfExperts:  | methods: extract_moe_parameters, update_physical_experts_metadata
+class AscendDeepseekV4ForCausalLM:  | methods: __init__, set_moe_parameters, embed_input_ids, forward, compute_logits, get_expert_mapping, get_mtp_target_hidden_states, set_aux_hidden_state_layers, load_weights
+
+===== FILE: models\deepseek_v4\mtp.py =====
+[530行]
+class SharedHead:  | methods: __init__, forward
+class DeepSeekMultiTokenPredictorLayer:  | methods: __init__, forward, hc_head
+class DeepSeekMultiTokenPredictor:  | methods: __init__, embed_input_ids, forward, compute_logits
+class DeepSeekV4MTP:  | methods: __init__, set_moe_parameters, embed_input_ids, forward, compute_logits, load_weights, _rewrite_spec_layer_name, no_mtp_block_in_name
+
+===== FILE: models\layer\__init__.py =====
+[0行]
+
+===== FILE: models\layer\attention\__init__.py =====
+[0行]
+
+===== FILE: models\layer\attention\layer.py =====
+[214行] module doc: Attention layer.
+def get_dsv4_block_sizes(use_a5_bf16_kv): 
+def dsv4_block_sizes(vllm_config): Return the A5 BF16 KV table when explicitly requested, else the upstream table.
+class DSAAttention: Multi-Head Latent Attention layer. | methods: __init__, forward, process_weights_after_loading, get_attn_backend, get_kv_cache_spec
+
+===== FILE: models\minimax_m3\__init__.py =====
+[21行]
+
+===== FILE: models\minimax_m3\minimax_m3.py =====
+[1368行] module doc: Inference-only MiniMaxM3 model.
+def _scatter_index_cache(cache, updates, slot_mapping): Write MiniMax-M3 index keys into the paged cache.
+class MiniMaxM3SparseAttention: Block-sparse attention with lightning indexer on Ascend. | methods: __init__, get_attn_backend, get_kv_cache_spec, _insert_kv, _sparse_prepare, _run_sparse_attention, forward, _qk_norm, _index_qk_norm
+def _sparse_attention_layer_ids(config): 
+def _get_text_config(vllm_config): 
+def _get_max_position_embeddings(config): 
+def _get_rope_parameters(config): 
+def _is_w8a8_mxfp8_linear(layer): 
+class MiniMaxM3SwiGLUOAI: MiniMax-M3 SwiGLU-OAI activation for packed gate/up outputs. | methods: __init__, forward
+class MiniMaxM3MLP:  | methods: __init__, forward
+class MiniMaxM3MoE:  | methods: __init__, ebias_weight_loader, forward
+class MiniMaxM3Attention:  | methods: __init__, _qk_norm, forward
+class MiniMaxM3DecoderLayer:  | methods: __init__, forward
+class MiniMaxM3Model:  | methods: __init__, embed_input_ids, forward, _set_aux_hidden_state_layers, set_aux_hidden_state_layers, get_expert_mapping, load_weights
+class MiniMaxM3SparseForCausalLM:  | methods: __init__, embed_input_ids, set_aux_hidden_state_layers, get_eagle3_default_aux_hidden_state_layers, forward, _set_moe_parameters, update_physical_experts_metadata, compute_logits, load_weights, get_expert_mapping
+def get_spec_layer_idx_from_weight_name(config, weight_name): 
+
+===== FILE: models\minimax_m3\minimax_m3_vl.py =====
+[453行] module doc: MiniMax M3 multimodal wrapper for Ascend.
+def _load_vllm_minimax_m3_common_module(module_name): 
+def _install_fused_allreduce_norm_fallback(): Avoid importing vLLM's CUDA-only fusion module on Ascend.
+class MiniMaxM3VLModel:  | methods: __init__, forward
+class MiniMaxM3SparseForConditionalGeneration:  | methods: get_placeholder_str, __init__, _sync_moe_parameters, update_physical_experts_metadata, lm_head, _parse_and_validate_image_input, _parse_and_validate_video_input, _process_image_input, _process_video_input, _parse_and_validate_multimodal_inputs, embed_multimodal, embed_input_ids, forward, compute_logits, set_aux_hidden_state_layers ...
+
+===== FILE: models\minimax_m3\msa_m3.py =====
+[1316行] module doc: MiniMax-M3 sparse attention and indexer backends for Ascend.
+def _should_use_tp_sharded_index_decode(tp_size, num_prefills): 
+def _active_decode_num_reqs(num_decodes, num_decode_tokens, decode_query_len): Return the number of real decode requests, ignoring FIA/graph padding.
+def _active_prefill_num_reqs(num_prefills, num_prefill_tokens, query_start_loc_cpu, num_decodes): Return real prefill requests, ignoring FIA/SP tail padding segments.
+class AscendMiniMaxM3IndexerBackend:  | methods: get_name, get_impl_cls, get_builder_cls, get_supported_head_sizes, get_supported_kernel_block_sizes, is_sparse, get_kv_cache_shape, get_kv_cache_stride_order
+class AscendMiniMaxM3IndexerCache:  | methods: __init__, get_kv_cache_spec, forward, get_attn_backend
+class AscendMiniMaxM3IndexerPrefillMetadata:  | methods: 
+class AscendMiniMaxM3IndexerDecodeMetadata:  | methods: 
+class AscendMiniMaxM3IndexerMetadata:  | methods: 
+class AscendMiniMaxM3IndexerMetadataBuilder:  | methods: __init__, _build_tp_score_metadata, build
+class AscendMiniMaxM3IndexerImpl:  | methods: __init__, _decode_topk_tp_sharded, forward, update_graph_params
+class AscendMiniMaxM3Indexer:  | methods: __init__, index_cache, forward
+class AscendMiniMaxM3SparseBackend:  | methods: get_name, get_impl_cls, get_builder_cls, get_supported_head_sizes, get_supported_kernel_block_sizes, is_sparse, get_kv_cache_shape, get_kv_cache_stride_order
+class AscendMiniMaxM3SparsePrefillMetadata:  | methods: 
+class AscendMiniMaxM3SparseDecodeMetadata:  | methods: 
+class AscendMiniMaxM3SparseMetadata:  | methods: 
+class AscendMiniMaxM3SparseMetadataBuilder:  | methods: __init__, build
+class AscendMiniMaxM3SparseImpl:  | methods: __init__, forward, update_graph_params
+class AscendMiniMaxM3QKVParallelLinearWithIndexer: Fused [q | k | v | index_q | index_k] column-parallel GEMM for M3 sparse layers. | methods: __init__, forward, validate_shard_id, _get_shard_offset_mapping, _get_shard_size_mapping, weight_loader_v2, weight_loader
+class AscendMiniMaxM3IndexerLinear: Merged [index_q | index_k] projection for M3 sparse layers. | methods: __init__, forward, validate_shard_id, _get_shard_offset_mapping, _get_shard_size_mapping, weight_loader_v2, weight_loader
+def _quant_description_value(quant_config, key): 
+def _sparse_proj_quant_type(quant_config, prefix, proj_name): 
+def _use_fused_qkv_indexer(quant_config, prefix): 
+def _register_m3_sparse_packed_modules(quant_config, fused_qkv_indexer): 
+def minimax_m3_sparse_forward(query, key, value, index_query, index_key, attn_output): 
+def minimax_m3_sparse_forward_fake(query, key, value, index_query, index_key, attn_output): 
+
+===== FILE: models\minimax_m3\ops\__init__.py =====
+[1行]
+
+===== FILE: models\minimax_m3\ops\msa_m3_npu.py =====
+[639行] module doc: NPU sparse attention ops for MiniMax-M3 on Ascend.
+def _k2q_csr_block_stats(cu_block_lens): Derive ``(total_rows, max_kv)`` from ``cu_block_lens`` on host.
+def _npu_k2q_csr(q2k, cu_seqlens, cu_block_lens, order_method, total_rows, max_kv): Convert MiniMax-M3 q2k indices to k2q CSR on NPU.
+class MiniMaxM3TPDecodeScoreMetadata: Graph-stable inputs for packed TP decode scoring. | methods: 
+def _as_ascendc_index_kv_cache(index_kv_cache): Convert the runtime index K cache to the AscendC BBND layout.
+def _split_main_kv_cache(kv_cache): 
+def _select_num_idx_from_topk(topk_idx): 
+def _build_cu_block_lens(seq_lens, block_size): Build cumulative logical KV-block counts for each prefill request.
+def _minimax_m3_index_score(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, start_loc): Compute MSA index scores with the bundled AscendC operator.
+def minimax_m3_index_prefill(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, context_lens): Compute AscendC prefill scores and finalize their block TopK.
+def _index_score_topk_candidates(score, context_lens, decode_query_len, topk, block_offset, init_blocks): Return global block IDs and scores after exactly one local TopK.
+def _minimax_m3_index_decode(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, context_lens): Run AscendC decode score followed by one non-fused local TopK.
+def minimax_m3_index_decode(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, context_lens): Compute AscendC decode scores and return their block TopK.
+def minimax_m3_index_tp_block_parallel_decode(idx_q, index_kv_cache, metadata, causal_mask): Run packed-query scoring and TopK over TP-sharded KV blocks.
+def _minimax_m3_sparse_attn_a3(q, kv_cache, topk_idx, block_table, cu_seqlens_q, seq_lens): 
+def _minimax_m3_sparse_attn_a5(q, kv_cache, topk_idx, block_table, cu_seqlens_q, seq_lens): 
+def minimax_m3_sparse_attn(q, kv_cache, topk_idx, block_table, cu_seqlens_q, seq_lens): 
+def minimax_m3_sparse_attn_decode(q, kv_cache, topk_idx, block_table, seq_lens, num_kv_heads): Run sparse decode through the AscendC sparse-attention operator.
+
+===== FILE: models\minimax_m3\ops\msa_m3_triton.py =====
+[1638行] module doc: Triton kernels for MiniMax M3 block-sparse GQA attention on Ascend.
+def _as_triton_index_kv_cache(index_kv_cache): Normalizes the index-key cache to [num_blocks, 128, head_dim].
+def _split_triton_main_kv_cache(kv_cache): 
+def _is_arch_support_pdl(): 
+def _sparse_attn_num_stages_kwarg(): Triton ``num_stages`` override for the sparse-attn GEMM kernels.
+def _detected_aicore_count(): Returns the detected Ascend AI Core count, or zero on fallback.
+def _prefill_index_score_kernel(query_ptr, index_key_cache_ptr, score_ptr, block_table_ptr, query_start_offsets_ptr, sequence_lengths_ptr): Computes one max dot-product score per visible sparse block.
+def _decode_index_score_kernel(q_ptr, ik_cache_ptr, score_ptr, block_table_ptr, seq_lens, global_seq_lens): 
+def _mask_decode_topk_indices_kernel(ti_ptr, seq_lens, global_seq_lens, block_size, block_offset, topk): 
+def _prepare_prefill_topk_scores_kernel(score_ptr, query_start_offsets_ptr, prefix_lengths_ptr, index_head_count, init_block_count, local_block_count): Applies init/local priorities and fills the invalid score tail.
+def _mask_prefill_topk_indices_kernel(topk_indices_ptr, query_start_offsets_ptr, prefix_lengths_ptr, index_head_count, sparse_block_size, topk): Replaces invalid prefill top-k block IDs with ``-1``.
+def _gqa_sparse_fwd_kernel(q_ptr, k_cache_ptr, v_cache_ptr, t_ptr, o_ptr, block_table_ptr): 
+def _gqa_sparse_decode_kernel(q_ptr, k_cache_ptr, v_cache_ptr, t_ptr, o_ptr, lse_ptr): 
+def _merge_topk_attn_out_kernel(o_ptr, lse_ptr, out_ptr, head_dim, stride_o_c, stride_o_b): 
+def _copy_topk_indices(raw_indices, requested_topk, output): Copies top-k indices into an int32 result and pads missing slots.
+def _copy_topk_values(raw_values, requested_topk): Copies top-k scores into an fp32 result and pads missing slots.
+def minimax_m3_index_score(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, prefix_lens): Computes one block score for every visible prefill KV block.
+def minimax_m3_index_topk(score, cu_seqlens_q, prefix_lens, max_query_len, topk, init_blocks): Finalizes prefill scores and returns zero-based block IDs.
+def minimax_m3_index_decode(idx_q, index_kv_cache, block_table, seq_lens, max_seq_len, topk): Computes decode block scores and returns zero-based top-k block IDs.
+def minimax_m3_sparse_attn(q, kv_cache, topk_idx, block_table, cu_seqlens_q, seq_lens): GQA block-sparse attention over the selected blocks. block_size_q == 1.
+def minimax_m3_sparse_attn_decode(q, kv_cache, topk_idx, block_table, seq_lens, num_kv_heads): GQA block-sparse attention for decode (split-K over the top-k blocks).
+
+===== FILE: models\minimax_m3\ops\msa_m3_triton_a5.py =====
+[1417行] module doc: Triton kernels for MiniMax M3 block-sparse GQA attention on Ascend.
+def _as_triton_main_kv_cache(kv_cache): 
+def _as_triton_index_kv_cache(index_kv_cache): Normalize Ascend indexer cache to ``[num_blocks, 128, head_dim]``.
+def _is_arch_support_pdl(): 
+def _sparse_attn_num_stages_kwarg(): Triton ``num_stages`` override for the sparse-attn GEMM kernels.
+def _decode_qk_score_target_programs(): 
+def _prune_decode_index_score_configs(configs, nargs): 
+def _index_block_score_kernel(q_ptr, ik_cache_ptr, score_ptr, block_table_ptr, cu_seqlens, seq_lens): 
+def _decode_qk_score_kernel(q_ptr, ik_cache_ptr, score_ptr, block_table_ptr, seq_lens_ptr, num_idx_heads): Compute decode QK block scores with one program per query/chunk.
+def _decode_index_score_pad_tail_kernel(score_ptr, seq_lens, block_size, max_block, decode_query_len, chunk_blocks): 
+def _topk_index_mask_invalid_kernel(ti_ptr, seq_lens, block_size, topk, decode_query_len, stride_ti_h): 
+def _prefill_index_score_prepare_for_topk_kernel(score_ptr, cu_seqlens, prefix_lens, init_blocks, local_blocks, max_block): 
+def _topk_index_mask_invalid_prefill_kernel(ti_ptr, cu_seqlens, prefix_lens, block_size, topk, stride_ti_h): 
+def _decode_index_score_masks_kernel(init_mask_ptr, local_mask_ptr, seq_lens, block_size, max_block, decode_query_len): 
+def _build_decode_index_score_masks(seq_lens, decode_query_len, init_blocks, local_blocks, max_block, score_block_stride): Build bool init/local masks for decode index scoring via Triton.
+def minimax_m3_index_score(idx_q, index_kv_cache, block_table, cu_seqlens_q, seq_lens, prefix_lens): Compute per-token index scores for each visible sparse block.
+def minimax_m3_index_topk(score, cu_seqlens_q, prefix_lens, max_query_len, topk, init_blocks): Select index top-k from a precomputed score tensor (torch.topk).
+def minimax_m3_index_decode(idx_q, index_kv_cache, block_table, seq_lens, max_seq_len, topk): Decode index block-score + top-k (torch.topk + invalid-index mask).
+def _gqa_sparse_fwd_kernel(q_ptr, kv_cache_ptr, t_ptr, o_ptr, block_table_ptr, cu_seqlens_q): 
+def _gqa_sparse_decode_kernel(q_ptr, kv_cache_ptr, t_ptr, o_ptr, lse_ptr, block_table_ptr): 
+def _merge_topk_attn_out_kernel(o_ptr, lse_ptr, out_ptr, head_dim, stride_o_c, stride_o_b): 
+def minimax_m3_sparse_attn(q, kv_cache, topk_idx, block_table, cu_seqlens_q, seq_lens): GQA block-sparse attention over the selected blocks. block_size_q == 1.
+def minimax_m3_sparse_attn_decode(q, kv_cache, topk_idx, block_table, seq_lens, num_kv_heads): GQA block-sparse attention for decode (split-K over the top-k blocks).
+

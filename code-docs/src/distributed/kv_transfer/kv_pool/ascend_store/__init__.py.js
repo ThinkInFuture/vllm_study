@@ -1,0 +1,1 @@
+window.__SRC_SET("distributed/kv_transfer/kv_pool/ascend_store/__init__.py","");

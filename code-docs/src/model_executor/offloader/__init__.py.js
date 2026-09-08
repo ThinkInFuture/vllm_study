@@ -1,0 +1,1 @@
+window.__SRC_SET("model_executor/offloader/__init__.py","\"\"\"Ascend-specific model parameter offloading.\"\"\"\n\nfrom vllm_ascend.model_executor.offloader.base import create_offloader\nfrom vllm_ascend.model_executor.offloader.prefetch import AscendPrefetchOffloader\n\n__all__ = [\n    \"AscendPrefetchOffloader\",\n    \"create_offloader\",\n]\n");

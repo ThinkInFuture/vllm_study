@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注意力机制 - vLLM Ascend</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .navbar { background: white; border-radius: 12px; padding: 15px 25px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-size: 1.2rem; font-weight: bold; color: #667eea; text-decoration: none; }
+        .navbar-nav { display: flex; gap: 12px; list-style: none; flex-wrap: wrap; }
+        .navbar-nav a { color: #666; text-decoration: none; padding: 8px 14px; border-radius: 8px; transition: all 0.2s; font-size: 0.9rem; }
+        .navbar-nav a:hover, .navbar-nav a.active { background: #667eea; color: white; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-size: 2rem; color: #333; margin-bottom: 8px; }
+        .page-header p { color: #666; }
+        .section { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .section h2 { color: #333; font-size: 1.4rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea; }
+        .section h3 { color: #667eea; font-size: 1.15rem; margin: 25px 0 12px 0; }
+        .section p { color: #555; margin-bottom: 12px; }
+        .mermaid-box { background: #fafbfc; border: 1px solid #e8ecf0; border-radius: 10px; padding: 20px; margin: 20px 0; }
+        .mermaid-box .chart-label { color: #667eea; font-weight: bold; font-size: 1rem; margin-bottom: 15px; text-align: center; }
+        .mermaid-box .chart-content { text-align: center; overflow-x: auto; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; padding: 18px; margin: 15px 0; overflow-x: auto; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.6; }
+        .code-block .filename { color: #667eea; font-size: 0.85rem; margin-bottom: 8px; display: block; }
+        .code-block .cmt { color: #6a9955; }
+        .code-block .kw { color: #569cd6; }
+        .code-block .str { color: #ce9178; }
+        .code-block .fn { color: #dcdcaa; }
+        .code-block .cls { color: #4ec9b0; }
+        .note { background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 15px 0; }
+        .note h4 { color: #667eea; margin-bottom: 6px; font-size: 0.95rem; }
+        .note p { color: #555; margin: 0; font-size: 0.9rem; }
+        .file-tree { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 15px 0; font-family: 'Consolas', monospace; font-size: 0.9rem; line-height: 1.8; overflow-x: auto; white-space: pre; }
+        .file-tree .dir { color: #667eea; font-weight: bold; }
+        .file-tree .file { color: #555; }
+        .backend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+        .backend-card { background: #f8f9fa; border-radius: 10px; padding: 20px; border-left: 4px solid #667eea; }
+        .backend-card h4 { color: #667eea; margin-bottom: 10px; font-size: 1.05rem; }
+        .backend-card p { color: #666; font-size: 0.9rem; margin-bottom: 10px; }
+        .backend-card ul { list-style: none; padding: 0; }
+        .backend-card li { color: #555; font-size: 0.85rem; padding: 3px 0; }
+        .backend-card li::before { content: "→ "; color: #667eea; }
+        .func-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .func-table th { background: #667eea; color: white; padding: 10px 12px; text-align: left; font-size: 0.9rem; }
+        .func-table td { padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #555; }
+        .func-table tr:hover { background: #f0f4ff; }
+        .func-table .fn-name { color: #dcdcaa; font-family: 'Consolas', monospace; }
+        .func-table .cls-name { color: #4ec9b0; font-family: 'Consolas', monospace; }
+        .func-table .file-path { color: #6a9955; font-family: 'Consolas', monospace; font-size: 0.8rem; }
+        footer { text-align: center; color: #999; padding: 30px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">vLLM Ascend</a>
+        <ul class="navbar-nav">
+            <li><a href="../index.html">架构总览</a></li>
+            <li><a href="upstream.html">上下游衔接</a></li>
+            <li><a href="../panorama/panorama.html">全景图</a></li>
+            <li><a href="core.html">核心模块</a></li>
+            <li><a href="models.html">模型定义</a></li>
+            <li><a href="attention.html" class="active">注意力</a></li>
+            <li><a href="ops.html">算子</a></li>
+            <li><a href="worker.html">执行器</a></li>
+            <li><a href="distributed.html">分布式</a></li>
+            <li><a href="quantization.html">量化</a></li>
+        </ul>
+    </nav>
+
+    <header class="page-header">
+        <h1>注意力机制 (attention/)</h1>
+        <p>5种NPU优化的注意力后端 · 上下文并行支持 · 15+文件</p>
+    </header>
+
+    <!-- 1. 模块概述 -->
+    <div class="section">
+        <h2>一、模块概述</h2>
+        <p>attention目录包含针对不同模型特性优化的注意力后端，支持标准Transformer、MLA、SFA、DSA、FA3等多种架构。通过上下文并行（Context Parallel）支持超长序列推理。</p>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图1：注意力后端继承关系</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph LR
+    A[AttentionBackend 基类] --> B[AscendAttentionBackend 标准]
+    A --> C[AscendMLABackend MLA]
+    A --> D[AscendSFABackend SFA]
+    A --> E[AscendDSABackend DSA]
+    A --> F[AscendFABackend FA3]
+    
+    B --> B1[Q/K/V矩阵乘法]
+    B --> B2[Softmax归一化]
+    
+    C --> C1[低秩KV压缩]
+    C --> C2[共享KV头]
+    
+    D --> D1[稀疏注意力模式]
+    D --> D2[选择性计算]
+    
+    E --> E1[动态稀疏模式]
+    E --> E2[索引器支持]
+    
+    F --> F1[分块计算]
+    F --> F2[内存优化]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 文件结构 -->
+    <div class="section">
+        <h2>二、文件结构</h2>
+        
+        <pre class="file-tree"><span class="dir">attention/</span>
+├── <span class="file">__init__.py</span>              # 入口：get_attn_backend_cls()
+├── <span class="file">attention_v1.py</span>          # 标准注意力后端
+├── <span class="file">mla_v1.py</span>                # MLA多头潜在注意力
+├── <span class="file">sfa_v1.py</span>                # SFA稀疏注意力
+├── <span class="file">dsa_v1.py</span>                # DSA动态稀疏注意力
+├── <span class="file">fa3_v1.py</span>                # Flash Attention 3
+├── <span class="file">sparse_flash_mla.py</span>      # 稀疏Flash MLA操作
+├── <span class="file">attention_mask.py</span>        # AttentionMaskBuilder
+├── <span class="file">indexer.py</span>               # AscendSFAIndexerBackend
+├── <span class="file">dsa_attn_kv_plan.py</span>      # DsaAttnKvPlan, get_dsa_attn_kv_plan()
+├── <span class="file">sfa_kv_offload.py</span>        # SFA KV缓存卸载
+├── <span class="file">utils.py</span>                 # PagedAttentionGraphParam, AscendDCPMetadata
+├── <span class="dir">context_parallel/</span>        # 上下文并行
+│   ├── <span class="file">__init__.py</span>
+│   ├── <span class="file">attention_cp.py</span>     # CP基类
+│   ├── <span class="file">common_cp.py</span>        # DCPMetadataBuilderMixin, DCPImplMixin
+│   ├── <span class="file">mla_cp.py</span>           # AscendMlaDCPImpl
+│   ├── <span class="file">sfa_cp.py</span>           # AscendSFADCPImpl
+│   └── <span class="file">dsa_cp.py</span>           # DSA上下文并行</pre>
+    </div>
+
+    <!-- 3. 后端选择逻辑 -->
+    <div class="section">
+        <h2>三、后端选择逻辑</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图2：注意力后端选择流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+graph TD
+    A[get_attn_backend_cls] --> B{use_mla?}
+    B -->|Yes| C{use_sparse?}
+    B -->|No| D{use_compress?}
+    C -->|Yes| E[AscendSFABackend]
+    C -->|No| F[AscendMLABackend]
+    D -->|Yes| G[AscendDSABackend]
+    D -->|No| H[AscendAttentionBackend]
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/attention/__init__.py</div>
+<pre>
+<span class="kw">def</span> <span class="fn">get_attn_backend_cls</span>(use_mla, use_sparse, use_compress):
+    <span class="cmt"># 根据模型配置选择注意力后端</span>
+    <span class="kw">if</span> use_mla:
+        <span class="kw">if</span> use_sparse:
+            <span class="kw">return</span> <span class="str">"vllm_ascend.attention.sfa_v1.AscendSFABackend"</span>
+        <span class="kw">else</span>:
+            <span class="kw">return</span> <span class="str">"vllm_ascend.attention.mla_v1.AscendMLABackend"</span>
+    <span class="kw">elif</span> use_compress:
+        <span class="kw">return</span> <span class="str">"vllm_ascend.attention.dsa_v1.AscendDSABackend"</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="str">"vllm_ascend.attention.attention_v1.AscendAttentionBackend"</span>
+</pre>
+        </div>
+    </div>
+
+    <!-- 4. 后端详解 -->
+    <div class="section">
+        <h2>四、后端详解</h2>
+        
+        <div class="backend-grid">
+            <div class="backend-card">
+                <h4>AscendAttentionBackend</h4>
+                <p>标准注意力后端，适用于普通Transformer模型</p>
+                <ul>
+                    <li>Q/K/V矩阵乘法</li>
+                    <li>注意力掩码应用</li>
+                    <li>Softmax归一化</li>
+                    <li>支持PagedAttention</li>
+                </ul>
+            </div>
+            <div class="backend-card">
+                <h4>AscendMLABackend</h4>
+                <p>MLA多头潜在注意力，适用于DeepSeek系列</p>
+                <ul>
+                    <li>低秩KV压缩（减少75%内存）</li>
+                    <li>共享KV头</li>
+                    <li>Prefill/Decode分离元数据</li>
+                    <li>内存高效</li>
+                </ul>
+            </div>
+            <div class="backend-card">
+                <h4>AscendSFABackend</h4>
+                <p>SFA稀疏注意力，适用于稀疏注意力模型</p>
+                <ul>
+                    <li>稀疏注意力模式</li>
+                    <li>选择性计算</li>
+                    <li>计算优化</li>
+                    <li>支持KV卸载</li>
+                </ul>
+            </div>
+            <div class="backend-card">
+                <h4>AscendDSABackend</h4>
+                <p>DSA动态稀疏注意力，适用于动态稀疏模型</p>
+                <ul>
+                    <li>动态稀疏模式</li>
+                    <li>自适应计算</li>
+                    <li>索引器支持</li>
+                    <li>KV计划管理</li>
+                </ul>
+            </div>
+            <div class="backend-card">
+                <h4>AscendFABackend</h4>
+                <p>Flash Attention 3，高性能注意力实现</p>
+                <ul>
+                    <li>分块计算</li>
+                    <li>内存优化</li>
+                    <li>高吞吐量</li>
+                    <li>适用于长序列</li>
+                </ul>
+            </div>
+        </div>
+
+        <table class="func-table">
+            <tr><th>文件</th><th>关键类/函数</th><th>功能说明</th></tr>
+            <tr><td class="file-path">attention_v1.py</td><td><span class="cls-name">AscendAttentionBackend</span>, <span class="cls-name">AscendAttentionBackendImpl</span>, <span class="cls-name">AscendC8AttentionBackendImpl</span>, <span class="cls-name">AscendMetadata</span>, <span class="cls-name">AscendAttentionMetadataBuilder</span></td><td>标准MHA注意力后端，支持C8量化变体，实现PagedAttention</td></tr>
+            <tr><td class="file-path">mla_v1.py</td><td><span class="cls-name">AscendMLABackend</span>, <span class="cls-name">AscendMLAPrefillMetadata</span>, <span class="cls-name">AscendMLADecodeMetadata</span>, <span class="cls-name">AscendMLAMetadata</span>, <span class="cls-name">AscendMLAMetadataBuilder</span></td><td>MLA后端，Prefill和Decode使用不同的元数据结构，优化DeepSeek推理</td></tr>
+            <tr><td class="file-path">sfa_v1.py</td><td><span class="cls-name">AscendSFABackend</span>, <span class="cls-name">AscendSFAMetadata</span>, <span class="cls-name">AscendSFAMetadataBuilder</span></td><td>SFA后端，稀疏注意力模式，配合indexer.py使用</td></tr>
+            <tr><td class="file-path">dsa_v1.py</td><td><span class="cls-name">AscendDSABackend</span>, <span class="cls-name">AscendDSAMetadata</span>, <span class="cls-name">AscendDSAImpl</span>, <span class="cls-name">DsaAttnKvPlan</span></td><td>DSA后端，动态稀疏注意力，支持KV计划管理</td></tr>
+            <tr><td class="file-path">fa3_v1.py</td><td><span class="cls-name">AscendFABackend</span>, <span class="cls-name">AscendFAImpl</span></td><td>Flash Attention 3后端，分块计算优化</td></tr>
+            <tr><td class="file-path">indexer.py</td><td><span class="cls-name">AscendSFAIndexerBackend</span>, <span class="cls-name">AscendSFAIndexerMetadataBuilder</span></td><td>SFA索引器后端，为SFA提供稀疏索引</td></tr>
+            <tr><td class="file-path">utils.py</td><td><span class="cls-name">PagedAttentionGraphParam</span>, <span class="cls-name">AscendDCPMetadata</span>, <span class="cls-name">AscendCommonAttentionMetadata</span>, <span class="fn-name">get_or_register_attention_buffer()</span>, <span class="fn-name">enable_dcp()</span>, <span class="fn-name">enable_pcp()</span></td><td>注意力工具函数，支持DCP和PCP模式</td></tr>
+            <tr><td class="file-path">context_parallel/mla_cp.py</td><td><span class="cls-name">AscendMlaDCPImpl</span>, <span class="cls-name">AscendMlaDCPMetadataBuilder</span></td><td>MLA上下文并行实现，支持跨设备注意力计算</td></tr>
+        </table>
+    </div>
+
+    <!-- 5. 标准注意力流程 -->
+    <div class="section">
+        <h2>五、标准注意力流程</h2>
+        
+        <div class="mermaid-box">
+            <div class="chart-label">图3：标准注意力计算流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant W as Worker
+    participant A as AscendAttentionBackend
+    participant N as NPU
+    
+    W->>A: prepare.attn_metadata()
+    A-->>W: AscendMetadata
+    
+    W->>A: forward_masked(hidden_states, metadata)
+    A->>N: Q * K^T (矩阵乘法)
+    N-->>A: 注意力分数
+    A->>N: 应用注意力掩码
+    A->>N: Softmax归一化
+    A->>N: 注意力权重 * V
+    N-->>A: 注意力输出
+    A-->>W: 输出hidden_states
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MLA注意力详解 -->
+    <div class="section">
+        <h2>六、MLA注意力详解</h2>
+        
+        <p>MLA（Multi-head Latent Attention）是DeepSeek系列模型的核心创新，通过低秩KV压缩将注意力计算的内存占用减少75%。</p>
+
+        <div class="mermaid-box">
+            <div class="chart-label">图4：MLA注意力计算流程</div>
+            <div class="chart-content">
+                <pre class="mermaid">
+sequenceDiagram
+    participant U as 上游vLLM Worker
+    participant M as AscendMLABackend
+    participant O as ops/mla.py
+    participant N as NPU
+    
+    U->>M: forward_batched(hidden_states, attn_metadata)
+    M->>O: 调用mla_forward()
+    O->>N: 低秩KV压缩
+    O->>N: Q * K^T (压缩后)
+    O->>N: Softmax
+    O->>N: 注意力权重 * V
+    N-->>O: 注意力输出
+    O-->>M: 返回结果
+    M-->>U: 输出hidden_states
+                </pre>
+            </div>
+        </div>
+
+        <div class="code-block">
+<div class="filename">vllm_ascend/attention/mla_v1.py（简化）</div>
+<pre>
+<span class="kw">class</span> <span class="cls">AscendMLABackend</span>(AttentionBackend):
+    <span class="kw">def</span> <span class="fn">forward_batched</span>(self, hidden_states, attn_metadata):
+        <span class="cmt"># 调用ops/mla.py中的MLA算子</span>
+        <span class="kw">return</span> mla_forward(
+            hidden_states,
+            attn_metadata.kv_cache,
+            attn_metadata.mla_metadata
+        )
+</pre>
+        </div>
+    </div>
+
+    <!-- 7. 上下文并行 -->
+    <div class="section">
+        <h2>七、上下文并行 (context_parallel/)</h2>
+        
+        <p>上下文并行将长序列分割到多个设备上计算，支持超长序列推理。DCP（Disaggregated Context Parallel）将Prefill和Decode分离到不同设备。</p>
+
+        <pre class="file-tree"><span class="dir">context_parallel/</span>
+├── <span class="file">__init__.py</span>
+├── <span class="file">attention_cp.py</span>     # 上下文并行基类
+├── <span class="file">common_cp.py</span>        # DCPMetadataBuilderMixin, DCPImplMixin
+├── <span class="file">mla_cp.py</span>           # AscendMlaDCPImpl, AscendMlaDCPMetadataBuilder
+├── <span class="file">sfa_cp.py</span>           # AscendSFADCPImpl, AscendSFADCPMetadataBuilder
+└── <span class="file">dsa_cp.py</span>           # DSA上下文并行</pre>
+
+        <div class="note">
+            <h4>上下文并行说明</h4>
+            <p>1. <strong>DCP</strong>：分解计算，将Prefill和Decode分离到不同设备，提升资源利用率</p>
+            <p>2. <strong>PCP</strong>：流水线上下文并行，将序列分割到多个设备上流水线计算</p>
+            <p>3. <strong>适用场景</strong>：超长序列（如100K+ token）的推理场景</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>vLLM Ascend Plugin | 华为昇腾NPU优化的大语言模型推理引擎</p>
+    </footer>
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        themeVariables: { fontSize: '16px', fontFamily: 'Arial, sans-serif' }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+===== FILE: worker/block_table.py =====
+[458行]
+class BlockTable:  | methods: __init__, append_row, add_row, clear_row, move_row, swap_row, compute_slot_mapping, compute_slot_mapping_draft, _compute_dcp_slot_mapping, commit_block_table, clear, _convert_physical_to_logical_blocks, get_device_tensor, get_cpu_tensor, get_numpy_array ...
+class MultiGroupBlockTable: The BlockTables for each KV cache group. | methods: __init__, append_row, add_row, clear_row, move_row, swap_row, compute_slot_mapping, compute_slot_mapping_draft, commit_block_table, clear, __getitem__
+
+===== FILE: worker/dcp_utils.py =====
+[696行]
+class DCPSpecDecodeMTPInputs: Device-side DCP state needed by proposer MTP draft steps. | methods: 
+class DCPSpecDecodeFirstPassInputs: DCP metadata attached to the first speculative draft pass. | methods: 
+class DCPAsyncSpecDecodeRebuildResult: Status returned after rebuilding async speculative inputs. | methods: 
+class DCPManager: Manage Decode Context Parallel metadata and reusable buffers. | methods: __init__, classify_decode_request_mask, init_batch_info, prepare_spec_decode_first_pass_inputs, _get_spec_decode_mtp_slot_inputs, prepare_spec_decode_mtp_drafting_inputs, rebuild_async_spec_decode_inputs, generate_dcp_mtp_input, _get_dcp_local_seq_lens, _is_mla_kv_cache_spec, _is_sfa_dcp_metadata_builder, prepare_spec_decode_drafting_cp_metadata, update_spec_decode_drafting_cp_metadata, generate_dcp_metadata, generate_mtp_attention_mask_for_decode
+
+===== FILE: worker/encoder_acl_graph.py =====
+[374行] module doc: NPU-specific encoder ACL graph: params, runtime context, FIA replay updates, and manager.
+class EncoderGraphParams: Mirrors :class:`vllm_ascend.compilation.acl_graph.GraphParams` but keyed by encoder token budget. | methods: 
+def set_encoder_graph_params(token_budgets): 
+def get_encoder_graph_params(): 
+def update_encoder_graph_workspace(token_budget, workspace): 
+class EncoderForwardContext: Vision encoder NPUGraph runtime flags and host-side FIA arguments. | methods: 
+def get_encoder_forward_context(): 
+def _reset_encoder_forward_context(): Clear replay-time host length fields.
+def set_encoder_forward_context(token_budget, capturing): Enter encoder graph replay (FIA host args): callers must pass lengths each time.
+def maybe_compute_actual_seq_lengths(cu_seqlens, num_query_tokens, num_kv_tokens): Convert ``cu_seqlens`` to FIA host ``actual_seq_lengths``.
+def update_encoder_graph_params(update_stream, token_budget): Re-bind fused infer attention host tensors inside the encoder NPUGraph (parallel to LLM path).
+class EncoderAclGraphManager: Hooks encoder capture/replay into Ascend FIA graph-task infrastructure. | methods: __init__, capture, _capture_budget_graph, _run_budget_graph
+def weak_ref_workspaces(): 
+
+===== FILE: worker/model_runner_v1.py =====
+[5368行]
+class GraphCaptureContext:  | methods: 
+def graph_capture(device): `graph_capture` is a context manager which should surround the code that
+def get_tp_context(drafter): 
+class ExecuteModelState: Ephemeral cached state transferred between execute_model() and | methods: 
+class NPUModelRunner:  | methods: __init__, use_dcp, _init_device_properties, _sync_device, reset_encoder_cache, _set_up_drafter, _get_drafter, _eagle3_uses_aux_hidden_state, _get_eagle3_aux_layers_from_config, _draft_uses_qwen3_gqa_dspark, _use_aclgraph, _sync_metadata_across_dp, get_model, _is_pd_prefill_worker, _apply_pp_sampled_tokens_from_scheduler_output ...
+def _post_process_cudagraph_mode(tensor): Synchronize cudagraph_mode across DP ranks by taking the minimum.
+def _get_gpu_model_runner_module_name(model_runner): Return the module name of GPUModelRunner found in the MRO.
+def _torch_cuda_wrapper(): 
+def _replace_gpu_model_runner_function_wrapper(target_module_name): 
+def update_pass_config(model_runner): 
+
+===== FILE: worker/npu_input_batch.py =====
+[258行]
+class NPUInputBatch:  | methods: __init__
+
+===== FILE: worker/utils.py =====
+[184行]
+def _zero_kv_blocks_kernel(seg_addrs_ptr, block_ids_ptr, n_blocks, N_SEGS, PAGE_SIZE_EL, BLOCK_SIZE): Zero KV cache blocks across all segments in a single launch.
+class AscendKVBlockZeroer: Manages efficient zeroing of KV cache blocks via a Triton kernel. | methods: __init__, init_meta, zero_block_ids
+
+===== FILE: worker/v2/aclgraph_utils.py =====
+[299行]
+def _prepare_pcp_inputs_to_capture(num_reqs, num_tokens, model_state, input_buffers, _block_tables, attn_groups): Build graph inputs with the same PCP-local layout used on replay.
+def collect_sorted_captured_token_sizes(capture_descs): Collect the actual per-graph token counts that will be captured.
+def _get_graph_update_backend(attn_groups): 
+class ModelAclGraphManager: ACL Model Cuda Graph Manager for Ascend NPUs. | methods: init_breakable_cg_runner, run_fullgraph, capture
+class ModelWithContext: Define a wrapper model to inject forward context. | methods: __init__, forward, get_original_model, compute_logits, compute_draft_logits, markov_embed, markov_bias, map_draft_to_target
+def model_capture_wrapper(speculator, is_draft_model_prefill): Context manager to override speculator's model for speculator capturing.
+
+===== FILE: worker/v2/attn_utils.py =====
+[936行]
+def get_kv_cache_spec(vllm_config): Build Ascend-specific KV cache specs for v2 worker patching.
+def build_attn_metadata(): Build attention metadata for Ascend NPUs.
+def build_attn_state(vllm_config, seq_lens_np, num_reqs, num_scheduled_tokens, num_valid_tokens): Build attention state for npu's attention backend.
+def _get_layer_kv_cache_specs(kv_cache_config): 
+def _is_dsv4_model(vllm_config): 
+def _get_attention_kv_cache_dims(layer_name, kv_cache_spec): 
+def _adjust_dsv4_kv_layout(raw_tensor, cache_shapes, cache_dtypes, page_size_bytes, overlap_full_kv_cache): 
+def _view_dsv4_cache(raw_tensor, kv_cache_spec, attn_backend, kv_cache_config): Create DSA cache views without applying normal MLA K/V splitting.
+def _align_memory(tensor, alignment): 
+def _align_up(value, alignment): 
+def _allocate_int8_cache_tensor(numel, alignment, device): Allocate an int8 raw cache tensor.
+def _allocate_sparse_c8_indexer_tensors(dsa_k_tensor_size, dsa_k_scale_tensor_size, alignment, scale_dtype, device): Allocate dsa_k and dsa_k_scale from one aligned int8 raw allocation.
+def _allocate_kv_cache(kv_cache_config, shared_layers, device): Initialize the KV cache buffer with the correct size. The buffer needs to be
+def _reshape_mamba_kv_cache(raw_cache, kv_cache_spec): Create the contiguous per-state views used by the Ascend v1 runner.
+def _reshape_kv_cache_v2(attn_groups, kv_cache_raw_tensors, cache_dtype, kernel_block_sizes, shared_kv_cache_layers, kv_cache_config): 
+def build_attn_metadata_wrapper(): Context manager to override attention metadata building for Ascend NPUs.
+def build_draft_attn_metadata_factory(positions, pad, is_prefilling): Wrap build_attn_metadata to forward rotary positions for the draft block.
+
+===== FILE: worker/v2/block_table.py =====
+[61行]
+class AscendBlockTables: Block table for Ascend NPUs. | methods: __init__
+
+===== FILE: worker/v2/eplb.py =====
+[97行]
+def is_eplb_load_collection_phase_matched(load_collection_phase, batch_has_prefill): Return whether the batch belongs to the configured collection phase.
+def _unwrap_moe(model): 
+class AscendEPLBController: Construct Ascend state and apply phase-filtered load collection. | methods: __init__, prepare_load, set_batch_phase, prepare_forward, setup_from_mapping
+
+===== FILE: worker/v2/input_batch.py =====
+[142行]
+class AscendInputBuffers: Input buffers for Ascend NPUs. | methods: __init__
+class AscendInputBatch: Input batch for Ascend NPUs. | methods: 
+
+===== FILE: worker/v2/model_runner.py =====
+[995行]
+def _use_ascend_pcp_manager_for_vllm_0271(): Make the legacy vLLM PCP builder instantiate the Ascend manager.
+class NPUModelRunner: Model runner for Ascend NPUs. | methods: __init__, pcp_manager_cls, sample_tokens, initialize_kv_cache, execute_model, profile_run, _lmhead_tp_max_num_logits, sample, _dummy_run, postprocess_sampled, _copy_num_computed_tokens_to_cpu, _update_seq_lens_cpu, _pad_query_start_loc_for_fia
+def graph_manager_wrapper(model_runner): Context manager to override graph manager.
+
+===== FILE: worker/v2/model_states/__init__.py =====
+[71行]
+def init_asecnd_model_state(vllm_config, model, encoder_cache, device): 
+
+===== FILE: worker/v2/model_states/default.py =====
+[106行]
+class AscendModelState: Model state for Ascend NPUs. | methods: prepare_attn
+
+===== FILE: worker/v2/model_states/mamba_hybrid.py =====
+[106行]
+class AscendMambaHybridModelState: Mamba state with Ascend-specific attention metadata construction. | methods: prepare_attn
+
+===== FILE: worker/v2/pcp_manager.py =====
+[218行]
+class AscendPCPAttentionContext: Canonical global PCP view for one attention step. | methods: 
+class AscendPCPManager: PCP manager that refreshes Ascend-only local-batch metadata. | methods: validate_config, partition_batch, prepare_slot_mappings, build_attention_context
+
+===== FILE: worker/v2/pp_utils.py =====
+[196行] module doc: Common Model Runner V2 pipeline-parallel utilities.
+class _PPAuxHiddenStateModel:  | methods: 
+class SpecPPSupport: Capabilities for one speculative decoding method under PP. | methods: 
+def resolve_spec_pp_support(vllm_config): Return the registered Spec+PP capabilities for this configuration.
+def bypass_upstream_spec_pp_guard(vllm_config, support): Initialize the upstream runner as PP=1 to bypass its Spec+PP guard.
+def restore_pp_after_upstream_init(model_runner, vllm_config): Restore PP state skipped while the upstream runner initialized as PP=1.
+class PPTransportDataType: Data types carried between PP ranks via ``IntermediateTensors``. | methods: 
+def make_empty_intermediate_tensors(model, tensor_factory): Wrap a model's PP tensor factory with auxiliary receive buffers.
+def _get_transport_key_prefix(data_type): 
+def get_pp_transport_tensors(intermediate_tensors, data_type): Return tensors of one transport type in their original order.
+def add_pp_transport_tensors(intermediate_tensors, data_type, tensors): Add tensors of one transport type to a PP payload.
+def add_pp_transport_buffers(intermediate_tensors, data_type, count, shape, dtype, device): Add empty receive buffers for one PP transport data type.
+
+===== FILE: worker/v2/sample/apply_top_k_top_p.py =====
+[14行]
+def apply_top_k_top_p_npu(logits, k, p): 
+
+===== FILE: worker/v2/sample/bad_words.py =====
+[185行]
+def _bad_words_kernel(logits_ptr, logits_stride, expanded_idx_mapping_ptr, bad_word_token_ids_ptr, bad_word_token_ids_stride, bad_word_offsets_ptr): Optimized bad words filtering kernel for Ascend NPU.
+def apply_bad_words(logits, expanded_idx_mapping, bad_word_token_ids, bad_word_offsets, num_bad_words, all_token_ids): Apply bad words filtering to logits.
+
+===== FILE: worker/v2/sample/gumbel.py =====
+[219行]
+def _temperature_kernel(logits_ptr, logits_stride, expanded_idx_mapping_ptr, temperature_ptr, vocab_size, BLOCK_SIZE): 
+def apply_temperature(logits, expanded_idx_mapping, temperature): Args:
+def _gumbel_sample_kernel(local_argmax_ptr, local_argmax_stride, local_max_ptr, local_max_stride, processed_logits_ptr, processed_logits_stride): 
+def gumbel_sample(logits, expanded_idx_mapping, temperature, seed, pos, apply_temperature): 
+
+===== FILE: worker/v2/sample/logprob.py =====
+[169行]
+def _topk_log_softmax_kernel(output_ptr, logits_ptr, logits_stride, topk_ids_ptr, topk, vocab_size): 
+def compute_token_logprobs(logits, token_ids): 
+def _ranks_kernel(output_ptr, logits_ptr, logits_stride, token_ids_ptr, vocab_size, batch_size): 
+def compute_topk_logprobs(logits, num_logprobs, sampled_token_ids, cu_num_logits, logprob_token_ids_state, expanded_idx_mapping): 
+
+===== FILE: worker/v2/sample/min_p.py =====
+[91行]
+def _min_p_kernel(in_logits_ptr, out_logits_ptr, logits_stride, expanded_idx_mapping_ptr, min_p_ptr, vocab_size): 
+def apply_min_p(logits, expanded_idx_mapping, min_p): 
+
+===== FILE: worker/v2/sample/penalties.py =====
+[225行]
+def _penalties_kernel(logits_ptr, logits_stride, expanded_idx_mapping_ptr, token_ids_ptr, expanded_local_pos_ptr, repetition_penalty_ptr): 
+def apply_penalties(logits, expanded_idx_mapping, token_ids, expanded_local_pos, repetition_penalty, frequency_penalty): 
+def _bincount_kernel(expanded_idx_mapping_ptr, all_token_ids_ptr, all_token_ids_stride, prompt_len_ptr, prefill_len_ptr, prompt_bin_mask_ptr): 
+def bincount(expanded_idx_mapping, all_token_ids, prompt_len, prefill_len, prompt_bin_mask, output_bin_counts): 
+
+===== FILE: worker/v2/spec_decode/__init__.py =====
+[58行]
+def init_speculator(vllm_config, device): Override GPU init_speculator for Ascend NPUs.
+
+===== FILE: worker/v2/spec_decode/autoregressive/aclgraph.py =====
+[179行]
+class AutoRegressiveAclGraphManager: ACL graph manager for autoregressive speculative decoding. | methods: __init__, capture, run_fullgraph
+
+===== FILE: worker/v2/spec_decode/autoregressive/speculator.py =====
+[507行]
+class AscendAutoRegressiveSpeculator: Shared Ascend spec-decode loop for AscendEagle/AscendMTPSpeculator. | methods: __init__, _create_draft_vllm_config, init_cudagraph_manager, propose, set_attn, capture, _run_model, _generate_draft, _multi_step_decode, _prefill, _build_draft_attn_metadata, build_draft_attn_metadatas, _init_decode_draft_attn_metadatas, _update_decode_attn_metadata, _calc_next_seq_lens_cpu ...
+def gather(input, dim, index): 
+def torch_gather_wrapper(): Context manager to override torch.gather for Ascend NPUs.
+
+===== FILE: worker/v2/spec_decode/dflash/aclgraph.py =====
+[122行]
+class DFlashAclGraphManager:  | methods: __init__, capture, run_fullgraph
+
+===== FILE: worker/v2/spec_decode/dflash/speculator.py =====
+[452行]
+class AscendDFlashSpeculator:  | methods: build_draft_attn_metadatas, _update_draft_attn_metadata, __init__, init_cudagraph_manager, set_attn, propose
+
+===== FILE: worker/v2/spec_decode/dspark/speculator.py =====
+[196行]
+class AscendDSparkSpeculator:  | methods: __init__, load_draft_model, init_cudagraph_manager, set_attn, build_draft_attn_metadatas, _update_draft_attn_metadata, propose
+
+===== FILE: worker/v2/spec_decode/eagle/speculator.py =====
+[44行]
+class AscendEagleSpeculator: Ascend Eagle speculator: the NPU loop from AscendAutoRegressiveSpeculator | methods: _create_draft_vllm_config
+
+===== FILE: worker/v2/spec_decode/rejection_sampler_utils.py =====
+[507行]
+def _npu_gumbel_block_argmax(logits, block, mask, token_idx, expanded_idx_mapping_ptr, temp_ptr): 
+def _resample_kernel(resampled_local_argmax_ptr, resampled_local_argmax_stride, resampled_local_max_ptr, resampled_local_max_stride, target_logits_ptr, target_logits_stride): 
+def _probabilistic_rejection_kernel(sampled_ptr, sampled_stride, rejected_steps_ptr, target_rejected_logsumexp_ptr, draft_rejected_logsumexp_ptr, target_logits_ptr): 
+def rejection_sample(target_logits, draft_logits, draft_sampled, cu_num_logits, pos, idx_mapping): 
+
+===== FILE: worker/v2/states.py =====
+[71行]
+class AscendRequestState: Request state for Ascend NPUs. | methods: __init__, add_request
+
+===== FILE: worker/v2/utils.py =====
+[61行]
+def torch_cuda_wrapper(): 
+def communicator_switch(): 
+def torch_npu_graph_wrapper(): 
+
+===== FILE: worker/worker.py =====
+[1152行]
+class NPUWorker:  | methods: __init__, uninstall_static_kernel, sleep, wake_up, _check_weight_transfer_engine, init_weight_transfer_engine, _check_nz_disabled, start_weight_update, update_weights, finish_weight_update, shutdown, initialize_cache, _init_device, init_device, _apply_kv_offload_decode_memory_constraints ...
+def parse_text_output(output): 
+

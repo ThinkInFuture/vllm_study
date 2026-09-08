@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend - 模型定义 API 参考</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;}
+.navbar{background:white;border-radius:12px;padding:15px 25px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.navbar-brand{font-size:1.2rem;font-weight:bold;color:#667eea;text-decoration:none;}
+.navbar-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap;}
+.navbar-nav a{color:#666;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;}
+.navbar-nav a:hover,.navbar-nav a.active{background:#667eea;color:white;}
+.page-header{text-align:center;margin-bottom:30px;}
+.page-header h1{font-size:1.8rem;color:#333;margin-bottom:5px;}
+.page-header p{color:#666;font-size:0.95rem;}
+.section{background:white;border-radius:12px;padding:25px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.section h2{color:#333;font-size:1.2rem;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #667eea;}
+.file-block{margin-bottom:25px;padding-left:20px;border-left:3px solid #e8ecf0;}
+.file-block:hover{border-left-color:#667eea;}
+.file-name{font-family:"Consolas",monospace;font-size:0.95rem;font-weight:bold;color:#667eea;margin-bottom:8px;display:block;}
+.file-desc{color:#888;font-size:0.85rem;margin-bottom:12px;line-height:1.4;}
+.item{display:flex;gap:10px;padding:4px 0;font-size:0.85rem;}
+.item-type{font-family:"Consolas",monospace;font-size:0.75rem;padding:1px 6px;border-radius:4px;white-space:nowrap;min-width:50px;text-align:center;}
+.type-class{background:#e8f5e9;color:#2e7d32;}
+.type-func{background:#e3f2fd;color:#1565c0;}
+.item-name{font-family:"Consolas",monospace;color:#333;min-width:220px;}
+.item-desc{color:#666;}
+footer{text-align:center;color:#999;padding:30px;font-size:0.85rem;}
+.file-desc-real{color:#444;font-size:0.88rem;margin-bottom:8px;line-height:1.7;background:#f8f9fc;border-radius:8px;padding:10px 12px;}
+.src-link{font-size:0.75rem;color:#fff;background:#667eea;border-radius:4px;padding:1px 8px;margin-left:8px;text-decoration:none;font-weight:normal;vertical-align:middle;}
+.src-link:hover{background:#5568d8;}
+.file-classes{color:#999;font-size:0.78rem;margin-bottom:10px;line-height:1.5;}
+.container{max-width:1200px;margin:0 auto;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="../index.html" class="navbar-brand">vLLM Ascend</a><ul class="navbar-nav"><li><a href="panorama.html">全景索引</a></li><li><a href="panorama-root.html">root</a></li><li><a href="panorama-core.html">core</a></li><li><a href="panorama-attention.html">attention</a></li><li><a href="panorama-ops.html">ops</a></li><li><a href="panorama-worker.html">worker</a></li><li><a class="active" href="panorama-models.html">models</a></li><li><a href="panorama-distributed.html">distributed</a></li><li><a href="panorama-rest.html">rest(其他)</a></li></ul></nav>
+<div class="page-header"><h1>vLLM Ascend · 模型定义模块 API 参考</h1><p>文件数: 26 | 函数条目: 286 | 每个文件含职责讲解，每个函数含 [代码行数]，文件名旁可跳转源码查看页</p></div><div class="file-block">
+<div class="file-name">models\__init__.py<a class="src-link" href="../src-viewer.html?file=models/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models 包注册入口（56 行）。register_model 把 Ascend 定制的模型架构（DeepSeek-V4、Kimi K3、MiniMax-M3 系列、各 draft 模型等）注册进 vLLM 的模型注册表，使平台加载模型时命中 NPU 实现而非上游版本。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">register_model</span><span class="item-desc">[53行] 将模型架构名注册到 vLLM ModelRegistry（Kimi/DeepSeek/MiniMax/Qwen等）</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_mtp.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_mtp.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek MTP（Multi-Token Prediction）投机层适配（81 行）。AscendDeepSeekMTP 实现 MTP 模块：forward 前向、load_weights 加载（_rewrite_spec_layer_name 重写投机层权重名以对齐 checkpoint）、_maybe_set_own_lm_head 在需要时为 draft 设置独立输出头；AscendGlmMoeDsaForCausalLM 为 GLM-MoE-DSA 的权重加载适配。</div>
+<div class="file-classes">类: AscendDeepSeekMTP, AscendGlmMoeDsaForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[5行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[12行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_set_own_lm_head</span><span class="item-desc">[19行] 条件性设置自定义 lm_head</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[7行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rewrite_spec_layer_name</span><span class="item-desc">[5行] 重写 spec 层的名称</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\kimi_k3.py<a class="src-link" href="../src-viewer.html?file=models/kimi_k3.py" target="_blank">查看源码</a></div><div class="file-desc-real">Kimi K3 模型适配（871 行）。AscendKimiMoE 用 vLLM 标准 MoE 接口组装 Kimi K3 的专家层；AscendKimiMLAAttention 仅扩展 DSpark RoPE 元数据部分（其余沿用上游通用 Kimi MLA）；AscendKimiDecoderLayer 沿上游解码层结构接 Ascend 注意力后端（_run_self_attn/forward_attn_residual）；AscendKimiLinearModel 组装文本主体并处理权重加载；AscendKimiLinearForCausalLM/AscendKimiK3ForConditionalGeneration 分别为文本因果 LM 与多模态包装（保留 vLLM 0.27 状态/缓存接口、支持 DSpark 辅助捕获物化）；AscendKimiK3MultiModalProjector 多模态投影器（可选 ModelSlim 输出旋转）；_apply_ascend_attn_res 用原生算子实现 Kimi 规范的残差混合。</div>
+<div class="file-classes">类: AscendKimiMoE, AscendKimiMLAAttention, AscendKimiDecoderLayer, AscendKimiLinearModel, AscendKimiLinearForCausalLM, AscendKimiK3MultiModalProjector, AscendKimiK3ForConditionalGeneration</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_ascend_attn_res</span><span class="item-desc">[34行] 应用 Kimi 学习到的残差混合（用原生 NPU ops）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[114行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[6行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_attention_layer</span><span class="item-desc">[2行] attention 层实例</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_vl_first_layer</span><span class="item-desc">[2行] 判断是否是 VL 的第一层</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">layer_name</span><span class="item-desc">[2行] 当前层的名称</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">impl</span><span class="item-desc">[2行] impl 实例变量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">kv_cache</span><span class="item-desc">[2行] kv cache 实例变量</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">kv_cache_dtype</span><span class="item-desc">[2行] kv cache dtype</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_k_scale</span><span class="item-desc">[2行] K cache 缩放因子</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_self_attn</span><span class="item-desc">[7行] 运行 self-attention 子层</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_attn_residual</span><span class="item-desc">[44行] 应用 attention residual 块（Kimi 特有）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_layer</span><span class="item-desc">[7行] 按 layer_idx 返回 layer 实例</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[25行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">remap_mixed_gate_weights</span><span class="item-desc">[14行] 重映射混合 gate 权重到正确的 expert index</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_dspark_aux_capture_materialized</span><span class="item-desc">[2行] 为 DSpark 附加捕获启用物化</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\kimi_k3_dspark.py<a class="src-link" href="../src-viewer.html?file=models/kimi_k3_dspark.py" target="_blank">查看源码</a></div><div class="file-desc-real">Kimi K3 DSpark draft 模型（364 行）。AscendK3DSparkModel 提供 precompute_and_store_context_kv 预计算并缓存上下文 KV 供 draft 多步复用，forward 执行 draft 前向；AscendK3DSparkDecoderLayer 为 draft 解码层；AscendK3DSparkForCausalLM 组织整体（get_draft_attn_causal 决定 draft 注意力因果性、load_weights、embed_input_ids）。</div>
+<div class="file-classes">类: AscendK3DSparkDecoderLayer, AscendK3DSparkModel, AscendK3DSparkForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_uses_causal_draft_attention</span><span class="item-desc">[5行] 是否使用因果 draft attention</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[32行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[18行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precompute_and_store_context_kv</span><span class="item-desc">[28行] 预计算并存储 context 阶段 KV</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_draft_attn_causal</span><span class="item-desc">[3行] 取得 draft attention 是否因果</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[54行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[30行] Embed draft tokens and replace multimodal placeholder positions.</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\kimi_k3_mtp.py<a class="src-link" href="../src-viewer.html?file=models/kimi_k3_mtp.py" target="_blank">查看源码</a></div><div class="file-desc-real">Kimi K3 MTP draft 模型（93 行）。AscendKimiK3MultiTokenPredictorLayer 为单层 MTP 预测层，AscendKimiK3MultiTokenPredictor 组装 MTP 模块，AscendKimiK3MTP 为对 vLLM 注册暴露的完整 draft 模型包装。</div>
+<div class="file-classes">类: AscendKimiK3MultiTokenPredictorLayer, AscendKimiK3MultiTokenPredictor, AscendKimiK3MTP</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[8行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\llama_eagle3.py<a class="src-link" href="../src-viewer.html?file=models/llama_eagle3.py" target="_blank">查看源码</a></div><div class="file-desc-real">Llama Eagle3 draft 模型（140 行）。AscendEagle3LlamaForCausalLM 加载 Eagle3 draft 权重并执行 draft 前向；针对 QuaRot 旋转的 draft 训练方式：get_embedding_tensor 扫描目录找 embedding 张量、_find_safetensors_weight 定位目标张量避免加载无关分片、load_quarot_target_layer 把目标层词表分片装入 draft 的未旋转隐藏基、compute_rotation_matrix3 计算三层 hidden_states 的反旋转矩阵。</div>
+<div class="file-classes">类: AscendEagle3LlamaForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_embedding_tensor</span><span class="item-desc">[12行] Scans the directory and returns the first tensor found that contains 'embed' in its key.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_find_safetensors_weight</span><span class="item-desc">[20行] Locate one target tensor without loading unrelated checkpoint shards.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_quarot_target_layer</span><span class="item-desc">[42行] Load one target vocab shard into the draft's unrotated hidden basis.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_rotation_matrix3</span><span class="item-desc">[3行] Anti-rotate matrix for 3 layers of hidden_states.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[5行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[26行] 加载权重到模型</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\llama_eagle3_vwn.py<a class="src-link" href="../src-viewer.html?file=models/llama_eagle3_vwn.py" target="_blank">查看源码</a></div><div class="file-desc-real">Llama Eagle3 的 VWN（vocab-未旋转网络）变体（257 行）。PreVwnLayerV1 为前置 VWN 层、VwnLlamaDecoderLayer/VwnLlamaModel 组成 VWN 主体（替代标准解码层栈）；Eagle3VwnLlamaForCausalLM 提供 compute_logits 与 combine_hidden_states（合并多源 hidden states 供 draft 使用），是 Eagle3 在 VWN 投影结构下的 Ascend 实现。</div>
+<div class="file-classes">类: PreVwnLayerV1, VwnLlamaDecoderLayer, VwnLlamaModel, Eagle3VwnLlamaForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_linear</span><span class="item-desc">[10行] 内部线性层调用</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[39行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[9行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[22行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">combine_hidden_states</span><span class="item-desc">[21行] 合并 hidden states（Eagle3 等）</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\qwen3_dflash2.py<a class="src-link" href="../src-viewer.html?file=models/qwen3_dflash2.py" target="_blank">查看源码</a></div><div class="file-desc-real">Qwen3 DFlash2 draft 模型（309 行）。DFlashGroupedConv 用分组卷积从 anchor hidden states 一次性卷出多步 draft 的 delta/base（prepare/finish 管理卷积前后状态）；DFlash2Qwen3DecoderLayer 为 draft 解码层；CandidateSelector 基于 _score_edges 对候选边打分（前驱/后继表 + unary logits + anchor token）选 top-k 候选路径；DFlash2Qwen3Model/DFlash2Qwen3ForCausalLM 组装模型并提供 compute_candidates 候选计算接口。</div>
+<div class="file-classes">类: DFlashGroupedConv, DFlash2Qwen3DecoderLayer, CandidateSelector, DFlash2Qwen3Model, DFlash2Qwen3ForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_grouped_conv</span><span class="item-desc">[21行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[14行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_convolve</span><span class="item-desc">[10行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">prepare</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">finish</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[24行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_score_edges</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[2行] 将 input_ids 嵌入为 hidden states</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_candidates</span><span class="item-desc">[23行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\qwen3_dspark.py<a class="src-link" href="../src-viewer.html?file=models/qwen3_dspark.py" target="_blank">查看源码</a></div><div class="file-desc-real">Qwen3 DSpark draft 模型（173 行）。DSparkConfidenceHead 为置信度头（对 draft 候选打置信分）；AscendQwen3DSparkForCausalLM 组织 draft 模型：compute_confidence 输出置信度、load_weights 处理 process_weight 的旋转权重合并（linear_weight+rotation_weight）。</div>
+<div class="file-classes">类: DSparkConfidenceHead, AscendQwen3DSparkForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weight</span><span class="item-desc">[16行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[13行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[8行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_confidence_relative_name</span><span class="item-desc">[10行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_confidence</span><span class="item-desc">[6行] Per-position acceptance probability for each drafted token.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[69行] 加载权重到模型</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\__init__.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models.deepseek_v4 子包标记。该包实现 DeepSeek-V4 在 Ascend 上的完整适配：主模型、lightning indexer、KV 压缩器、SWA 缓存、DSpark draft 与 MTP。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type">(无函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\compressor.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/compressor.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 KV 压缩器（238 行）。Compressor 把长上下文 KV 压缩为低秩表示（_compute_metadata 构建压缩元数据、forward 执行压缩）；AscendCompressorMetadata 携带压缩 KV 与压缩器状态缓存的请求级元数据；AscendCompressorStateCache 管理压缩器状态的分页缓存：get_kv_cache_spec 定义缓存规格、get_attn_backend 选择配套后端。</div>
+<div class="file-classes">类: AscendCompressorStateCache, Compressor</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[77行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[15行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[32行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[11行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_metadata</span><span class="item-desc">[31行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\dspark.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/dspark.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 DSpark draft 模型（547 行）。DSparkMarkovHead 实现 Markov 式候选头（embed/bias）；DSparkConfidenceHead 置信度头；DeepseekV4DSparkModel 组装 draft 主体：_project_shared_kv 投影共享 KV、_store_standard_swa_kv 存标准 SWA KV、precompute_and_store_context_kv 预计算上下文 KV、hc_head/Markov embed/bias 接口与 compute_logits；DSparkDeepseekV4ForCausalLM 为注册包装：set_moe_parameters、map_draft_to_target（draft→目标 token 映射）、compute_draft_logits、_remap_dspark_name 权重名重映射。</div>
+<div class="file-classes">类: DSparkMarkovHead, DSparkConfidenceHead, DeepseekV4DSparkModel, DSparkDeepseekV4ForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_dsv4_rope</span><span class="item-desc">[14行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_dspark_num_mtp_layers</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[21行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">bias</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[10行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_draft_kv_cache_layer_names</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">combine_hidden_states</span><span class="item-desc">[2行] 合并 hidden states（Eagle3 等）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_project_shared_kv</span><span class="item-desc">[11行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_store_standard_swa_kv</span><span class="item-desc">[24行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precompute_and_store_context_kv</span><span class="item-desc">[11行] 预计算并存储 context 阶段 KV</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hc_head</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">markov_embed</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">markov_bias</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[11行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_expert_mapping</span><span class="item-desc">[9行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_moe_parameters</span><span class="item-desc">[18行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_draft_logits</span><span class="item-desc">[3行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">map_draft_to_target</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_confidence</span><span class="item-desc">[4行] Per-position acceptance probability for each drafted token.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[95行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_remap_dspark_name</span><span class="item-desc">[40行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\indexer.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/indexer.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 lightning indexer（718 行）。Hadamard 工具：hadamard_linear 快速 Hadamard 变换线性层、hadamard_scale/rotate_activation 激活旋转；AscendDeepseekV4IndexerCache 管理 indexer K/scale 分页缓存（get_kv_cache_spec/get_attn_backend）；IndexerOverlapPlan 把主注意力压缩器的工作安排在 indexer 选择周围重叠执行；AscendIndexerOps 封装设备算子序列：解包 indexer KV 缓存、量化 query/key、更新 scale 缓存、select_topk 及量化-更新-选择融合路径；DeepseekV4Indexer 为 indexer 层本体：多流路径（_cv_compute_query_and_update_cache_multistream/_select_topk_multistream）与串行路径（_select_topk_serial）、topk 索引缓存复用、forward 主入口。</div>
+<div class="file-classes">类: AscendDeepseekV4IndexerCache, DeepseekV4Indexer</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hadamard_linear</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hadamard_scale</span><span class="item-desc">[4行] Scale and reshape the output of hadamard_linear.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rotate_activation</span><span class="item-desc">[3行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_w8a8_dynamic</span><span class="item-desc">[7行] True iff ``linear`` is wired up with ``AscendW8A8DynamicLinearMethod``.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[74行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[23行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[61行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[11行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unpack_dsa_indexer_kv_cache</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">quantize_query</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">quantize_key_and_update_cache</span><span class="item-desc">[13行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_scale_cache</span><span class="item-desc">[11行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">select_topk</span><span class="item-desc">[31行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">quantize_update_cache_and_select_topk</span><span class="item-desc">[27行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_indexer_cache_metadata</span><span class="item-desc">[9行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_cache</span><span class="item-desc">[35行] Update Indexer caches without projecting queries or selecting TopK.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_cached_topk_indices</span><span class="item-desc">[7行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_cached_topk_indices</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_cv_compute_query_and_update_cache_multistream</span><span class="item-desc">[119行] Compute the Indexer query and update its cache.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_topk_multistream</span><span class="item-desc">[35行] Overlap Indexer selection inputs with caller-provided main-stream work.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_indexer_qkv_prepare</span><span class="item-desc">[66行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_topk_serial</span><span class="item-desc">[45行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\model.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/model.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 主模型（1280 行）。AscendDeepseekV4SWACache 管理 SWA（滑窗注意力）层缓存（spec/forward/后端选择）；RoPE：precompute_freqs_cis_cpu 预计算复指数频率表、apply_rotary_emb 应用/逆变换；DeepseekV4Attention 注意力层、DeepseekV4MoE 专家层（DeepseekV2MLP 为共享专家 MLP）、DeepseekV2DecoderLayer（hc_pre/hc_post 挂钩）、DeepseekV4Model 主体（hc_head 接口）；yarn_get_mscale/_get_llama_4_scaling 支持 YaRN 与 Llama4 位置缩放；AscendDeepseekV4ForCausalLM 为完整包装（MTP 目标 hidden states、辅助隐藏层设置、专家映射、权重加载）。</div>
+<div class="file-classes">类: AscendDeepseekV4SWACache, DeepseekV2MLP, DeepseekV4MoE, DeepseekV4Attention, DeepseekV2DecoderLayer, DeepseekV4Model, DeepseekV2MixtureOfExperts, AscendDeepseekV4ForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[22行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[15行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[9行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[4行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">precompute_freqs_cis_cpu</span><span class="item-desc">[36行] Precomputes frequency-based complex exponential values for rotary positional embeddings.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">find_correction_dim</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">find_correction_range</span><span class="item-desc">[4行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">linear_ramp_factor</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">apply_rotary_emb</span><span class="item-desc">[22行] Applies rotary positional embeddings to the input tensor.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_spec_layer_idx_from_weight_name</span><span class="item-desc">[4行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">yarn_get_mscale</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_llama_4_scaling</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hc_pre</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hc_post</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">make_empty_intermediate_tensors</span><span class="item-desc">[14行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[2行] 将 input_ids 嵌入为 hidden states</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hc_head</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extract_moe_parameters</span><span class="item-desc">[17行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_physical_experts_metadata</span><span class="item-desc">[14行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_moe_parameters</span><span class="item-desc">[20行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[6行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_expert_mapping</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_mtp_target_hidden_states</span><span class="item-desc">[5行] Pre-hc_head residual stream buffer (max_num_batched_tokens,</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_aux_hidden_state_layers</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[221行] 加载权重到模型</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\deepseek_v4\mtp.py<a class="src-link" href="../src-viewer.html?file=models/deepseek_v4/mtp.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 MTP 投机模块（530 行）。DeepSeekMultiTokenPredictorLayer 单层 MTP（forward/hc_head）；DeepSeekMultiTokenPredictor 组装嵌入与前向；DeepSeekV4MTP 为注册包装：set_moe_parameters、embed_input_ids、compute_logits、load_weights（_rewrite_spec_layer_name 重写投机层名、no_mtp_block_in_name 判断）、SharedHead 共享输出头。</div>
+<div class="file-classes">类: SharedHead, DeepSeekMultiTokenPredictorLayer, DeepSeekMultiTokenPredictor, DeepSeekV4MTP</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[7行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[11行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hc_head</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[2行] 将 input_ids 嵌入为 hidden states</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[6行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_moe_parameters</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[227行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_rewrite_spec_layer_name</span><span class="item-desc">[29行] 重写 spec 层的名称</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">no_mtp_block_in_name</span><span class="item-desc">[14行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\layer\__init__.py<a class="src-link" href="../src-viewer.html?file=models/layer/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models.layer 子包标记。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type">(无函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\layer\attention\__init__.py<a class="src-link" href="../src-viewer.html?file=models/layer/attention/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models.layer.attention 子包标记。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type">(无函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\layer\attention\layer.py<a class="src-link" href="../src-viewer.html?file=models/layer/attention/layer.py" target="_blank">查看源码</a></div><div class="file-desc-real">DSA 注意力层定义（214 行）。DSAAttention 是 DeepSeek-V4 稀疏注意力的层封装（forward/process_weights_after_loading/get_attn_backend/get_kv_cache_spec）；dsv4_block_sizes 决定内核块大小表：显式请求 A5 BF16 KV 时用 A5 专用表，否则用上游表（get_dsv4_block_sizes 提供两套取值）。</div>
+<div class="file-classes">类: DSAAttention</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsv4_block_sizes</span><span class="item-desc">[22行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dsv4_block_sizes</span><span class="item-desc">[5行] Return the A5 BF16 KV table when explicitly requested, else the upstream table.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[95行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[8行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[3行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[2行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[25行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\__init__.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models.minimax_m3 子包标记（21 行，含包初始化逻辑）。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type">(无函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\minimax_m3.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/minimax_m3.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 主模型（1368 行）。MiniMaxM3SparseAttention 实现块稀疏注意力 + lightning indexer（get_attn_backend/get_kv_cache_spec/_insert_kv 写入、_sparse_prepare/_run_sparse_attention 稀疏执行、_qk_norm/_index_qk_norm 归一化）；MiniMaxM3SwiGLUOAI 为 OAI 风格 SwiGLU 激活（gate/up 打包输入）；MLP/MoE（ebias_weight_loader 专家偏置加载）/Attention/DecoderLayer/Model 标准层级；MiniMaxM3SparseForCausalLM 完整包装（Eagle3 辅助隐藏层、专家映射、MTP 层名识别 get_spec_layer_idx_from_weight_name）；_scatter_index_cache 把 index key 写入分页缓存。</div>
+<div class="file-classes">类: MiniMaxM3SparseAttention, MiniMaxM3SwiGLUOAI, MiniMaxM3MLP, MiniMaxM3MoE, MiniMaxM3Attention, MiniMaxM3DecoderLayer, MiniMaxM3Model, MiniMaxM3SparseForCausalLM</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_scatter_index_cache</span><span class="item-desc">[32行] Write MiniMax-M3 index keys into the paged cache.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[22行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[2行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[9行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_insert_kv</span><span class="item-desc">[36行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sparse_prepare</span><span class="item-desc">[53行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_run_sparse_attention</span><span class="item-desc">[13行] Insert KV, build sparse top-k indices, then run sparse attention.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[10行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_qk_norm</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_index_qk_norm</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sparse_attention_layer_ids</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_text_config</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_max_position_embeddings</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_rope_parameters</span><span class="item-desc">[10行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_w8a8_mxfp8_linear</span><span class="item-desc">[4行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ebias_weight_loader</span><span class="item-desc">[3行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[2行] 将 input_ids 嵌入为 hidden states</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_set_aux_hidden_state_layers</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_aux_hidden_state_layers</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_expert_mapping</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[27行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mark_loaded</span><span class="item-desc">[4行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mark_skipped</span><span class="item-desc">[4行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_eagle3_default_aux_hidden_state_layers</span><span class="item-desc">[3行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_set_moe_parameters</span><span class="item-desc">[32行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_physical_experts_metadata</span><span class="item-desc">[16行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[6行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">text_weights</span><span class="item-desc">[9行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_spec_layer_idx_from_weight_name</span><span class="item-desc">[7行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\minimax_m3_vl.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/minimax_m3_vl.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 多模态包装（453 行）。MiniMaxM3SparseForConditionalGeneration 处理图像/视频输入（_parse_and_validate_image/video_input、_process_image/video_input、embed_multimodal），同步 MoE 参数并暴露 lm_head；MiniMaxM3VLModel 为视觉语言主体；_install_fused_allreduce_norm_fallback 回退 vLLM 的 CUDA-only allreduce+norm 融合模块避免在 Ascend 上导入失败。</div>
+<div class="file-classes">类: MiniMaxM3VLModel, MiniMaxM3SparseForConditionalGeneration</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_load_vllm_minimax_m3_common_module</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_install_fused_allreduce_norm_fallback</span><span class="item-desc">[33行] Avoid importing vLLM's CUDA-only fusion module on Ascend.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">fused_allreduce_gemma_rms_norm</span><span class="item-desc">[22行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[31行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[14行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_placeholder_str</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sync_moe_parameters</span><span class="item-desc">[13行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_physical_experts_metadata</span><span class="item-desc">[10行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">lm_head</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parse_and_validate_image_input</span><span class="item-desc">[17行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parse_and_validate_video_input</span><span class="item-desc">[17行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_image_input</span><span class="item-desc">[24行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_video_input</span><span class="item-desc">[24行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parse_and_validate_multimodal_inputs</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_multimodal</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">embed_input_ids</span><span class="item-desc">[13行] 将 input_ids 嵌入为 hidden states</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_logits</span><span class="item-desc">[2行] 从 hidden states 计算最终 logits</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_aux_hidden_state_layers</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_eagle3_default_aux_hidden_state_layers</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_expert_mapping</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">load_weights</span><span class="item-desc">[31行] 加载权重到模型</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">counted_weights</span><span class="item-desc">[16行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\msa_m3.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/msa_m3.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 稀疏注意力后端族（1316 行）。Indexer 侧：AscendMiniMaxM3IndexerBackend（后端元信息）、IndexerCache（K 缓存规格）、Prefill/Decode/Metadata 元数据、MetadataBuilder（含 TP 分片打分元数据 _build_tp_score_metadata）、IndexerImpl（decode topk TP 分片 _decode_topk_tp_sharded）、Indexer 层；Sparse 侧：AscendMiniMaxM3SparseBackend/Metadata/MetadataBuilder/Impl 稀疏注意力主计算；AscendMiniMaxM3QKVParallelLinearWithIndexer 融合 [Q|K|V|index_q|index_k] 列并行 GEMM（shard 校验/偏移映射/两种 weight_loader）、AscendMiniMaxM3IndexerLinear 合并 [index_q|index_k] 投影；minimax_m3_sparse_forward 注册为自定义算子（带 fake 实现）供 torch.compile 切图。</div>
+<div class="file-classes">类: AscendMiniMaxM3IndexerBackend, AscendMiniMaxM3IndexerCache, AscendMiniMaxM3IndexerMetadata, AscendMiniMaxM3IndexerMetadataBuilder, AscendMiniMaxM3IndexerImpl, AscendMiniMaxM3Indexer, AscendMiniMaxM3SparseBackend, AscendMiniMaxM3SparseMetadata, AscendMiniMaxM3SparseMetadataBuilder, AscendMiniMaxM3SparseImpl, AscendMiniMaxM3QKVParallelLinearWithIndexer, AscendMiniMaxM3IndexerLinear</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_should_use_tp_sharded_index_decode</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_active_decode_num_reqs</span><span class="item-desc">[9行] Return the number of real decode requests, ignoring FIA/graph padding.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_active_prefill_num_reqs</span><span class="item-desc">[24行] Return real prefill requests, ignoring FIA/SP tail padding segments.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[2行] 返回 attention 实现类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[2行] 返回 attention metadata builder 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_head_sizes</span><span class="item-desc">[2行] 返回支持的 head 大小列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_sparse</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_stride_order</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[38行] 初始化类实例（绑定配置、参数、模块）</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_spec</span><span class="item-desc">[7行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[4行] attention 前向入口</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_backend</span><span class="item-desc">[2行] 根据 vllm_config 返回 attention backend 类</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_tp_score_metadata</span><span class="item-desc">[25行] Package graph-stable inputs; derive TP tensors in model forward.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[74行] 构造 attention metadata</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_topk_tp_sharded</span><span class="item-desc">[55行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[16行] No-op: sparse-attention replay parameters are owned by its metadata</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">index_cache</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">validate_shard_id</span><span class="item-desc">[7行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_shard_offset_mapping</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_shard_size_mapping</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">weight_loader_v2</span><span class="item-desc">[25行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">weight_loader</span><span class="item-desc">[27行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_quant_description_value</span><span class="item-desc">[8行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sparse_proj_quant_type</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_use_fused_qkv_indexer</span><span class="item-desc">[22行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_register_m3_sparse_packed_modules</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_forward</span><span class="item-desc">[18行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_forward_fake</span><span class="item-desc">[10行]</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\ops\__init__.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/ops/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">models.minimax_m3.ops 子包标记。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type">(无函数)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\ops\msa_m3_npu.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/ops/msa_m3_npu.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 NPU 稀疏算子集（639 行）。q2k→k2q CSR 索引转换（_k2q_csr_block_stats/_npu_k2q_csr）把查询主导的稀疏索引转为键主导 CSR 供 AscendC 算子消费；index 打分：_minimax_m3_index_score 调捆绑 AscendC 算子计算索引分、minimax_m3_index_prefill（prefill 打分 + 块 topk 收尾）、minimax_m3_index_decode（decode 打分 + 非融合局部 topk）、minimax_m3_index_tp_block_parallel_decode（TP 分块并行打包打分与 topk）；稀疏注意力：minimax_m3_sparse_attn 按 A3/A5 硬件分发（_minimax_m3_sparse_attn_a3/a5）、minimax_m3_sparse_attn_decode 走 AscendC 稀疏注意力算子；MiniMaxM3TPDecodeScoreMetadata 保证 TP decode 打分的图稳定输入。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_k2q_csr_block_stats</span><span class="item-desc">[9行] Derive ``(total_rows, max_kv)`` from ``cu_block_lens`` on host.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_npu_k2q_csr</span><span class="item-desc">[32行] Convert MiniMax-M3 q2k indices to k2q CSR on NPU.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_as_ascendc_index_kv_cache</span><span class="item-desc">[13行] Convert the runtime index K cache to the AscendC BBND layout.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_main_kv_cache</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_select_num_idx_from_topk</span><span class="item-desc">[2行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_cu_block_lens</span><span class="item-desc">[18行] Build cumulative logical KV-block counts for each prefill request.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_minimax_m3_index_score</span><span class="item-desc">[35行] Compute MSA index scores with the bundled AscendC operator.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_prefill</span><span class="item-desc">[44行] Compute AscendC prefill scores and finalize their block TopK.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_index_score_topk_candidates</span><span class="item-desc">[77行] Return global block IDs and scores after exactly one local TopK.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_minimax_m3_index_decode</span><span class="item-desc">[40行] Run AscendC decode score followed by one non-fused local TopK.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_decode</span><span class="item-desc">[31行] Compute AscendC decode scores and return their block TopK.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_tp_block_parallel_decode</span><span class="item-desc">[100行] Run packed-query scoring and TopK over TP-sharded KV blocks.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_minimax_m3_sparse_attn_a3</span><span class="item-desc">[30行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_minimax_m3_sparse_attn_a5</span><span class="item-desc">[45行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn</span><span class="item-desc">[30行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn_decode</span><span class="item-desc">[34行] Run sparse decode through the AscendC sparse-attention operator.</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\ops\msa_m3_triton.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/ops/msa_m3_triton.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 Triton kernel 集（1638 行，非 A5 平台）。index 打分：_prefill_index_score_kernel 对每个可见稀疏块算一个最大点积分、_decode_index_score_kernel decode 打分；topk：_mask_decode_topk_indices_kernel/_mask_prefill_topk_indices_kernel 失效块掩码、_prepare_prefill_topk_scores_kernel 应用 init/local 优先级填充无效尾部；稀疏注意力：_gqa_sparse_fwd_kernel（prefill，block_size_q==1）/_gqa_sparse_decode_kernel（decode split-K）+ _merge_topk_attn_out_kernel 合并多块输出与 LSE；包装函数 minimax_m3_index_score/topk/decode 与 minimax_m3_sparse_attn/decode 组织 kernel launch；_copy_topk_indices/values 复制并填充 topk 结果；_detected_aicore_count/_is_arch_support_pdl 做硬件适配。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_as_triton_index_kv_cache</span><span class="item-desc">[15行] Normalizes the index-key cache to [num_blocks, 128, head_dim].</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_triton_main_kv_cache</span><span class="item-desc">[19行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_arch_support_pdl</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sparse_attn_num_stages_kwarg</span><span class="item-desc">[20行] Triton ``num_stages`` override for the sparse-attn GEMM kernels.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_detected_aicore_count</span><span class="item-desc">[17行] Returns the detected Ascend AI Core count, or zero on fallback.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prefill_index_score_kernel</span><span class="item-desc">[159行] Computes one max dot-product score per visible sparse block.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_index_score_kernel</span><span class="item-desc">[150行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mask_decode_topk_indices_kernel</span><span class="item-desc">[34行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_prefill_topk_scores_kernel</span><span class="item-desc">[115行] Applies init/local priorities and fills the invalid score tail.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mask_prefill_topk_indices_kernel</span><span class="item-desc">[58行] Replaces invalid prefill top-k block IDs with ``-1``.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gqa_sparse_fwd_kernel</span><span class="item-desc">[151行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gqa_sparse_decode_kernel</span><span class="item-desc">[189行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_merge_topk_attn_out_kernel</span><span class="item-desc">[46行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_copy_topk_indices</span><span class="item-desc">[23行] Copies top-k indices into an int32 result and pads missing slots.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_copy_topk_values</span><span class="item-desc">[17行] Copies top-k scores into an fp32 result and pads missing slots.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_score</span><span class="item-desc">[63行] Computes one block score for every visible prefill KV block.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_topk</span><span class="item-desc">[79行] Finalizes prefill scores and returns zero-based block IDs.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_decode</span><span class="item-desc">[123行] Computes decode block scores and returns zero-based top-k block IDs.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn</span><span class="item-desc">[60行] GQA block-sparse attention over the selected blocks. block_size_q == 1.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn_decode</span><span class="item-desc">[113行] GQA block-sparse attention for decode (split-K over the top-k blocks).</span></span></div>
+</div>
+<div class="file-block">
+<div class="file-name">models\minimax_m3\ops\msa_m3_triton_a5.py<a class="src-link" href="../src-viewer.html?file=models/minimax_m3/ops/msa_m3_triton_a5.py" target="_blank">查看源码</a></div><div class="file-desc-real">MiniMax-M3 A5 平台 Triton kernel 集（1417 行）。与通用版对应但按 A5 特性调优：_decode_qk_score_kernel 单程序处理一个 query/chunk 的 decode QK 块打分、_index_block_score_kernel 索引块打分；topk 准备/掩码 kernel（prefill 与 decode 两套 init/local 掩码构建 _build_decode_index_score_masks）；稀疏注意力 _gqa_sparse_fwd_kernel/_gqa_sparse_decode_kernel + _merge_topk_attn_out_kernel；对外的 minimax_m3_index_score/topk/decode、minimax_m3_sparse_attn/decode 接口与通用版一致（torch.topk + 失效索引掩码）；_prune_decode_index_score_configs/_sparse_attn_num_stages_kwarg 做 kernel 配置裁剪与调优。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_as_triton_main_kv_cache</span><span class="item-desc">[12行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_as_triton_index_kv_cache</span><span class="item-desc">[15行] Normalize Ascend indexer cache to ``[num_blocks, 128, head_dim]``.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_arch_support_pdl</span><span class="item-desc">[5行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sparse_attn_num_stages_kwarg</span><span class="item-desc">[12行] Triton ``num_stages`` override for the sparse-attn GEMM kernels.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_qk_score_target_programs</span><span class="item-desc">[13行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prune_decode_index_score_configs</span><span class="item-desc">[6行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_index_block_score_kernel</span><span class="item-desc">[101行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_qk_score_kernel</span><span class="item-desc">[115行] Compute decode QK block scores with one program per query/chunk.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_index_score_pad_tail_kernel</span><span class="item-desc">[36行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_topk_index_mask_invalid_kernel</span><span class="item-desc">[31行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prefill_index_score_prepare_for_topk_kernel</span><span class="item-desc">[44行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_topk_index_mask_invalid_prefill_kernel</span><span class="item-desc">[30行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_decode_index_score_masks_kernel</span><span class="item-desc">[49行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_decode_index_score_masks</span><span class="item-desc">[39行] Build bool init/local masks for decode index scoring via Triton.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_score</span><span class="item-desc">[57行] Compute per-token index scores for each visible sparse block.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_topk</span><span class="item-desc">[65行] Select index top-k from a precomputed score tensor (torch.topk).</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_index_decode</span><span class="item-desc">[117行] Decode index block-score + top-k (torch.topk + invalid-index mask).</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gqa_sparse_fwd_kernel</span><span class="item-desc">[137行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gqa_sparse_decode_kernel</span><span class="item-desc">[155行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_merge_topk_attn_out_kernel</span><span class="item-desc">[45行]</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn</span><span class="item-desc">[57行] GQA block-sparse attention over the selected blocks. block_size_q == 1.</span></span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">minimax_m3_sparse_attn_decode</span><span class="item-desc">[91行] GQA block-sparse attention for decode (split-K over the top-k blocks).</span></span></div>
+</div>
+</body>
+</html>

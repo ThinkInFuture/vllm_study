@@ -1,0 +1,697 @@
+===== FILE: ops\__init__.py =====
+[54行]
+class dummyFusionOp:  | methods: __init__
+def register_dummy_fusion_op(): 
+
+===== FILE: ops\activation.py =====
+[86行]
+class AscendQuickGELU:  | methods: forward_oot
+class AscendSiluAndMul:  | methods: forward_oot
+class AscendSiluAndMulWithClamp:  | methods: forward_oot
+class AscendSwigluOAIAndMul:  | methods: swiglu_oai_forward
+class AscendSwigluStepAndMul:  | methods: swiglustep_forward
+
+===== FILE: ops\bailing_moe_linear_attn.py =====
+[169行] module doc: NPU-friendly OOT replacement for BailingMoELinearAttention.
+class AscendBailingMoELinearAttention: NPU-friendly drop-in replacement for BailingMoELinearAttention. | methods: _prefill_and_mix_infer, _decode_infer, _forward
+
+===== FILE: ops\conv.py =====
+[26行]
+class AscendConv3dLayer:  | methods: forward_oot
+
+===== FILE: ops\cv_linear.py =====
+[145行]
+class CVLinearWrapper: Splits a Linear layer into quantize(Vector) + matmul(Cube). | methods: __init__, _detect_w8a8_dynamic, _detect_communication, quantize, matmul, forward, weight, weight, __getattr__
+
+===== FILE: ops\dsa.py =====
+[266行]
+class DSAModules: Modules used in SFA V2. | methods: 
+class AscendDeepseekSparseAttention:  | methods: __init__, forward
+def dsa_forward(hidden_states, output, layer_name): 
+def dsa_forward_fake(hidden_states, output, layer_name): 
+def _build_kv_cache(self, forward_context): Construct the 6-tuple KV cache used by impl.forward().
+def unfold_kvcache(kvcache): 
+
+===== FILE: ops\gdn.py =====
+[605行]
+class AscendGatedDeltaNetAttention:  | methods: _probe_fused_chunk, _chunk_gated_delta_rule_fused, _split_ba_for_tp, get_state_shape, _warmup_prefill_kernels, _warmup_prefill_kernels_v0202, get_attn_backend, forward, _forward_core
+
+===== FILE: ops\gdn_attn_builder.py =====
+[923行]
+def _stable_argsort_for_npu(tensor): 
+def _treat_single_token_prefills_with_state_as_decodes(common_attn_metadata): Use decode metadata for one-token stateful prompt chunks.
+class GDNChunkedPrefillMetadata:  | methods: 
+class GDNCausalConv1dMetadata:  | methods: 
+class GDNSpecCausalConv1dMetadata:  | methods: 
+class GDNPrefillMetadata:  | methods: 
+class GDNDecodeMetadata:  | methods: 
+class GDNSpecDecodeMetadata:  | methods: 
+def _build_actual_seq_lengths(query_start_loc, num_sequences, out): 
+def _compact_empty_segments(cu_seqlens_host, initial_state, device): Drop zero-length segments so AscendC fwd_h/fwd_o indexing lines up.
+def _build_non_spec_chunked_prefill_metadata(builder, cu_seqlens_cpu, device): 
+class AscendGDNAttentionMetadataBuilder:  | methods: __init__, _init_reorder_batch_threshold, _copy_sequence_indices_to_device, _pad_non_spec_decode_graph_inputs, _reset_spec_decode_graph_inputs, _attach_non_spec_prefill_metadata, _attach_spec_decode_metadata, _attach_non_spec_decode_metadata, _fold_spec_sized_prefill_chunks_into_spec, build, _build_prefill_has_initial_state_and_causal_conv1d_meta
+class AscendGDNAttentionBackend:  | methods: get_builder_cls
+
+===== FILE: ops\kimi_kda.py =====
+[544行] module doc: Ascend backend for the vLLM 0.27 Kimi K3 delta-attention layer.
+def _zero_padded_output(output, num_live_tokens): Clear graph-padding rows using a device-side live-token count.
+def _zero_padded_recurrent_output(output, query_start_loc): Clear graph-padding rows skipped by recurrent KDA.
+def _prepare_beta(raw_beta, num_actual_tokens): Convert vLLM 0.27's packed raw beta to the AscendC contract.
+class AscendKimiK3DeltaAttention: Kimi K3 KDA using AscendC prefill and recurrent kernels. | methods: __init__, get_attn_backend, forward, _run_causal_conv1d, _pack_conv_weights, _run_recurrent, _run_prefill, _forward
+
+===== FILE: ops\layernorm.py =====
+[215行]
+class AscendRMSNorm:  | methods: __init__, _bias_weight_loader, forward_oot
+class AscendGemmaRMSNorm:  | methods: forward_oot
+class LayerNormFn:  | methods: forward
+class AscendRMSNormGated:  | methods: __init__, reset_parameters, forward_oot
+class AscendFusedRMSNormGated: Use Ascend's fused kernel at the upstream FLA CustomOp boundary. | methods: forward_oot
+
+===== FILE: ops\linear.py =====
+[585行] module doc: To customize linear communication groups or forward of classes in this file,
+def unquantized_gemm(x, weight, bias): 
+def unquantized_gemm_fake(x, weight, bias): 
+def _should_keep_nd_for_compatibility_weight(weight): 
+class AscendUnquantizedLinearMethod: Linear method without quantization | methods: process_weights_after_loading, apply
+class AscendLinearBase:  | methods: __init__
+class AscendQKVParallelLinear: Linear layers for the attention's QKV transformation. | methods: __init__, forward
+class AscendMergedColumnParallelLinear: Packed linear layers with column parallelism. | methods: __init__, forward
+class AscendRowParallelLinear: Linear layer with row parallelism. | methods: __init__, forward
+class AscendColumnParallelLinear: Linear layer with column parallelism. | methods: __init__, forward, weight_loader
+class AscendReplicatedLinear: Ascend Replicated linear layer. | methods: __init__, forward
+
+===== FILE: ops\linear_op.py =====
+[387行] module doc: This file extends the functionality of linear operations by encapsulating custom
+class CustomLinearOp:  | methods: __init__, comm_group, tp_rank, tp_size, update_attrs, apply_impl, apply
+class CustomColumnParallelOp:  | methods: __init__, update_attrs
+class CustomRowParallelOp:  | methods: __init__, update_attrs, apply, get_input_parallel
+class CustomReplicatedOp:  | methods: apply_impl
+class MLPColumnParallelOp:  | methods: __init__, comm_group, apply_impl
+class MLPRowParallelOp:  | methods: __init__, comm_group, apply_impl
+class DSV4OProjColumnParallelOp:  | methods: comm_group, apply_impl
+class DSV4OProjRowParallelOp:  | methods: comm_group, apply_impl
+class OProjRowParallelOp:  | methods: __init__, comm_group, apply_impl, update_attrs
+class ShardedCPColumnParallelOp:  | methods: comm_group, apply_impl
+def _is_shared_expert_layer(prefix): 
+def _get_column_parallel_op(prefix, layer): 
+def _get_row_parallel_op(prefix, layer): 
+def get_parallel_op(disable_tp, prefix, layer, direct): 
+def get_replicated_op(disable_tp, prefix, layer): 
+def is_moe_layer(prefix): 
+
+===== FILE: ops\mla.py =====
+[199行]
+class IndexerWrapper: A wrapper of Indexer for Deepseek v3.2. | methods: __init__, forward
+class AscendMultiHeadLatentAttention:  | methods: __init__, forward
+def mla_forward(hidden_states, output, layer_name): 
+def mla_forward_fake(hidden_states, output, layer_name): 
+
+===== FILE: ops\mm_encoder_attention.py =====
+[352行] module doc: Ascend implementation of upstream :class:`MMEncoderAttention`.
+class AscendMMEncoderAttention:  | methods: __init__, _reshape_qkv_to_3d, _maybe_pad_qkv, _maybe_compute_cu_seqlens, _maybe_unpad_output, _restore_batch_layout, _run_vit_fia, _forward_eager_fia, _forward_capture_fia, forward_oot
+
+===== FILE: ops\qwen2_decoder.py =====
+[356行]
+class AscendCustomQwen2Decoder:  | methods: __init__, _create_optimized_custom_model
+class AscendQwen2Model:  | methods: __init__, forward
+class AscendQwen2DecoderLayer:  | methods: __init__, forward
+def optimized_apply_rotary_pos_emb(q, k, cos, sin, position_ids, unsqueeze_dim): 
+class AscendQwen2Attention: Multi-headed attention from 'Attention Is All You Need' paper | methods: __init__, forward
+class AscendQwen2RMSNorm:  | methods: __init__, forward
+
+===== FILE: ops\register_custom_ops.py =====
+[213行]
+def _get_ep_local_sizes(dp_metadata, ep_group): Return the SP token layout when the MoE runner installed it.
+def _pad_to_ep_local_size(x, max_local_size): Make an EP all-gather input have the same first dimension on every rank.
+def _maybe_all_gather_and_maybe_unpad_impl(x): 仅用于 EP 通信场景：EP all_gather + 按 DP token 分布 unpad。
+def _maybe_pad_and_reduce_impl(x): 仅用于 EP 通信场景：按 DP token 分布 pad 后做 EP reduce_scatter。
+def _maybe_all_gather_and_maybe_unpad_fake(x): 
+def _maybe_pad_and_reduce_fake(x): 
+def _quantize_impl(in_tensor, input_scale, input_scale_reciprocal, input_offset): 
+def _quantize_impl_fake(in_tensor, input_scale, input_scale_reciprocal, input_offset): 
+def _rope_forward_oot_impl_fake(positions, query, key, cos_sin_cache, head_dim, rotary_dim): 
+def _muls_add_impl_fake(x, y, scale): 
+
+===== FILE: ops\rel_pos_attention.py =====
+[68行]
+class AscendRelPosAttention:  | methods: __init__, forward
+
+===== FILE: ops\rope_dsv4.py =====
+[311行]
+class RopeGlobalState:  | methods: __init__
+class RopeDataProxy:  | methods: __init__, pad_to, __getitem__
+def get_cos_and_sin_dsa(positions, use_cache, draft_index): 
+def get_full_cos_and_sin_dsa(group_name): Return the full precomputed RoPE cache for a registered DSA RoPE group.
+class ComplexExpRotaryEmbedding:  | methods: __init__, precompute_freqs_cis, forward, extra_repr
+
+===== FILE: ops\rotary_embedding.py =====
+[578行]
+def set_cos_and_sin(vllm_config, max_num_reqs, decode_token_per_req, dtype, device): 
+def get_cos_and_sin_mla(positions, use_cache): 
+def _record_cos_sin_cache(cos_sin_cache): 
+def _record_cos_and_sin_cache(cos_cache, sin_cache): 
+def _record_cos_and_sin_cache_interleaved(cos_sin_cache): 
+def update_cos_sin(positions): 
+def get_cos_and_sin_slice(): 
+def rope_forward_oot(positions, query, key, cos_sin_cache, head_size, rotary_dim): 
+class AscendRotaryEmbedding:  | methods: __init__, forward_oot
+class AscendYaRNRotaryEmbedding:  | methods: __init__, forward_oot
+class AscendDeepseekScalingRotaryEmbedding:  | methods: __init__, _yarn_get_mscale, _rotate_half, _yarn_linear_ramp_mask, _yarn_find_correction_dim, _yarn_find_correction_range, _apply_rotary_pos_emb, _set_cos_sin_cache, forward
+class AscendMRotaryEmbedding:  | methods: forward_triton, forward_oot
+class AscendApplyRotaryEmb:  | methods: __init__, forward_oot
+
+===== FILE: ops\vocab_parallel_embedding.py =====
+[411行]
+class AscendVocabParallelEmbedding: Register VocabParallelEmbedding as a custom op for Ascend. | methods: __init__, _mask_input_for_vocab_range, forward, _forward_embed_tp, _forward_origin
+class AscendParallelLMHead: Register ParallelLMHead as a custom op for Ascend. | methods: __init__
+def lmhead_all_to_all(logits, comm_group): All-to-all for lm-head TP: redistribute `[N, V/P]` (all tokens, partial
+class AscendLogitsProcessor: Register LogitsProcessor as a custom op for Ascend. | methods: _apply_head, _get_logits, _get_logits_lmheadtp, _get_logits_normal
+
+===== FILE: ops\fused_moe\__init__.py =====
+[0行]
+
+===== FILE: ops\fused_moe\eplb.py =====
+[138行]
+def build_expert_replica_routing_table(logical_to_physical_map, logical_replica_count, ep_rank): Build a rank-aware table for routing logical experts to replicas.
+def map_to_physical(topk_ids, expert_replica_routing_table): Map logical expert IDs to global physical IDs through a periodic table.
+def map_to_physical_and_record(topk_ids, expert_replica_routing_table, expert_load_view, record_enabled, num_unpadded_tokens): Map logical IDs and record load only while collection is enabled.
+def _map_to_physical_and_record_fake(topk_ids, expert_replica_routing_table, expert_load_view, record_enabled, num_unpadded_tokens): 
+
+===== FILE: ops\fused_moe\force_eplb.py =====
+[142行]
+def _build_or_get_topk(moe_comm_method): 
+def build_force_eplb_topk(device, max_num_tokens): Build force-EPLB tables before ACLGraph capture.
+def get_force_eplb_topk(topk_ids, num_logical_experts): Return deterministic round-robin ids when the policy is enabled.
+def _build_round_robin_topk(): 
+
+===== FILE: ops\fused_moe\fused_moe.py =====
+[336行]
+class AscendMoERunner:  | methods: __init__, is_internal_router, use_dp_chunking, _fused_output_is_reduced, _get_shared_expert_parallel_mode, _reduce_shared_output_if_needed, local_num_experts, ep_rank, _maybe_reduce_shared_expert_output, _maybe_reduce_routed_output_before_transform, _maybe_reduce_final_output, set_lora_context
+
+===== FILE: ops\fused_moe\gate_linear.py =====
+[63行]
+class AscendGateLinear: Ascend replacement for vLLM GateLinear. | methods: __init__, forward
+
+===== FILE: ops\fused_moe\moe_comm_method.py =====
+[492行]
+def get_moe_comm_method(moe_comm_type): 
+def setup_moe_comm_method(moe_config): 
+class FusedExpertsResult:  | methods: 
+class MoECommMethod: Base class for MoE communication methods. | methods: __init__, set_lora_context, prepare, finalize, fused_experts, _apply_mlp, _get_token_dispatcher, _get_prepare_finalize
+class AllGatherCommImpl: This implementation is the same as NativeAllGatherCommImpl, | methods: _get_token_dispatcher, _get_prepare_finalize
+class MC2CommImpl: This implementation is for the scenarios listed below: | methods: pad_and_split_input_ids, _get_token_dispatcher, _get_prepare_finalize
+class AlltoAllCommImpl: This implementation is for the scenarios listed below: | methods: pad_and_split_input_ids, _get_token_dispatcher, _get_prepare_finalize
+class FusedMC2CommImpl: This implementation is for the scenarios listed below: | methods: __init__, pad_and_split_input_ids, _get_token_dispatcher, _get_prepare_finalize, _init_mega_moe_symm_buffer, _apply_cann_mega_moe, fused_experts
+
+===== FILE: ops\fused_moe\moe_mlp.py =====
+[884行]
+def _custom_gmm_swiglu_enabled(fusion, dynamic_eplb, activation): 
+def _gmm_swiglu_quant_fusion_enabled(use_mxfp_quant, fusion, dynamic_eplb, activation): 
+def cumsum_group_list(group_list, src_list_type, dst_list_type, active_num, expert_num): 
+def _require_single_tensor_for_swiglu_quant(tensor_or_list): 
+def _prepare_dequant_swiglu_weight_scale(w1_scale, is_swigluoai_uninterleave): 
+def _prepare_swigluoai_grouped_matmul_scales(weight_scale, output_dtype): 
+def _apply_situ(hidden_states): Match SituAndMul.forward_native without constructing a CustomOp in forward.
+def _apply_clipped_swiglu(hidden_states): 
+def _swiglu_oai_dynamic_mx_quant(hidden_states): 
+def quant_apply_mlp(hidden_states, w1, w1_scale, w2, w2_scale, group_list): 
+def unquant_apply_mlp(hidden_states, w1, w2, group_list, w1_bias, w2_bias): 
+def unified_apply_mlp(): Unified MoE MLP entry.
+
+===== FILE: ops\fused_moe\moe_utils.py =====
+[169行]
+def async_all_to_all(input_, output_split_sizes, input_split_sizes, group, event): 
+def _gather_along_first_dim(input_, group, output_split_sizes): Gather tensors and concatenate along the first dimension.
+def gather_from_sequence_parallel_region(input_, group, output_split_sizes): Wrapper for autograd function: forward: AG, backward: RS <first dim>
+def load_cann_mega_moe_ops(): 
+def _get_cann_mega_moe_quant_settings(quant_type): 
+def get_moe_num_logical_experts(layer, num_experts, global_redundant_expert_num, num_shared_experts): 
+def enable_fusion_gmmswigluquant(): 
+
+===== FILE: ops\fused_moe\prepare_finalize.py =====
+[573行]
+class PrepareAndFinalize: Abstract base class for MoE (Mixture-of-Experts) tensor preparation and finalization | methods: __init__, set_lora_context, prepare, finalize
+class PrepareAndFinalizeWithAll2All: MoE communication strategy using All-to-All style slicing. | methods: __init__, _restore_tp_across_dp, prepare, pad_and_split_input_ids, finalize
+class PrepareAndFinalizeWithMC2: MoE communication strategy using MC2, based on All2All with additional | methods: __init__, _restore_tp_across_dp, prepare, finalize, pad_and_split_input_ids
+class PrepareAndFinalizeWithAllGather: MoE communication strategy using All-Gather + Reduce-Scatter on EP group. | methods: _use_ep_sequence_parallel, prepare, _prepare_with_ep_group, _prepare_with_dp_group, all_gather_input_id_with_dp_group, finalize, _finalize_with_ep_group, _finalize_with_dp_group
+
+===== FILE: ops\fused_moe\routed_experts.py =====
+[593行]
+class AscendUnquantizedFusedMoEMethod:  | methods: __init__, set_lora_context, is_monolithic, maybe_make_prepare_finalize, get_eplb_weight_views, process_weights_after_loading, apply
+def use_multistage_eplb_load(dynamic_eplb, policy_type, collection_interval): Whether EPLB should retain a separate expert-load vector per step.
+def make_eplb_placement_config(eplb_config, num_redundant_experts): Build the minimal config view consumed by init_eplb_config.
+class EplbExpertTensorList: Per-expert tensors exposed through the upstream EPLB weight contract. | methods: shape, __torch_function__
+class AscendRoutedExperts: Ascend-owned routed expert container. | methods: __init__, get_expert_weights, init_eplb, _promote_attr_to_buffer, _get_quant_method, get_eplb_parameter, ascend_expert_map, ascend_expert_map, update_expert_map, get_log2phy_map, ep_rank, clear_moe_load, quant_type, _select_experts, forward_impl
+
+===== FILE: ops\fused_moe\shared_experts.py =====
+[418行]
+class FusedMoEEvents:  | methods: 
+class SharedExpertParallelMode: Effective activation and weight layout for a shared-expert forward. | methods: 
+class AscendSharedExperts: Ascend-owned shared expert executor. | methods: __init__, set_lora_context, validate_consistency, part1, part2, parallel_mode, _prepare_local_dp_input, _finalize_local_dp_output, _gather_sp_input, _pad_and_reduce_scatter, prepare_input_before_routed_experts, forward
+
+===== FILE: ops\fused_moe\token_dispatcher.py =====
+[719行]
+def _get_expert_token_nums_type(token_dispatch_input): 
+class MoETokenDispatcher:  | methods: __init__, set_lora_context, ep_group, ep_rank, ep_size, token_dispatch, token_combine
+class TokenDispatcherWithMC2:  | methods: __init__, refresh_hccl_group, get_dispatch_mc2_kwargs, token_dispatch, get_combine_mc_kwargs, token_combine
+class TokenDispatcherWithAllGather:  | methods: __init__, token_dispatch, token_combine
+class TokenDispatcherWithAll2AllV: The implementation of the AlltoAll-based token dispatcher, which handles token | methods: __init__, token_dispatch, token_combine, _dispatch_preprocess, _preprocess, _dispatch_postprocess, _combine_preprocess, _combine_postprocess
+
+===== FILE: ops\fused_moe\dataclass\__init__.py =====
+[0行]
+
+===== FILE: ops\fused_moe\dataclass\fused_experts.py =====
+[136行]
+class MoEWeights: Dense and quantized weight payloads consumed by MoE execution. | methods: 
+class MoEFusedExpertsInput: Top-level input for the routed experts pipeline. | methods: 
+def build_fused_experts_input(): 
+
+===== FILE: ops\fused_moe\dataclass\moe_mlp.py =====
+[114行]
+class MoEMlpComputeInput: Input to MLP compute. | methods: 
+def build_mlp_compute_input(): 
+
+===== FILE: ops\fused_moe\dataclass\moe_quant.py =====
+[159行]
+class MoEMxfpParams: Internal MXFP-only precision settings used by fused_moe runtime. | methods: 
+class MoEQuantParams: Quant mode, backend override, and optional internal MXFP leaf config. | methods: is_quant, is_mxfp, is_w4a4_mxfp, is_int_quant, is_fp8, use_w4a8_per_channel_gmm_swiglu, dispatch_with_quant, get_dst_type, get_scale_type
+def _build_mxfp_params(): 
+def build_quant_params(quant_type, comm_quant_mode, mxfp_act_quant_type, mxfp_weight_quant_type, mxfp_scale_dtype, mxfp_per_token_scale_dtype): 
+
+===== FILE: ops\fused_moe\dataclass\prepare_finalize.py =====
+[30行]
+class MoEPrepareOutput: Typed output from prepare stage. | methods: 
+
+===== FILE: ops\fused_moe\dataclass\router_input.py =====
+[39行]
+class MoeRouterInput: Routing and dispatch side inputs for one MoE invocation. | methods: 
+
+===== FILE: ops\fused_moe\dataclass\token_dispatcher.py =====
+[97行]
+class MoEMC2CombineMetadata:  | methods: 
+class MoEAllGatherCombineMetadata:  | methods: 
+class MoEAllToAllCombineMetadata:  | methods: 
+class MoETokenDispatchInput: Input to token dispatch. | methods: 
+class MoETokenDispatchOutput:  | methods: 
+def build_token_dispatch_input(): 
+
+===== FILE: ops\fused_moe\router\__init__.py =====
+[9行]
+
+===== FILE: ops\fused_moe\router\fused_topk_router.py =====
+[159行]
+class AscendFusedTopKRouter: Router adapter that uses Ascend's existing expert-selection path. | methods: __init__, is_fused_supported, _compute_routing
+
+===== FILE: ops\fused_moe\router\grouped_topk_router.py =====
+[129行]
+class AscendGroupedTopKRouter:  | methods: __init__, routing_method_type, _renormalize_topk_weights, _native_grouped_topk, _compute_routing
+
+===== FILE: ops\fused_moe\router\router_factory.py =====
+[114行]
+def check_npu_moe_gating_top_k(top_k, renormalize, topk_group, num_expert_group, scoring_func, custom_routing_function): 
+def create_ascend_fused_moe_router(top_k, global_num_experts, renormalize, use_grouped_topk, num_expert_group, topk_group): 
+
+===== FILE: ops\triton\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\batch_memcpy.py =====
+[31行]
+def batch_memcpy_kernel(src_ptrs, dst_ptrs, sizes, BLOCK_SIZE): 
+
+===== FILE: ops\triton\bincount.py =====
+[149行]
+def token_bin_counts_and_mask_kernel(tokens_ptr, tokens_batch_stride, tokens_seq_stride, batch_size, seq_len, vocab_size): Count token occurrences per batch row.
+def get_token_bin_counts_and_mask_triton(tokens, vocab_size, num_seqs): Triton-Ascend implementation of token bin counting.
+
+===== FILE: ops\triton\compute_slot_mapping.py =====
+[84行]
+def _next_power_of_2(value): 
+def _compute_slot_mapping_kernel(num_tokens, max_num_tokens, query_start_loc_ptr, positions_ptr, block_table_ptr, block_table_stride): 
+
+===== FILE: ops\triton\dsa_cp.py =====
+[41行]
+def build_local_metadata_triton(query_start_loc_ptr, seq_lens_ptr, local_query_start_loc_ptr, local_seq_lens_ptr, local_start, local_end): Fused NPU kernel for local token metadata computation
+
+===== FILE: ops\triton\eplb.py =====
+[76行]
+def _map_to_physical_and_record_kernel(topk_ids_ptr, routing_table_ptr, physical_ids_ptr, expert_load_ptr, record_enabled_ptr, num_unpadded_tokens_ptr): 
+def map_to_physical_and_record_triton(topk_ids, expert_replica_routing_table, expert_load_view, record_enabled, num_unpadded_tokens): Map logical IDs and optionally record physical-expert load.
+
+===== FILE: ops\triton\fused_gdn_gating.py =====
+[99行]
+def fused_gdn_gating_kernel(g, beta_output, A_log, a, b, dt_bias): 
+def fused_gdn_gating_patch(A_log, a, b, dt_bias, beta, threshold): 
+
+===== FILE: ops\triton\layernorm_gated.py =====
+[168行]
+def _layer_norm_fwd_1pass_kernel_npu(X, Y, W, B, Z, Mean): 
+def layer_norm_fwd_npu(x, weight, bias, eps, z, out): 
+
+===== FILE: ops\triton\mul_add.py =====
+[57行]
+def muls_add_kernel(x_ptr, y_ptr, output_ptr, scale, n_elements, n_blocks): 
+def muls_add_triton(x, y, scale): 
+
+===== FILE: ops\triton\muls_add.py =====
+[57行]
+def muls_add_kernel(x_ptr, y_ptr, output_ptr, scale, n_elements, n_blocks): 
+def muls_add_triton(x, y, scale): 
+
+===== FILE: ops\triton\penalty.py =====
+[162行]
+def apply_all_penalties_kernel(logits_ptr, prompt_mask_ptr, output_mask_ptr, output_bin_counts_ptr, repetition_penalties_ptr, frequency_penalties_ptr): Apply repetition, frequency, and presence penalties to logits in place.
+def apply_penalties_triton(logits, prompt_tokens_tensor, output_tokens_tensor, presence_penalties, frequency_penalties, repetition_penalties): Apply penalties to logits in place. Same interface as
+def _apply_all_penalties_triton(logits, prompt_mask, output_mask, output_bin_counts, repetition_penalties, frequency_penalties): Apply all penalties given precomputed bin counts and masks.
+
+===== FILE: ops\triton\reject_sample.py =====
+[776行]
+def cal_grid_and_block_size(batch_size): 
+def rejection_greedy_sample_spec_len_1_triton(output_token_ids_ptr, draft_token_ids_ptr, target_argmax_ptr, bonus_token_ids_ptr, vec_len, uniform_probs_ptr): 
+def bonus_renew(bonus_token_ids_ptr, position, output_token_ids_ptr, max_spec_len, num_tokens1): 
+def rejection_greedy_sample_triton(output_token_ids_ptr, cu_num_draft_tokens_ptr, draft_token_ids_ptr, target_argmax_ptr, bonus_token_ids_ptr, is_greedy_ptr): 
+def rejection_random_sample_kernel(output_token_ids_ptr, cu_num_draft_tokens_ptr, draft_token_ids_ptr, draft_probs_ptr, target_probs_ptr, target_indices_ptr): 
+def expand_kernel(output_ptr, input_ptr, cu_num_tokens_ptr, replace_from, replace_to, vec_len): 
+def sample_recovered_tokens_kernel(output_token_ids_ptr, cu_num_draft_tokens_ptr, draft_token_ids_ptr, draft_probs_ptr, target_probs_ptr, target_indices_ptr): 
+def rejection_greedy_sample_with_triton(output_token_ids, num_draft_tokens, cu_num_draft_tokens, draft_token_ids, target_argmax, bonus_token_ids): 
+def expand_triton(batch_size, expanded_x, x, cu_num_tokens, replace_from, replace_to): 
+def rejection_random_sample_block_verify_kernel(output_token_ids_ptr, cu_num_draft_tokens_ptr, draft_token_ids_ptr, draft_probs_ptr, target_probs_ptr, target_indices_ptr): 
+
+===== FILE: ops\triton\rms_norm.py =====
+[71行]
+def triton_rms_kernel(hidden_state_ptr, hidden_state_stride_bs, norm_output_ptr, variance_epsilon, total_batch, DIM): 
+def triton_q_rms(q, variance_epsilon): 
+
+===== FILE: ops\triton\rope.py =====
+[431行]
+def _triton_rope(q_ptr, q_row_stride, k_ptr, k_row_stride, cos_ptr, cos_row_stride): This triton kernel applies rotary embedding on q and k.
+def _triton_rope_siso(qk_ptr, qk_row_stride, cos_ptr, cos_row_stride, sin_ptr, sin_row_stride): 
+def rope_forward_triton(q, k, cos, sin, cos_sin_cache, positions): 
+def rope_forward_triton_siso(qk, cos, sin, cos_sin_cache, positions, rope_dim): 
+
+===== FILE: ops\triton\sfa_cp.py =====
+[425行]
+def _pack_sfa_dcp_output_lse_kernel(output_ptr, lse_ptr, send_ptr, output_stride_t, output_stride_h, output_stride_d): 
+def _fused_sfa_dcp_lse_combine_kernel(recv_ptr, output_ptr, recv_stride_rank, recv_stride_scatter, recv_stride_replicated, recv_stride_d): 
+def _lse_pack_dim(output_dtype): 
+def _validate_sfa_dcp_inputs(sfa_output, softmax_lse, dcp_size, scatter_dim): 
+def pack_sfa_dcp_output_lse(sfa_output, softmax_lse, dcp_size, scatter_dim): Pack strided SFA output and FP32 LSE into one HCCL payload.
+def fused_sfa_dcp_lse_combine(recv, head_dim, scatter_dim): Unpack one HCCL payload and merge rank outputs using their LSE.
+def sfa_dcp_a2a_fused_combine(sfa_output, softmax_lse, dcp_size, scatter_dim, group): Run stride-aware pack, one HCCL All2All, and fused LSE combine.
+def sfa_dcp_a2a_fused(sfa_output, softmax_lse, dcp_size, scatter_dim, group_name): Custom-op entry point for fused SFA DCP output post-processing.
+def sfa_dcp_a2a_fused_fake(sfa_output, softmax_lse, dcp_size, scatter_dim, group_name): Propagate output metadata for torch.compile without running HCCL.
+
+===== FILE: ops\triton\sparse_index_remap.py =====
+[182行]
+def remap_sparse_indices_fused_kernel(indices_ptr, chunk_out_ptr, chunk_count_ptr, out_ptr, topk_count, dcp_size): Fused remap + per-chunk compaction + output tail pre-fill.
+def remap_sparse_indices_compact_gather_kernel(chunk_out_ptr, chunk_count_ptr, out_ptr, topk_count, BLOCK, NUM_CHUNKS): Gather chunks to the row front in chunk order.
+def remap_sparse_indices_triton(topk_indices, dcp_size, dcp_rank, interleave_size): Triton replacement for the torch implementation in
+
+===== FILE: ops\triton\triton_utils.py =====
+[66行]
+def _resolve_triton_ascend_op(op_name): 
+def init_device_properties_triton(): 
+def get_aicore_num(): 
+def get_vectorcore_num(): 
+
+===== FILE: ops\triton\activation\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\activation\swiglu_quant.py =====
+[102行]
+def _swiglu_quant_kernel(x_ptr, group_list_ptr, out_ptr, scale_ptr, TOTAL_COLS, HALF_COLS): 
+def swiglu_quant(x, group_list, group_list_type, need_quant): 
+
+===== FILE: ops\triton\activation\swiglustep.py =====
+[130行] module doc: Triton kernel for SwigluStepAndMul activation.
+def _swiglustep_kernel(x_ptr, out_ptr, M, TOTAL_COLS, HALF_COLS, LIMIT): 
+def swiglustep_forward_triton(x, limit): Fused SwigluStep: silu(gate).clamp(max=limit) * up.clamp(±limit).
+
+===== FILE: ops\triton\batch_invariant\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\batch_invariant\matmul.py =====
+[448行]
+def matmul_bias_persistent_kernel(x_ptr, y_ptr, bias_ptr, output_ptr, M, N): 
+def matmul_persistent(x, y, bias): Implement matrix multiplication with optional bias using Triton: x @ y + bias (if bias is not None)
+def linear_persistent_kernel(a_ptr, b_ptr, c_ptr, M, N, K): 
+def linear_persistent(x, y): Implement matrix multiplication with Triton: x @ y^T
+def mm_batch_invariant(a, b): 
+def bmm_batch_invariant(a, b): 
+def addmm_batch_invariant(input_, a, b): 
+def matmul_batch_invariant(a, b): 
+def linear_batch_invariant(input_, weight, bias): 
+
+===== FILE: ops\triton\batch_invariant\mean.py =====
+[173行]
+def mean_kernel(input_ptr, output_ptr, input_stride0, input_stride1, input_stride2, output_stride0): Kernel for computing mean along a single dimension.
+def mean_dim(input_, dim, keepdim, dtype): Triton implementation of torch.mean with single dimension reduction.
+def mean_batch_invariant(input_, dim, keepdim, dtype): 
+
+===== FILE: ops\triton\batch_invariant\rmsnorm.py =====
+[153行]
+def _rms_norm_kernel(input_ptr, weight_ptr, output_ptr, input_row_stride, output_row_stride, n_rows): Compute RMS normalization along the last dimension of a 2D tensor.
+def rms_norm(input_, weight, eps): Compute RMS normalization using Triton kernel with fixed grid size.
+def rms_norm_batch_invariant(input_, weight, eps): Batch-invariant wrapper for RMS normalization.
+
+===== FILE: ops\triton\batch_invariant\softmax.py =====
+[38行]
+def softmax_batch_invariant(input_, dim, dtype): 
+
+===== FILE: ops\triton\fla\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\fla\chunk.py =====
+[386行]
+def chunk_gated_delta_rule_fwd(q, k, v, g, beta, scale): 
+class ChunkGatedDeltaRuleFunction:  | methods: forward
+def chunk_gated_delta_rule(q, k, v, g, beta, scale): Args:
+
+===== FILE: ops\triton\fla\chunk_delta_h.py =====
+[244行]
+def chunk_gated_delta_rule_fwd_kernel_h_blockdim64(k, v, w, v_new, g, h): 
+def chunk_gated_delta_rule_fwd_h(k, w, u, g, initial_state, output_final_state): 
+
+===== FILE: ops\triton\fla\chunk_delta_hupdate.py =====
+[219行]
+def chunk_gated_delta_rule_fwd_kernel_hupdate_blockdim64(k, w, g, cu_seqlens, chunk_offsets, h_update): 
+def chunk_gated_delta_rule_fwd_hupdate(k, w, u, g, chunk_size, cu_seqlens): 
+
+===== FILE: ops\triton\fla\chunk_o.py =====
+[163行]
+def chunk_fwd_kernel_o(q, k, v, h, g, o): 
+def chunk_fwd_o(q, k, v, h, g, scale): 
+
+===== FILE: ops\triton\fla\chunk_scaled_dot_kkt.py =====
+[155行]
+def chunk_scaled_dot_kkt_fwd_kernel(k, beta, g_cumsum, A, cu_seqlens, chunk_indices): 
+def chunk_scaled_dot_kkt_fwd(k, beta, g_cumsum, cu_seqlens, chunk_indices, chunk_size): Compute beta * K * K^T.
+
+===== FILE: ops\triton\fla\cumsum.py =====
+[144行]
+def chunk_local_cumsum_scalar_kernel(s, o, scale, cu_seqlens, chunk_indices, T): 
+def chunk_local_cumsum_scalar(g, chunk_size, reverse, scale, cu_seqlens, block_indices): 
+def chunk_local_cumsum(g, chunk_size, reverse, scale, cu_seqlens, head_first): 
+
+===== FILE: ops\triton\fla\fused_qkvzba_split_reshape.py =====
+[225行]
+def fused_qkvzba_split_reshape_cat_kernel(mixed_qkv, z, b, a, mixed_qkvz, mixed_ba): Fused kernel to split and reshape mixed QKVZ and BA tensors.
+def fused_qkvzba_split_reshape_cat(mixed_qkvz, mixed_ba, num_heads_qk, num_heads_v, head_qk, head_v): 
+
+===== FILE: ops\triton\fla\l2norm.py =====
+[66行]
+def l2norm_fwd_kernel2_loop(X, Y, eps, M, N, MBLOCK): 
+def l2norm_fwd(x, eps, output_dtype): 
+
+===== FILE: ops\triton\fla\layernorm_guard.py =====
+[198行]
+def layer_norm_fwd_kernel(X, Y, W, B, Z, Mean): 
+def _layer_norm_fwd(x, weight, bias, eps, z, out): 
+class LayerNormFn:  | methods: forward
+
+===== FILE: ops\triton\fla\solve_tril.py =====
+[404行]
+def solve_tril_16x16_kernel(A, Ad, cu_seqlens, chunk_indices, T, H): 
+def merge_16x16_to_32x32_inverse_kernel(A, Ad, Ai, cu_seqlens, chunk_indices, T): 
+def merge_16x16_to_64x64_inverse_kernel(A, Ad, Ai, cu_seqlens, chunk_indices, T): 
+def solve_tril(A, cu_seqlens, chunk_indices_large_block, chunk_indices_bt, output_dtype): Compute the inverse of the matrix I + A
+
+===== FILE: ops\triton\fla\utils.py =====
+[133行]
+def prepare_lens(cu_seqlens): 
+def prepare_chunk_indices(cu_seqlens, chunk_size): 
+def prepare_final_chunk_indices(cu_seqlens, chunk_size): 
+def prepare_chunk_offsets(cu_seqlens, chunk_size): 
+def prepare_update_chunk_offsets(cu_seqlens, chunk_size): 
+def input_guard(fn): A decorator to make sure all input tensors are contiguous and set the device based on input tensors.
+def safe_exp(x): 
+def _clear_ssm_states_kernel(states_ptr, has_initial_state_ptr, inner_size, row_stride, BLOCK_SIZE): 
+def clear_ssm_states(ssm_states, has_initial_state): Zero out specific rows for the SSM states
+
+===== FILE: ops\triton\fla\wy_fast.py =====
+[143行]
+def recompute_w_u_fwd_kernel(k, v, beta, w, u, A): 
+def recompute_w_u_fwd(k, v, beta, g_cumsum, A, cu_seqlens): 
+
+===== FILE: ops\triton\kda\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\kda\chunk_delta_h.py =====
+[328行]
+def chunk_gated_delta_rule_fwd_kernel_h_blockdim64_kda(k, v, w, v_new, g, gk): 
+def chunk_gated_delta_rule_fwd_h_kda(k, w, u, g, gk, initial_state): 
+
+===== FILE: ops\triton\kda\cumsum.py =====
+[274行]
+def chunk_local_cumsum_scalar_kernel(s, o, scale, cu_seqlens, chunk_indices, T): 
+def chunk_local_cumsum_scalar(g, chunk_size, reverse, scale, cu_seqlens, block_indices): 
+def chunk_local_cumsum_vector_kernel(s, o, cu_seqlens, chunk_indices, T, B): 
+def chunk_local_cumsum_vector(g, chunk_size, reverse, cu_seqlens, chunk_indices, head_first): 
+def chunk_local_cumsum(g, chunk_size, reverse, scale, cu_seqlens, chunk_indices): 
+
+===== FILE: ops\triton\kda\fused_recurrent_kda.py =====
+[158行]
+def fused_recurrent_gated_delta_rule_fwd_kernel(q, k, v, g, beta, o): 
+
+===== FILE: ops\triton\kda\kda.py =====
+[1332行]
+def fused_recurrent_kda_fwd(q, k, v, g, beta, scale): 
+def fused_recurrent_kda(q, k, v, g, beta, scale): 
+def layer_norm_gated_fwd_kernel(x, g, y, w, b, residual): 
+def layer_norm_gated_fwd_kernel1(x, g, y, w, b, residual): 
+def layer_norm_gated_fwd(x, g, weight, bias, activation, eps): 
+def rms_norm_gated(x, g, weight, bias, activation, residual): 
+def chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_inter(q, k, g, beta, A, Aqk): 
+def chunk_kda_scaled_dot_kkt_fwd_kernel_intra_sub_intra(q, k, g, beta, A, Aqk): 
+def chunk_kda_scaled_dot_kkt_fwd(q, k, gk, beta, scale, cu_seqlens): Compute beta * K * K^T.
+def recompute_w_u_fwd_kernel(q, k, qg, kg, v, beta): 
+def recompute_w_u_fwd(k, v, beta, A, q, gk): 
+def chunk_gla_fwd_kernel_o(q, v, g, h, o, A): 
+def chunk_gla_fwd_o_gk(q, v, g, A, h, o): 
+def chunk_kda_fwd(q, k, v, g, beta, scale): 
+def chunk_kda(q, k, v, g, beta, scale): 
+def kda_gate_fwd_kernel(g, A, y, g_bias, beta, threshold): 
+def fused_kda_gate(g, A, head_k_dim, g_bias, beta, threshold): Forward pass for KDA gate:
+
+===== FILE: ops\triton\kda\l2norm.py =====
+[100行]
+def l2norm_fwd_persistent_kernel(X, Y, eps, M, N, MBLOCK): 
+def l2norm_fwd_tiled_kernel(X, Y, eps, M, N, BD): 
+def l2norm_fwd(x, eps, output_dtype, use_tiled_kernel): 
+
+===== FILE: ops\triton\kda\solve_tril.py =====
+[402行]
+def solve_tril_16x16_kernel_kda(A, Ai, cu_seqlens, chunk_indices, T, H): 
+def merge_16x16_to_32x32_inverse_kernel_kda(A, Ai, cu_seqlens, chunk_indices, T, H): 
+def merge_16x16_to_64x64_inverse_kernel_kda(A, Ai, cu_seqlens, chunk_indices, T, H): 
+def solve_tril_kda(A, cu_seqlens, chunk_indices, output_dtype): Compute the inverse of the matrix I + A
+
+===== FILE: ops\triton\kda\utils.py =====
+[97行]
+def tensor_cache(fn): Cache recent tensor-derived metadata keyed by tensor object identity.
+def prepare_lens(cu_seqlens): 
+def prepare_chunk_indices(cu_seqlens, chunk_size): 
+def prepare_chunk_offsets(cu_seqlens, chunk_size): 
+def input_guard(fn): A decorator to make sure all input tensors are contiguous and set the device based on input tensors.
+
+===== FILE: ops\triton\kimi_k3\__init__.py =====
+[1行] module doc: Triton fusion kernels specific to Kimi K3.
+
+===== FILE: ops\triton\kimi_k3\attention_residual.py =====
+[116行] module doc: Fused Kimi K3 attention-residual mixture.
+def _apply_attn_res_kernel(block_residual_ptr, prefix_sum_ptr, norm_w_ptr, proj_w_ptr, out_ptr, N): 
+def apply_attn_res(prefix_sum, block_residual, proj, norm, num_valid_blocks): Return K3's learned softmax mixture of residual streams.
+
+===== FILE: ops\triton\linearnorm\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\linearnorm\split_qkv_rmsnorm_mrope.py =====
+[427行]
+def split_qkv_rmsnorm_mrope_kernel(in_qkv_ptr, q_weight_ptr, q_bias_ptr, k_weight_ptr, k_bias_ptr, cos_sin_ptr): 
+def triton_split_qkv_rmsnorm_mrope(qkv, q_weight, k_weight, cos_sin, num_q_heads, num_kv_heads): 
+def triton_split_qkv_rmsnorm_mrope_fake(qkv, q_weight, k_weight, cos_sin, num_q_heads, num_kv_heads): 
+
+===== FILE: ops\triton\linearnorm\split_qkv_rmsnorm_rope.py =====
+[390行]
+def split_qkv_rmsnorm_rope_kernel(input_gm_ptr, q_gm_ptr, k_gm_ptr, v_gm_ptr, q_weight_ptr, q_bias_ptr): 
+def split_qkv_rmsnorm_rope_impl(input, cos_sin_cache, positions, q_weight, k_weight, q_hidden_size): 
+def split_qkv_rmsnorm_rope_impl_fake(input, cos_sin_cache, positions, q_weight, k_weight, q_hidden_size): 
+
+===== FILE: ops\triton\linearnorm\split_qkv_rmsnorm_rope_simt.py =====
+[386行]
+def precompute_rope_cos_sin_kernel(positions_gm_ptr, cos_sin_cache_gm_ptr, out_cos_sin_gm_ptr, batch_size, ROPE_DIM, num_vectorcore): 
+def split_qkv_rmsnorm_rope_simt_kernel(input_gm_ptr, q_gm_ptr, k_gm_ptr, v_gm_ptr, q_weight_ptr, q_bias_ptr): 
+def split_qkv_rmsnorm_rope_simt_impl(input, cos_sin_cache, positions, q_weight, k_weight, q_hidden_size): 
+def split_qkv_rmsnorm_rope_simt_impl_fake(input, cos_sin_cache, positions, q_weight, k_weight, q_hidden_size): 
+
+===== FILE: ops\triton\linearnorm\split_qkv_tp_rmsnorm_rope.py =====
+[376行]
+def _split_qkv_and_compute_local_qk_var_kernel(input_ptr, q_out_ptr, k_out_ptr, v_out_ptr, qk_var_ptr, num_tokens): Grid Stride Loop + batch loading + precomputed reciprocal.
+def _apply_global_rmsnorm_kernel(q_ptr, k_ptr, cos_ptr, sin_ptr, cs_row_stride, q_weight_ptr): 
+def split_qkv_tp_rmsnorm_rope_impl(input, q_weight, k_weight, q_hidden_size, kv_hidden_size, head_dim): 
+def split_qkv_tp_rmsnorm_rope_impl_fake(input, q_weight, k_weight, q_hidden_size, kv_hidden_size, head_dim): 
+
+===== FILE: ops\triton\mamba\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\mamba\causal_conv1d.py =====
+[14行]
+def extract_last_width(x, start_loc, width): 
+
+===== FILE: ops\triton\mamba\lightning_attn.py =====
+[627行] module doc: NPU-compatible linear attention operators for BailingMoE.
+def _fwd_diag_kernel(Q, K, V, Out, S, b): 
+def _fwd_kv_parallel(K, V, K_decay, KV, b, h): 
+def _fwd_kv_reduce(S, KV, KV_HISTORY, b, h, n): 
+def _fwd_none_diag_kernel(Q, Out, S, KV, b, h): 
+class _attention:  | methods: forward
+def lightning_attention_npu(q, k, v, ed, block_size, kv_history): lightning attention forward pass (NPU-friendly).
+class AscendLightningAttentionKernel: NPU-friendly lightning attention kernel for BailingMoE prefill. | methods: jit_linear_forward_prefix
+
+===== FILE: ops\triton\mamba\postprocess.py =====
+[429行]
+
+===== FILE: ops\triton\spec_decode\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\spec_decode\ngram.py =====
+[259行]
+def ngram_spec_decode_kernel(token_ids_ptr, num_tokens_ptr, sampled_ptr, discard_ptr, next_token_ids_ptr, draft_token_ids_ptr): 
+def triton_ngram_spec_decode(token_ids, num_tokens_no_spec, sampled_token_ids, discard_request_mask, vocab_size, min_n): 
+
+===== FILE: ops\triton\spec_decode\utils.py =====
+[213行]
+def prepare_inputs_padded_kernel(cu_num_draft_tokens_ptr, valid_sampled_tokens_count_ptr, query_start_loc_gpu_ptr, token_indices_to_sample_ptr, num_rejected_tokens_gpu_ptr, num_reqs): 
+def copy_and_expand_dflash_and_dspark_inputs_kernel(next_token_ids_ptr, target_positions_ptr, context_slot_mapping_ptr, out_input_ids_ptr, out_context_positions_ptr, out_query_positions_ptr): 
+def dflash2_greedy_selector_walk_kernel(scores_ptr, candidate_ids_ptr, output_ptr, num_reqs, num_steps, top_k): 
+
+===== FILE: ops\triton\v2\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\v2\apply_grammar_bitmask.py =====
+[110行]
+def _apply_grammar_bitmask_kernel_impl(logits_ptr, logits_stride, logits_indices_ptr, bitmask_ptr, bitmask_stride, vocab_size): 
+class _ApplyGrammarBitmaskKernelLauncher: Map the upstream logical grid to the Ascend VectorCore launch grid. | methods: __getitem__
+
+===== FILE: ops\triton\v2\mamba\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\v2\mamba\precopy.py =====
+[178行]
+def _copy_mamba_state_block(state_idx, bt_row_idx, src_col, dst_col, token_bias, block_table_ptrs_ptr): Copy one Mamba state block without casting pointers in copy loops.
+def precopy_mamba_align_fused_kernel(mamba_state_idx_ptr, src_col_ptr, token_bias_ptr, block_table_ptrs_ptr, block_table_stride_req, state_base_addrs_ptr): 
+
+===== FILE: ops\triton\v2\metrics\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\v2\metrics\num_nans.py =====
+[39行]
+def _num_nans_kernel(logits_ptr, logits_stride, num_nans_ptr, vocab_size, BLOCK_SIZE): 
+def get_num_nans(logits): 
+
+===== FILE: ops\triton\v2\sample\__init__.py =====
+[0行]
+
+===== FILE: ops\triton\v2\sample\fill_logprob_token_idx.py =====
+[54行]
+def _fill_logprob_token_ids_kernel(out_token_ids_ptr, out_token_ids_stride, out_valid_mask_ptr, out_valid_mask_stride, sampled_token_ids_ptr, topk_indices_ptr): 
+

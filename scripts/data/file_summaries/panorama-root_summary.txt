@@ -1,0 +1,490 @@
+===== FILE: __init__.py =====
+[108行]
+def _ensure_global_patch(): Apply process-wide vLLM patches before engine-core initialization.
+def register(): Register the NPU platform.
+def register_connector(): 
+def register_model_loader(): 
+def register_service_profiling(): 
+def register_model(): 
+
+===== FILE: ascend_config.py =====
+[1473行]
+def is_mega_moe_supported(): Whether the megamoe op is available at runtime.
+def validate_additional_config_bool(value, path): Apply the same pydantic bool rules to values read before config init.
+class AscendCompilationConfig: Configuration for controlling the behavior of Ascend graph optimization. | methods: _apply_unsupported_hardware_downgrade_and_static_kernel_check
+class AscendFusionConfig: Configuration for controlling whether to use a fused operator gmmswigluquant. | methods: 
+class EplbConfig: Configuration Object for ``additional_config["eplb_config"]``. | methods: _validate_config
+class RejectionSamplerConfig: Configuration for Block Verify and Entropy Verify in Rejection Sampler. | methods: _validate
+class RlConfig: Unified defaults for reinforcement-learning workloads. | methods: apply
+class AscendConfig: Configuration Object for additional_config from vllm.configs. | methods: _validate_user_input_ranges, derive_and_validate, _validate_mc2_comm_alg, _validate_sparse_c8_kv_offload_compatibility, _check_mooncake_c8_kv_cache_quant, _check_mix_placement, _is_megamoe_supported_by_config, _materialize_dump_config_to_file, _resolve_dump_config_path, _has_sparse_li_c8_layer_config, _parse_sparse_li_c8_layers_from_quant_config, is_sparse_li_c8_layer, _get_compile_ranges, _set_compile_ranges, update_compile_ranges_split_points ...
+class DynamicSpecConfig: Configuration Object for dynamic_spec_config from additional_config | methods: _validate
+class FinegrainedTPConfig: Configuration Object for ``additional_config["finegrained_tp_config"]``. | methods: _validate_sizes, _validate_preconditions
+class XliteGraphConfig: Configuration Object for ``additional_config["xlite_graph_config"]``. | methods: _validate_preconditions
+class ProfilingChunkConfig: Configuration for profiling-based dynamic chunk sizing. | methods: _validate_and_link_need_timing
+class BatchJobSchedConfig: Configuration for batch-job-aware scheduler. | methods: _validate
+class ShortRequestFirstConfig: Configuration object for ``additional_config["scheduler_config"]["short_request_first_config"]``. | methods: _validate_config
+class DyntraLBConfig: Configuration object for ``scheduler_config.dyntra_lb_config``. | methods: _validate_config
+class SchedulerConfig: Configuration object for ``additional_config["scheduler_config"]``. | methods: from_additional_config
+class SparseKVOffloadConfig: Configuration for the Sparse KV cache offloading. | methods: _validate_values, from_additional_config, _validate_preconditions
+def _is_ascend_config_initialized(config): Check whether a config object has essential initialized fields.
+def init_ascend_config(vllm_config): 
+def clear_ascend_config(): 
+def get_ascend_config(): 
+
+===== FILE: ascend_forward_context.py =====
+[456行]
+class MoECommType:  | methods: 
+def _is_decode_only_node(vllm_config): 
+def override_mrv2_in_profile_run(enabled): Override MRv2's extra profile-run marker for one forward path.
+def get_mrv2_in_profile_run(): 
+def use_cann_megamoe(vllm_config): 
+def set_ascend_forward_context(attn_metadata, vllm_config, num_tokens, num_tokens_across_dp, in_profile_run, num_actual_tokens): A context manager that stores the current forward context,
+def set_mc2_tokens_capacity(vllm_config, max_num_reqs, uniform_decode_query_len): 
+def get_mc2_tokens_capacity(): 
+def set_mc2_mask(vllm_config, device): 
+def get_mc2_mask(): 
+def _select_a2_moe_comm_method(num_tokens, vllm_config, mc2_tokens_capacity): 
+def _select_a3_moe_comm_method(num_tokens, mc2_tokens_capacity, vllm_config): 
+def _select_a5_moe_comm_method(num_tokens, vllm_config, mc2_tokens_capacity): 
+def select_moe_comm_method(num_tokens, vllm_config): Select the MoE communication method according to parallel settings,
+class _ExtraForwardContextProxy: Unified forward-context access for v1/v2 model runners. | methods: check_extra_attr, _ctx, __getattr__, __setattr__
+
+===== FILE: batch_invariant.py =====
+[163行]
+def add_rms_norm(x, residual, weight, eps): AclnnAddRmsNorm can't ensure batch invariant,
+def reduce_sum(x, dim, keepdim): npu_reduce_sum_batch_invariant requires dim to be specified, but torch.sum
+def override_envs_for_invariance(): 
+def enable_batch_invariant_mode(): 
+def init_batch_invariance(): Initialize batch-invariant mode for vLLM on Ascend NPU.
+
+===== FILE: config_utils.py =====
+[50行] module doc: Dependency-light helpers for vLLM-compatible config dataclasses.
+def config(cls): 
+def config(): 
+def config(cls): Create a vLLM-compatible config dataclass without importing vllm.config.
+
+===== FILE: cpu_binding.py =====
+[804行]
+def is_arm_cpu(): 
+def execute_command(cmd): 
+class DeviceInfo:  | methods: __init__, split_npu_smi_header, is_cpu_list, expand_cpu_list, get_all_logic_npus, get_npu_map_info, resolve_logic_id, get_running_npus, parse_allowed_cpus, parse_topo_affinity
+class CpuAlloc:  | methods: __init__, cpu_to_mask, get_threads_map, bind, average_distribute, extend_numa, build_cpu_node_map, parse_threads_per_core, get_uvb_poll_window_threads, get_ascend_950_cluster_size, get_single_numa_node, bind_uvb_poll_window_threads, build_ascend_950_cpu_pools, build_global_slice_cpu_pool, _binding_mode ...
+def bind_cpus(rank_id): 
+
+===== FILE: envs.py =====
+[87行]
+def __getattr__(name): 
+def __dir__(): 
+
+===== FILE: logger.py =====
+[208行] module doc: Logging configuration for vLLM-Ascend.
+def _use_color(): Determine if colored output should be used.
+def _is_ascend_module(pathname): 
+def _infer_module_name(pathname): Infer module name from the file path of the log caller.
+def _format_with_ascend_prefix(self, record, super_format): 
+class AscendFormatter: Extends NewLineFormatter with [vllm-ascend] prefix and module name. | methods: format
+class AscendColoredFormatter: Extends ColoredFormatter with [vllm-ascend] prefix and module name. | methods: format
+class RotatingAscendFileHandler: FileHandler that rotates log files when they exceed a size limit. | methods: __init__, emit, _rotate
+def _setup_file_logging(log_dir): 
+def configure_ascend_file_logging(): 
+def configure_ascend_logging(): Configure vllm_ascend logger with Ascend formatters.
+
+===== FILE: meta_registration.py =====
+[77行]
+def register_meta_if_necessary(ns, op_name, fn, overload): 
+def bgmv_expand_meta(x, weight, indices, y, slice_offset, slice_size): 
+def sgmv_expand_meta(x, weight, lora_indices, seq_len, y, slice_offset): 
+
+===== FILE: platform.py =====
+[1567行]
+class NPUPlatform:  | methods: pass_key, manual_seed_all, is_sleep_mode_available, is_cumem_allocator_available, is_pin_memory_available, opaque_attention_op, support_hybrid_kv_cache, support_static_graph_mode, use_custom_op_collectives, get_device_capability, get_device_name, inference_mode, set_device, register_custom_kv_cache_specs, get_pass_manager_cls ...
+def _fix_incompatible_config(vllm_config): Check and correct parameters in VllmConfig that are incompatible with Ascend NPU.
+def _validate_eplb_config(vllm_config): 
+def _check_ascend_config(vllm_config, ascend_config): Validate Ascend-specific options.
+def _validate_kv_load_failure_policy(vllm_config): 
+def _update_compilation_modes(vllm_config, ascend_config): Update compilation / cudagraph modes.
+def _setup_compile_backend(vllm_config, compile_backend): Recompute cudagraph sizes and setup the compile backend.
+def _setup_worker_and_scheduler(vllm_config, ascend_config): 
+def _validate_sfa_dcp_kv_sp(vllm_config): 
+def _set_pytorch_npu_alloc_env(vllm_config): 
+def _disable_expandable_segments(): Remove the allocator option that conflicts with sleep mode.
+def _validate_fa3_backend(key, _attn_selector_config): 
+def _get_default_max_cudagraph_capture_size(vllm_config): Mirror the default-max branch in vLLM's `_set_cudagraph_sizes()`.
+def _config_deprecated_logging(): Configure deprecated logging format, when used deprecated codes
+def _prune_reduced_capture_sizes(vllm_config): 
+def _get_recompute_scheduler_cls(): 
+def _get_dyntra_lb_scheduler_cls(): 
+def _validate_parallel_config(vllm_config): 
+def _validate_draft_decode_context_parallel_config(vllm_config): 
+
+===== FILE: profiling_config.py =====
+[591行] module doc: Service profiling configuration generator module.
+def get_config_dir(): Get the vllm_ascend configuration directory path.
+def _cleanup_temp_file(tmp_path): Clean up a temporary file if it exists.
+def generate_service_profiling_config(): Generate the service_profiling_symbols.yaml configuration file
+
+===== FILE: utils.py =====
+[1570行]
+def extract_dsv4_layer_index(config, layer_name): Extract DSV4 index for config per-layer arrays.
+def get_dsv4_spec_layer_idx_from_weight_name(config, weight_name): Return local MTP layer index for DSV4 checkpoint weight names.
+def get_dsv4_compress_ratio(config, layer_idx): Return DSV4 compress ratio, treating unspecified MTP layers as dense.
+def model_uses_sfa_sparse(model_config): 
+def enable_sfa_dcp_replicated_indexer(vllm_config): 
+def clear_enable_sp(): 
+def is_rc_device(): Return True if the 310P NPU runs in Root Complex (RC) mode.
+def _mark_op_side_effectful(op): 
+def _ensure_device_print_registered(): 
+def device_print(value): Print one value from a device callback.
+def _should_trans_nz(weight): 
+def maybe_trans_nz(weight): 
+def _round_up(x, align): 
+def _prepend_env_path(env_name, path): 
+def bootstrap_custom_op_env(): 
+def _custom_pad(x, pad_dims): 
+def _custom_reshape(x, target_shape): 
+def _custom_transpose(x, dim1, dim2): 
+def nd_to_nz_2d(in_tensor): 
+def nd_to_nz_spec(mask_tensor): 
+def aligned_16(tensor): Aligned tensor for 310P
+def enable_custom_op(): Enable lazy init for vllm_ascend_C to avoid early initialization of CANN's RTS component.
+def find_hccl_library(): We either use the library file specified by the `HCCL_SO_PATH`
+def current_stream(): replace `torch.npu.current_stream()` with `vllm.utils.current_stream()`.
+def global_stream(): 
+def shared_experts_calculation_stream(): 
+def cp_chunkedprefill_comm_stream(): 
+def attention_calculation_stream(): 
+def adapt_patch(is_global_patch): 
+def setup_ascend_local_comm_res(local_rank, kv_transfer_config): Load the local A5 endpoint config into ASCEND_LOCAL_COMM_RES.
+def vllm_version_is(target_vllm_version): 
+def get_max_hidden_layers(hf_config): 
+def update_cudagraph_capture_sizes(vllm_config, cudagraph_capture_sizes): 
+def dispose_tensor(x): 
+def register_ascend_customop(vllm_config): Register Ascend CustomOP
+def lmhead_tp_enable(): 
+def embedding_tp_enable(): 
+def oproj_tp_enable(): 
+def olora_tp_enable(): 
+
+===== FILE: attention\__init__.py =====
+[0行]
+
+===== FILE: attention\attention_mask.py =====
+[70行]
+def _generate_attn_mask(max_seq_len, dtype): 
+class AttentionMaskBuilder:  | methods: __init__, get_attn_mask, get_splitfuse_attn_mask, get_attention_mask
+
+===== FILE: attention\attention_v1.py =====
+[2223行]
+class AscendAttentionBackend:  | methods: get_name, get_impl_cls, get_builder_cls, supports_pcp, get_kv_cache_shape, swap_blocks, copy_blocks, get_supported_kernel_block_sizes
+class AscendAttentionState:  | methods: 
+class AscendMetadata: Per-layer attention metadata for Ascend FlashAttention backend. | methods: 
+class AscendAttentionMetadataBuilder: Builder for constructing AscendMetadata from CommonAttentionMetadata. | methods: __init__, get_cudagraph_support, reorder_batch, _split_decodes_and_prefills, _build_backend_metadata, build, _finalize_pcp_metadata, build_for_graph_capture
+class AscendAttentionBackendImpl:  | methods: __init__, _graph_metadata_layer_name, update_graph_params, process_weights_after_loading, full_graph_fia, full_graph_fia_v2, full_graph_pa, _get_fia_params, forward_fused_infer_attention, _forward_fia_chunked_prefill_split, forward_paged_attention, _forward_encoder_attention, do_kv_cache_update, reshape_and_cache, _reshape_and_cache_pcp ...
+class AscendC8AttentionBackendImpl: Attention backend implementation for INT8 KV cache (C8/QuaRot) models. | methods: forward, _nz_5d_view, _prepare_c8_scales, _dequant_paged_kv_to_dense, _quantize_kv_to_int8, _forward_c8_decode, _forward_c8_chunked_prefill, _forward_c8_fused_infer_attention, _reshape_and_cache
+
+===== FILE: attention\dsa_attn_kv_plan.py =====
+[182行] module doc: Centralized DeepSeek-V4 attention-KV execution choices.
+def _supports_dsv4_compressed_cache(): 
+def resolve_dsv4_cache_dtype(cache_dtype, model_dtype): Return the KV cache dtype the platform should pin for DeepSeek-V4.
+def is_a5_bf16_kv_enabled(vllm_config): Return whether BF16 SparseFlashMla KV is enabled on A5.
+def get_dsv4_attn_kv_dtype(vllm_config): Return the attention KV dtype while preserving non-A5 behavior.
+class DsaAttnKvPlan: The attention-KV plan only; indexer KV remains independently FP8. | methods: get_dsa_sparse_attn_metadata_op, get_dsa_sparse_attn_metadata_kwargs, get_dsa_sparse_attn_op, get_dsa_sparse_attn_base_kwargs, add_dsa_sparse_attn_extra_kwargs, get_dsa_compressor_slot_mapping_format, format_dsa_slot_mapping, dsa_kv_compress_scatter
+def get_dsa_attn_kv_plan(vllm_config): Return the explicit A5 BF16 or upstream-compatible FP8 DSA plan.
+
+===== FILE: attention\dsa_v1.py =====
+[1709行]
+def dsv4_dsa_overlap_stream(): 
+def _is_w8a8_dynamic(linear): True iff ``linear`` is wired up with ``AscendW8A8DynamicLinearMethod``.
+def _has_weight_scale(linear): 
+def _dsa_layout_kv(vllm_config): 
+def _dsa_swa_only_cmp_ratio(compress_ratio, vllm_config): BF16 SWA-only attention takes no compressed stream; otherwise keep main's value.
+class AscendDSABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_scale_shape, get_impl_cls, get_supported_kernel_block_sizes
+class AscendDSAC4Backend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC128Backend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSASWABackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC4StateBackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAC128StateBackend:  | methods: get_name, get_supported_kernel_block_sizes
+class AscendDSAReqMetadata: Unified metadata for all requests in one attention invocation. | methods: 
+class AscendDSAMetadata: Metadata for MLACommon. | methods: 
+class AscendDSALayerMetadata:  | methods: 
+def _require_req_metadata(metadata): 
+def get_dspark_sparse_sas_window(vllm_config): 
+def _aligned_dspark_index_width(window_size, block_size, alignment): 
+def build_dspark_swa_indices(block_table, num_speculative_tokens, window_size, block_size, query_start_loc, seq_lens): Build DSpark non-causal visible slot ids for a paged SWA cache.
+class AscendDSAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _init_hadamard, get_cudagraph_support, reorder_batch, set_num_actual_tokens, _num_compressor_metadata_rows, build_for_cudagraph_capture, build, _build_sas_metadata, _build_qli_metadata, build_req_metadata, build_for_drafting, build_req_metadata_for_drafting, build_for_graph_capture
+class AscendDSAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _get_layer_metadata, update_graph_params, process_weights_after_loading, _forward_o_proj, _prepare_caches_before_attention, _get_o_proj_input_shape, forward, _mla_prolog_single_stream, _mla_prolog_multistream, _maybe_update_compressed_caches_and_select_topk, _forward_attention
+
+===== FILE: attention\fa3_v1.py =====
+[144行]
+class AscendFABackend:  | methods: __init__, get_name, get_impl_cls, get_builder_cls, get_kv_cache_shape, get_supported_kernel_block_sizes
+class AscendFAImpl:  | methods: __init__, _flash_attn_with_kvcache, forward_impl
+
+===== FILE: attention\indexer.py =====
+[93行]
+class AscendSFAIndexerBackend: Placeholder backend for split SFA indexer cache layers. | methods: get_impl_cls, supports_pcp, get_name, get_builder_cls, get_kv_cache_shape, get_supported_kernel_block_sizes
+class AscendSFAIndexerMetadataBuilder: Cache-only metadata builder for split SFA indexer cache layers. | methods: __init__, get_cudagraph_support, build
+
+===== FILE: attention\mla_v1.py =====
+[2087行]
+def _npu_mla_prolog_v3_no_rope(): Call the AscendC MLA prolog with optional RoPE inputs omitted.
+class AscendMLABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_impl_cls, get_supported_kernel_block_sizes
+class ChunkedContextMetadata: Metadata for chunked context handling in MLA attention. | methods: 
+class AscendMLAPrefillMetadata: Prefill Specific Metadata for Ascend | methods: 
+class AscendMLADecodeMetadata: Decode-specific metadata for Ascend MLA attention. | methods: 
+class AscendMLAMetadata: Metadata for MLACommon. | methods: __post_init__
+class AscendMLAPCPMetadata: MLA metadata needed to write the complete PCP prefill KV cache. | methods: 
+class AscendMLAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, determine_chunked_prefill_workspace_size, get_cudagraph_support, reorder_batch, pad_actual_seq_len_q_mtp_enable_pad, pad_actual_seq_len_q_mtp_disable_pad, set_num_actual_tokens, build, build_chunked_metadata, get_block_table_size, build_prefill_metadata, build_decode_metadata, build_for_graph_capture
+class AscendMLAPCPMetadataBuilder: Build rank-local MLA metadata while retaining PCP cache-write slots. | methods: __init__, build
+class DecodeMLAPreprocessResult:  | methods: 
+class PrefillMLAPreprocessResult:  | methods: 
+class AscendMLAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, update_graph_params, _v_up_proj, _v_up_proj_batch_major, _q_proj_and_k_up_proj, process_weights_after_loading, _load_fa_quant_scales, _process_weights_for_fused, get_context_seq_len_npu, _reorg_kvcache, _compute_prefill_context, _forward_prefill, _exec_kv_no_rope, exec_kv_decode, exec_kv_prefill ...
+class AscendMLAPCPImpl: MRV2 MLA implementation for Prefill Context Parallelism. | methods: _get_num_prefill_kv_tokens, exec_kv_prefill
+
+===== FILE: attention\sfa_kv_offload.py =====
+[470行] module doc: Standalone SFA backend for Sparse KV offload.
+def _check_device_kv_cache_exist(): 
+class AscendSFAKVOffloadMetadataBuilder: Fills the offload-specific SFA metadata (decode split + request ids). | methods: __init__, _populate_offload_metadata, build, build_for_drafting
+class AscendSFAKVOffloadImpl: SFA implementation that routes main MLA K/V through the CPU pool. | methods: __init__, _resolve_preprocess_type, _cpu_cache_pair, _resident_views, _offload_layer_name, _is_decode_only, _pad_to_input_tokens, _in_graph_runtime, forward, _compute_kv_only, exec_kv, _execute_sparse_flash_attention_process
+
+===== FILE: attention\sfa_v1.py =====
+[1742行]
+class PreprocessType:  | methods: 
+def _get_indexer_types(configs): 
+def _has_shared_indexer_layers(configs): 
+def _get_config_bool(configs, attr): 
+class AscendSFABackend:  | methods: get_name, get_builder_cls, get_kv_cache_shape, get_impl_cls, get_supported_kernel_block_sizes
+class AscendSFAMetadata: Metadata for MLACommon. | methods: 
+class SFAForwardContext: Parallel-layout inputs consumed by the shared SFA forward template. | methods: 
+class AscendSFAMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _prepare_parallel_metadata, _update_parallel_slot_mapping, determine_chunked_prefill_workspace_size, get_cudagraph_support, reorder_batch, build, build_for_drafting, _build_with_metadata_view, _build, build_for_graph_capture
+class AscendSFAImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, kv_cache_indexer_k_idx, kv_cache_indexer_scale_idx, update_graph_params, process_weights_after_loading, _get_layer_quant_method, _resolve_preprocess_type, _try_enable_type, _get_fused_type_unsupported_reasons, _process_weights_for_fused_prolog_v3, _process_weights_for_fused_mlapo, forward_mha, forward_mqa, rope_single, exec_kv ...
+def custom_kv_rmsnorm_rope(kv, gamma, cos, sin, kv_lora_rank, qk_rope_head_dim): 
+
+===== FILE: attention\sparse_flash_mla.py =====
+[62行]
+def _get_sparse_flash_mla_ops(): Load SparseFlashMla operators without importing vllm_ascend.ops.
+def _add_compressed_kv_lengths(kwargs): 
+def sparse_flash_mla_metadata(): Adapt existing DSA metadata kwargs to SparseFlashMla BF16 KV.
+def sparse_flash_mla(q): Adapt existing DSA attention kwargs to SparseFlashMla BF16 KV.
+
+===== FILE: attention\utils.py =====
+[565行]
+def get_or_register_attention_buffer(vllm_config, layer_names, name, factory): Return a shared non-persistent buffer owned by attention modules.
+def build_valid_topk_mask(topk_indices, seq_len_thresholds): Mask padding and unwritten tail-block positions in SFA top-k rows.
+def get_sfa_qsfa_packed_head_dim(kv_lora_rank, qk_rope_head_dim, tile_size): 
+class PagedAttentionGraphParam: Mark PA params when PA and FIA share one graph replay list. | methods: __iter__
+def update_paged_attention_graph_param(update_stream, handle, event, param, block_table, seq_lens): 
+def cache_graph_workspace(graph_params, num_tokens, candidate_workspace): 
+def needs_layer_aware_fia_graph_replay(): 
+def ascend_chunked_prefill_workspace_size(vllm_config): 
+def using_paged_attention(runtime_shape, vllm_config, head_size): 
+def enable_dcp(): 
+def enable_pcp(): 
+class AscendDCPMetadata: Per-batch metadata required by decode context parallelism. | methods: 
+class AscendCommonAttentionMetadata: Per-batch attention metadata, shared across layers and backends. | methods: unpadded
+def filter_chunked_req_indices(seq_len, mask_for_non_zero_chunk): filter the reqs which are doing real chunk_prefill.
+def split_decodes_and_prefills(common_attn_metadata, decode_threshold, require_uniform, treat_short_extends_as_decodes): Assuming a reordered batch, finds the boundary between prefill and decode
+def wait_for_kv_layer_from_connector(layer_name): 
+def maybe_save_kv_layer_to_connector(layer_name, kv_cache_layer): 
+def notify_kv_cache_written(layer_name): Notify the connector that the paged KV cache for ``layer_name`` has been
+def round_up(val, align): 
+def trans_rope_weight(weight, rope_dim): 
+def transdata(nd_mat, block_size): 
+def enabling_mlapo(vllm_config): 
+
+===== FILE: attention\context_parallel\__init__.py =====
+[0行]
+
+===== FILE: attention\context_parallel\attention_cp.py =====
+[610行]
+class AscendMetadataForPrefill: GQA prefill metadata used only by DCP. | methods: 
+class AscendMetadataForDecode: GQA decode metadata used only by DCP. | methods: 
+class AscendAttentionDCPMetadata: GQA metadata fields used only by the DCP execution path. | methods: 
+class AscendAttentionDCPMetadataBuilder: Build attention metadata for decode context parallelism. | methods: _split_decodes_and_prefills, _get_chunked_req_mask, _build_backend_metadata
+class AscendAttentionDCPImpl:  | methods: update_graph_params, _forward_decode_dcp, _update_chunk_attn_out_lse_with_current_attn_out_lse, _prefill_query_all_gather, _compute_prefill_context, _load_kv_for_chunk, _gather_global_context_output, _update_global_context_output, forward_impl
+
+===== FILE: attention\context_parallel\common_cp.py =====
+[233行]
+def get_dcp_local_seq_lens(seq_lens, dcp_size, interleave_size): Return the interleave-aware KV length of every DCP rank.
+class DCPMetadataBuilderMixin: Shared DCP metadata access for backend-specific metadata builders. | methods: __init__, _require_dcp_metadata, _get_dcp_context_lens, _get_dcp_rank_context_lens
+class DCPImplMixin: Shared DCP group lifecycle and collectives for attention backends. | methods: __init__, _dcp_all_gather, _dcp_all_gather_fragments, _merge_dcp_attention_output
+def _process_attn_out_lse(attn_output, softmax_lse): 
+def _npu_attention_update(head_size, attn_out_lse): 
+def _npu_attn_out_lse_update(attn_lse_mask, attn_lse_nomask, attn_out_mask, attn_out_nomask): 
+def _out_lse_reshape(attn_out, attn_lse): 
+def _update_out_and_lse(out_list, lse_list): LSE_final = log(sum(exp(LSE_i))), O_final = sum(exp(LSE_i - LSE_final) * O_i)
+
+===== FILE: attention\context_parallel\dsa_cp.py =====
+[2291行]
+def hadamard_transform_ref(x, hadamard, scale): 
+def rotate_activation(x, hadamard): 
+class DSACPMetadata: Context-parallel metadata for sequence-sharded DSA execution. | methods: 
+class AscendDSAReqMetadata: Unified per-request metadata — combines fields formerly split into | methods: 
+class AscendDSAMetadata: Metadata for MLACommon. | methods: 
+class AscendDSACPLayerMetadata:  | methods: 
+class AscendDSACPMetadataBuilder: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, get_cudagraph_support, build, build_for_drafting, build_req_metadata_for_drafting, _num_compressor_metadata_rows, _ensure_device_local_metadata, build_req_metadata, _build_local_token_metadata, _get_cmp_seqlens_for_metadata, _build_sas_metadata, _build_qli_metadata, build_for_graph_capture
+class AscendDSACPImpl: NOTE: Please read the comment at the top of the file before trying to | methods: __init__, _get_layer_metadata, _compute_compressor_metadata, process_weights_after_loading, _get_tp_weight_switch_method, _enable_linear_tp_weight_switch, _enable_o_proj_tp_full_weight_switch, _maybe_all_gather_o_proj_full_weight, _switch_o_proj_to_full_weight, _switch_o_proj_to_tp_weight, _apply_wo_b, _get_batched_wo_a_weight, _get_batched_wo_a_scale, _split_full_hidden_states_for_cp, _gather_cp_output ...
+class AscendDSAPCPMetadata: Rank-local DSA metadata with its canonical cache-update view. | methods: from_local_metadata
+class AscendDSAPCPMetadataBuilder: Build rank-local attention and canonical global cache metadata. | methods: __init__, get_cudagraph_support, _build_global_common_attn_metadata, _build_local_common_attn_metadata, _build_local_dsa_metadata, _build_global_dsa_metadata, build
+class AscendDSAPCPImpl: Run batched global DSA cache updates before rank-local PCP attention. | methods: __init__, _gather_and_restore_hidden_states, _update_global_swa_cache, _update_global_compressor_cache, _update_global_indexer_cache, _prepare_caches_before_attention, _get_o_proj_input_shape
+
+===== FILE: attention\context_parallel\mla_cp.py =====
+[529行]
+class DCPChunkedContextMetadata: MLA chunk metadata for DCP-local context shards. | methods: 
+class AscendMLADCPDecodeMetadata: MLA decode metadata fields used only by DCP. | methods: 
+class AscendMlaDCPMetadataBuilder: Build MLA metadata for decode context parallelism. | methods: __init__, build_chunked_metadata, build_decode_metadata
+class AscendMlaDCPImpl: NOTE: Please read the comment at the top of the file before trying to | methods: update_graph_params, get_context_seq_len_npu, reorg_decode_q, _forward_decode, _reorg_kvcache
+
+===== FILE: attention\context_parallel\sfa_cp.py =====
+[1315行]
+class AscendSFAPCPImpl:  | methods: _get_sfa_kv_slot_mapping, exec_kv, _write_indexer_cache
+class DSACPContext:  | methods: 
+class AscendSFADSACPMetadata: SFA metadata fields used only by the DSA-CP execution path. | methods: 
+class DCPGatherContext: State needed to finish an async fused DCP KV all-gather. | methods: 
+class DCPContext:  | methods: 
+class AscendSFADCPMetadata: SFA metadata fields used only by the DCP execution path. | methods: 
+class AscendSFADSADCPMetadata: SFA metadata for the combined DSA-CP and DCP execution path. | methods: 
+class AscendSFADSACPMetadataBuilder: Adds TP-token-sharded DSA-CP metadata to the shared SFA builder. | methods: __init__, _prepare_parallel_metadata, _update_parallel_slot_mapping
+class AscendSFADSACPImpl: SFA implementation for DSA-CP token sharding in the TP group. | methods: __init__, process_weights_after_loading, _get_fused_type_unsupported_reasons, _parallel_query_gather_dim, _prepare_native_hidden_states, _get_parallel_forward_context, exec_kv, _prepare_kv_for_parallel, _store_parallel_kv, _enable_o_proj_tp_full_weight_switch, _get_o_proj_linear_method, _apply_o_proj_full_weight, _finalize_o_proj
+class AscendSFADCPMetadataBuilder:  | methods: __init__, _get_dcp_local_seq_lens, _get_dcp_local_block_table, _ensure_replicated_view_buffers, _build_block_table_replicated_view, _build_slot_mapping_replicated_view, _build_compact_kv_gather_metadata, _build_with_metadata_view, build_for_graph_capture
+class AscendSFADCPImpl:  | methods: __init__, _has_prefill, _record_dcp_kv_gather_context, _start_dcp_gather, _finish_dcp_gather, _all_gather_dim_async, _remap_sparse_indices, _merge_dcp_outputs, _start_dcp_query_gather, _record_query_gather_context, _get_sfa_kv_slot_mapping, _store_parallel_kv, _execute_sparse_flash_attention_process
+class AscendSFADSADCPMetadataBuilder: Composes DCP's outer KV view with DSA-CP token sharding. | methods: __init__
+class AscendSFADSADCPImpl: Composes DCP collectives around the DSA-CP SFA implementation. | methods: 
+def resolve_sfa_metadata_builder(): Resolve one SFA metadata builder from the two independent CP switches.
+def resolve_sfa_impl(vllm_config): Resolve one SFA implementation from the two independent CP switches.
+
+===== FILE: compilation\__init__.py =====
+[0行]
+
+===== FILE: compilation\acl_graph.py =====
+[396行]
+def _is_stream_resource_capture_error(exc): 
+def _is_old_hdk_capture_error(exc): 
+class ACLGraphEntry:  | methods: 
+class ACLGraphWrapper: Wraps a runnable to add acl graph capturing and replaying ability. And | methods: __init__, __getattr__, unwrap, __call__
+def weak_ref_workspaces(params): 
+def update_full_graph_params(attn_backend, update_stream, forward_context, num_tokens, vllm_config, speculative_config): 
+class GraphParams:  | methods: 
+def set_graph_params(aclgraph_capture_sizes): 
+def update_graph_params_workspaces(num_tokens, workspace): 
+def get_graph_params(): 
+def set_draft_graph_params(aclgraph_capture_sizes): 
+def update_draft_graph_params_workspaces(num_tokens, workspace): 
+def get_draft_graph_params(): 
+def set_draft_graph_prefill_params(aclgraph_capture_sizes): 
+def update_draft_graph_prefill_params_workspaces(num_tokens, workspace): 
+def get_draft_graph_prefill_params(): 
+
+===== FILE: compilation\breakable_aclgraph.py =====
+[91行]
+class BreakableACLGraphWrapper:  | methods: __init__, _capture, _replay
+
+===== FILE: compilation\compiler_interface.py =====
+[368行]
+def compile_fx(graph, example_inputs, inner_compile, decompositions): 
+def fusion_pass_compile(graph, example_inputs, compiler_config, compile_range, key): 
+def _compute_decode_cudagraph_batch_sizes(vllm_config): 
+def _configure_backend(config, ascend_compilation_config, vllm_config, process_kwargs_options): 
+def npugraph_ex_compile(graph, example_inputs, compiler_config, vllm_config, ascend_compilation_config, compile_range): 
+class AscendCompiler: AscendCompiler is a custom compiler interface for the Ascend platform. | methods: compute_hash, initialize_cache, compile, load
+
+===== FILE: compilation\graph_fusion_pass_manager.py =====
+[69行]
+class GraphFusionPassManager: A pass manager for graph fusion passes. | methods: __init__, __call__, add, configure
+
+===== FILE: compilation\passes\__init__.py =====
+[0行]
+
+===== FILE: compilation\passes\allgather_chunk_noop_pass.py =====
+[40行]
+class AllGatherChunkNoOpCleanupPass: Fold all_gather + sequence_parallel_chunk_impl into identity. | methods: __init__, _all_gather, _empty, _register_patterns, __call__
+
+===== FILE: compilation\passes\base_pattern.py =====
+[63行]
+class BasePattern:  | methods: __init__, get_inputs, get_pattern, get_replacement, get_extra_stream_scope_check, register
+
+===== FILE: compilation\passes\muls_add_pass.py =====
+[110行]
+class MulsAddPattern: Pattern that matches an element-wise mul + add sequence: | methods: __init__, get_inputs, get_pattern, get_replacement
+class MulsAddFusionPass: A fusion pass that replaces simple element-wise x * scale + y patterns | methods: __init__, __call__, is_applicable_for_range
+
+===== FILE: compilation\passes\noop_elimination.py =====
+[62行]
+class NoOpEliminationPass: Remove no-op view/reshape nodes after pattern rewrites. | methods: __call__, _is_view_like, _dims_equivalent, _all_dims_equivalent
+
+===== FILE: compilation\passes\norm_quant_fusion_pass.py =====
+[403行]
+class AddRMSNormQuantPattern:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class AddRMSNormQuantPatternWithBias:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class AddRMSNormDynamicQuantPattern:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class AddRMSNormDynamicQuantPatternWithBias:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class AddRMSNormDynamicMXQuantPattern:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class RMSNormDynamicMXQuantPattern:  | methods: __init__, get_inputs, get_pattern, get_replacement
+def _model_uses_w4a4_quant(vllm_config): Check whether the model uses W4A4 int4 quantization for any layer.
+class AddRMSNormQuantFusionPass: A pass for fusing AddRMSNorm and W8A8 quantization operations on Ascend. | methods: __init__, __call__, is_applicable_for_range
+
+===== FILE: compilation\passes\qknorm_rope_fusion_pass.py =====
+[244行]
+class QKNormRopeFusionPattern:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class QKNormRopeFusionPatternWithBias:  | methods: __init__, get_inputs, get_pattern, get_replacement
+class QKNormRopeFusionPass: A pass for fusing QKV split and RMSNorm operations into a single qk_rmsnorm operator. | methods: __init__, __call__, is_applicable_for_range
+
+===== FILE: compilation\passes\utils\__init__.py =====
+[0行]
+
+===== FILE: compilation\passes\utils\npugraph_ex_utils_check.py =====
+[75行]
+def extra_stream_scope_check(match): Checks if all nodes in the same stream.
+def check_and_register_fusion_pass(pattern_class): 
+
+===== FILE: core\__init__.py =====
+[0行]
+
+===== FILE: core\batch_job_aware_scheduler.py =====
+[685行] module doc: Batch-Job-Aware Scheduler for vLLM v1
+class JobNameParser: Job name parser with caching for better performance. | methods: __init__, parse, remove, clear
+class _JobStat: Per‑job running statistics. | methods: __init__
+class JobDecodeEstimator: Per‑job decode‑length estimator with EWMA. | methods: __init__, predict, observe, get_stats
+def _cdiv(a, b): Ceiling division: smallest integer >= a/b.
+class RunningBlockReserver: Predict the KV‑block demand of the next running‑loop pass. | methods: __init__, invalidate_cache, predict, _finalize_reserve, _compute_one, _compute_all
+class RequestBucket: Request bucket based on prefill length, supports O(log n) best-fit search. | methods: __init__, put, peek_best_fit_request, remove, is_empty, __len__, __bool__, __iter__
+class BatchJobAwareRequestQueue: Request queue with job‑grouped sorting and reserve‑aware admission. | methods: __init__, add_request, prepend_request, prepend_requests, remove_request, remove_requests, peek_request, pop_request, _get_job_name, _track_cold_start_req, _get_or_create_job_bucket, _free_blocks, _admission_budget, _find_admittable, _get_cold_start_request ...
+class BatchJobAwareScheduler: Batch‑job‑aware scheduler for offline / batched inference workloads. | methods: __init__, schedule, _free_request
+class BatchJobAwareAsyncScheduler: Batch-job-aware + asynchronous scheduling, combined via multiple inhernce. | methods: 
+
+===== FILE: core\dyntra_lb_scheduler.py =====
+[1205行]
+def get_dyntra_lb_block_size(scheduler): Return the effective attention block size used as DyntraLB load unit.
+def get_dyntra_lb_request_block_num(scheduler, request): Estimate a request's attention KV-cache blocks for load balancing.
+def diagnostics_enabled(vllm_config): Read the diagnostic toggle independently of DyntraLB activation.
+def print_scheduler_summary(scheduler, scheduler_output): 
+class DyntraLBPolicyMixin: Provide DyntraLB planning and request-lifecycle policy to a scheduler. | methods: __init__, _waiting_requests_in_schedule_order, _refresh_blocked_waiting_requests, _run_lb_kv_prefetch, prepare_dyntra_lb_step, _apply_load_balance_modifications, _can_admit_waiting_request, _scheduler_output_supports, _has_pending_deliverable_output, _get_connector_computed_blocks, _record_prefix_cache_stats, _preempt_request, _lb_pause_request, _handle_stopped_request, _update_after_schedule ...
+class DyntraLBScheduler:  | methods: schedule
+class AsyncDyntraLBScheduler: DyntraLB scheduler with vLLM's asynchronous scheduling semantics. | methods: 
+
+===== FILE: core\kv_cache_interface.py =====
+[242行]
+def get_storage_block_size(kv_cache_spec): Return the physical token rows represented by one scheduler block.
+class AscendMLAAttentionSpec: MLA cache spec with Ascend-specific layout metadata. | methods: storage_block_size, real_page_size_bytes, unpadded_page_size_bytes, merge, max_memory_usage_bytes
+class AscendSFAIndexerCacheSpec: KV cache spec for SFA indexer K/scale cache. | methods: page_size_bytes, real_page_size_bytes, merge
+class AscendSlidingWindowMLASpec: Sliding window attention with MLA cache format. | methods: __post_init__, storage_block_size, real_page_size_bytes, merge
+def register_ascend_kv_cache_specs(): 
+
+===== FILE: core\profiling_chunk_predictor.py =====
+[465行] module doc: Profiling-based Dynamic Chunk Size Predictor.
+def _start_profiling_chunk_timing(profiling_config, scheduler_output): 
+def _finish_profiling_chunk_timing(profiling_config, execution_start_time): 
+def _attach_profiling_chunk_execution_time(profiling_config, model_runner, output): 
+class ChunkSizePredictor: Predictor for dynamic chunk size based on quadratic latency model. | methods: __init__, fit, fit_chunk, set_target_latency, get_time, get_time_with_history, predict, predict_with_history
+class ProfilingChunkManager: Manager for profiling-based dynamic chunk sizing. | methods: __init__, is_ready, history_ready, predict_chunk_size, predict_time, record_batch_execution_time
+
+===== FILE: core\recompute_scheduler.py =====
+[1426行]
+class RecomputeSchedulerConfig:  | methods: initialize_from_config
+class PreemptedRequestData:  | methods: 
+class RecomputeReqInfo:  | methods: 
+class RecomputeSchedulerOutput:  | methods: 
+class RecomputeScheduler:  | methods: _get_computed_blocks_for_connector, _truncate_computed_blocks_for_connector, _truncate_computed_blocks_with_mamba_clamp, _apply_load_balance_modifications, _can_admit_waiting_request, _update_waiting_for_remote_kv, _finish_recomputed_request, schedule, _build_kv_connector_meta, _add_recomputed_outputs, update_from_output
+class AsyncRecomputeScheduler:  | methods: __init__
+class DyntraLBRecomputeScheduler:  | methods: 
+class AsyncDyntraLBRecomputeScheduler:  | methods: 
+

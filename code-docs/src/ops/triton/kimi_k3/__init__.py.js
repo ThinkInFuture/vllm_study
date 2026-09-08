@@ -1,0 +1,1 @@
+window.__SRC_SET("ops/triton/kimi_k3/__init__.py","\"\"\"Triton fusion kernels specific to Kimi K3.\"\"\"\n");

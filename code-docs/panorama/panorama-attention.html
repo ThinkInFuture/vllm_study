@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>vLLM Ascend - 注意力模块 API 参考</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f7fa;color:#333;margin:0;padding:20px;}
+.navbar{background:white;border-radius:12px;padding:15px 25px;margin-bottom:30px;box-shadow:0 2px 10px rgba(0,0,0,0.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.navbar-brand{font-size:1.2rem;font-weight:bold;color:#667eea;text-decoration:none;}
+.navbar-nav{display:flex;gap:8px;list-style:none;flex-wrap:wrap;}
+.navbar-nav a{color:#666;text-decoration:none;padding:6px 12px;border-radius:8px;transition:all 0.2s;font-size:0.85rem;}
+.navbar-nav a:hover,.navbar-nav a.active{background:#667eea;color:white;}
+.page-header{text-align:center;margin-bottom:30px;}
+.page-header h1{font-size:1.8rem;color:#333;margin-bottom:5px;}
+.page-header p{color:#666;font-size:0.95rem;}
+.section{background:white;border-radius:12px;padding:25px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
+.section h2{color:#333;font-size:1.2rem;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #667eea;}
+.file-block{margin-bottom:25px;padding-left:20px;border-left:3px solid #e8ecf0;}
+.file-block:hover{border-left-color:#667eea;}
+.file-name{font-family:"Consolas",monospace;font-size:0.95rem;font-weight:bold;color:#667eea;margin-bottom:8px;display:block;}
+.file-desc{color:#888;font-size:0.85rem;margin-bottom:12px;line-height:1.4;}
+.item{display:flex;gap:10px;padding:4px 0;font-size:0.85rem;}
+.item-type{font-family:"Consolas",monospace;font-size:0.75rem;padding:1px 6px;border-radius:4px;white-space:nowrap;min-width:50px;text-align:center;}
+.type-class{background:#e8f5e9;color:#2e7d32;}
+.type-func{background:#e3f2fd;color:#1565c0;}
+.item-name{font-family:"Consolas",monospace;color:#333;min-width:220px;}
+.item-desc{color:#666;}
+footer{text-align:center;color:#999;padding:30px;font-size:0.85rem;}
+.file-desc-real{color:#444;font-size:0.88rem;margin-bottom:8px;line-height:1.7;background:#f8f9fc;border-radius:8px;padding:10px 12px;}
+.src-link{font-size:0.75rem;color:#fff;background:#667eea;border-radius:4px;padding:1px 8px;margin-left:8px;text-decoration:none;font-weight:normal;vertical-align:middle;}
+.src-link:hover{background:#5568d8;}
+.file-classes{color:#999;font-size:0.78rem;margin-bottom:10px;line-height:1.5;}
+.container{max-width:1200px;margin:0 auto;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+</style>
+</head>
+<body>
+<nav class="navbar"><a href="../index.html" class="navbar-brand">vLLM Ascend</a><ul class="navbar-nav"><li><a href="panorama.html">全景索引</a></li><li><a href="panorama-root.html">root</a></li><li><a href="panorama-core.html">core</a></li><li><a class="active" href="panorama-attention.html">attention</a></li><li><a href="panorama-ops.html">ops</a></li><li><a href="panorama-worker.html">worker</a></li><li><a href="panorama-models.html">models</a></li><li><a href="panorama-distributed.html">distributed</a></li><li><a href="panorama-rest.html">rest(其他)</a></li></ul></nav>
+<div class="page-header"><h1>vLLM Ascend · 注意力模块 API 参考</h1><p>文件数: 18 | 函数条目: 378 | 每个文件含职责讲解，每个函数含 [代码行数]，文件名旁可跳转源码查看页</p></div><div class="file-block">
+<div class="file-name">attention\__init__.py<a class="src-link" href="../src-viewer.html?file=attention/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">attention 子包的包标记文件。attention 包收录 NPU 上全部注意力后端实现：通用 FlashAttention（attention_v1）、MLA、SFA 稀疏注意力、DSA（DeepSeek-V4）、FA3、KV offload，以及 context_parallel 下的 DCP/PCP 上下文并行变体。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\attention_mask.py<a class="src-link" href="../src-viewer.html?file=attention/attention_mask.py" target="_blank">查看源码</a></div><div class="file-desc-real">注意力掩码构建器（70 行）。AttentionMaskBuilder 按最大序列长度生成并缓存下三角掩码（_generate_attn_mask），提供普通掩码（get_attn_mask）、splitfuse 掩码（get_splitfuse_attn_mask）与统一入口 get_attention_mask，供不走 fused 算子的注意力路径使用。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_generate_attn_mask</span><span class="item-desc">[10行] 内部：生成 attention mask 张量</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[5行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attn_mask</span><span class="item-desc">[8行] 对外接口：返回 attention mask</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_splitfuse_attn_mask</span><span class="item-desc">[6行] 返回 SplitFuse 阶段 attention mask</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_attention_mask</span><span class="item-desc">[14行] 统一入口：按当前阶段返回对应的 attention mask</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\attention_v1.py<a class="src-link" href="../src-viewer.html?file=attention/attention_v1.py" target="_blank">查看源码</a></div><div class="file-desc-real">NPU 通用注意力后端（2223 行，attention 包核心）。AscendAttentionBackend 定义后端元信息（名称/KV cache 形状/支持 PCP）与 swap/copy blocks；AscendAttentionMetadataBuilder 把 vLLM 的 CommonAttentionMetadata 转成 AscendMetadata（含 decode/prefill 拆分、批重排、PCP 元数据、graph capture 支持）；AscendAttentionBackendImpl 实现前向：full graph FIA（fused infer attention）/PA（paged attention）路径、chunked prefill 分段、编码器注意力、KV cache 写入（do_kv_cache_update/reshape_and_cache 及 PCP 变体）；AscendC8AttentionBackendImpl 为 INT8 KV cache（C8/QuaRot）模型提供独立实现：分页 KV 反量化到稠密、激活量化、专用 decode/chunked prefill 前向。</div>
+<div class="file-classes">类: AscendAttentionBackend, AscendAttentionState, AscendAttentionMetadataBuilder, AscendAttentionBackendImpl, AscendC8AttentionBackendImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[6行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[6行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">supports_pcp</span><span class="item-desc">[5行] 返回是否支持 prefill context parallel</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">swap_blocks</span><span class="item-desc">[12行] 交换两个 block group 的内容（prefix cache）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">copy_blocks</span><span class="item-desc">[12行] 拷贝若干 KV cache block</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[51行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[8行] 返回 backend 对 CUDA graph 捕获的支持程度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorder_batch</span><span class="item-desc">[2行] 按 chunked-prefill 需求重排 batch</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_decodes_and_prefills</span><span class="item-desc">[9行] 把 batch 拆为 decode / prefill 子集</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_backend_metadata</span><span class="item-desc">[17行] Extension point for layouts such as DCP.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[109行] 构造 attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_pcp_metadata</span><span class="item-desc">[22行] 完成 PCP metadata 的填充</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[21行] 为 cudagraph 捕获构造 mock metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_graph_metadata_layer_name</span><span class="item-desc">[5行] 返回当前 graph 的 metadata 层名</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[370行] DCP/PCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">extract_layer_index</span><span class="item-desc">[3行] 从层名称中提取数字索引</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_direct_target_attn_key</span><span class="item-desc">[8行] 判断当前 key 是否是直接目标 attention key</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[2行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">full_graph_fia</span><span class="item-desc">[171行] FIA 全图 forward</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">full_graph_fia_v2</span><span class="item-desc">[125行] FIA 全图 forward (V2)</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">full_graph_pa</span><span class="item-desc">[65行] PA 全图 forward</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_fia_params</span><span class="item-desc">[59行] 取得 FIA forward 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_fused_infer_attention</span><span class="item-desc">[141行] FIA 融合 forward</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_fia_chunked_prefill_split</span><span class="item-desc">[80行] ChunkedPrefill with mixed prefill/decode: run decode and prefill in</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_paged_attention</span><span class="item-desc">[20行] PA 物理 forward</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_encoder_attention</span><span class="item-desc">[23行] encoder 阶段 attention forward</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">do_kv_cache_update</span><span class="item-desc">[21行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reshape_and_cache</span><span class="item-desc">[31行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reshape_and_cache_pcp</span><span class="item-desc">[38行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_impl</span><span class="item-desc">[22行] attention 前向底层实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[70行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_nz_5d_view</span><span class="item-desc">[4行] View a KV cache tensor in NZ 5D layout: (num_blocks, num_kv_heads, head_size//nz, block_size, nz).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_c8_scales</span><span class="item-desc">[34行] Shard per-channel C8 scales/offsets to this TP rank and pre-compute</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_shard_and_reshape</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dequant_paged_kv_to_dense</span><span class="item-desc">[47行] Gather paged INT8 KV blocks and dequantize.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_quantize_kv_to_int8</span><span class="item-desc">[22行] Quantize K/V from float to INT8 using static per-channel C8 scales.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_c8_decode</span><span class="item-desc">[37行] C8 decode via FIA V1 BNSD with native paged INT8 KV + perchannel antiquant.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_c8_chunked_prefill</span><span class="item-desc">[100行] C8 ChunkedPrefill: decode via FIA V1 BNSD paged INT8 (zero gather),</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_c8_fused_infer_attention</span><span class="item-desc">[58行] C8 FIA V1 TND for prefill states (PrefillNoCache uses float KV directly,</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reshape_and_cache</span><span class="item-desc">[36行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\dsa_attn_kv_plan.py<a class="src-link" href="../src-viewer.html?file=attention/dsa_attn_kv_plan.py" target="_blank">查看源码</a></div><div class="file-desc-real">DeepSeek-V4 DSA 注意力-KV 执行方案的中心化决策（182 行）。根据硬件（A5/Ascend950）与配置决定 KV cache dtype（resolve_dsv4_cache_dtype/get_dsv4_attn_kv_dtype）、是否启用 BF16 SparseFlashMla（is_a5_bf16_kv_enabled）；DsaAttnKvPlan 封装一套执行参数：稀疏注意力算子与元数据算子的选择、slot_mapping 是否需拆成（块号,块内偏移）二维格式、压缩 KV 的 scatter 写入路径（SparseFlashMla 走 npu_scatter_nd_update_，量化 epilogue 走 kv_compress_epilog 算子）。get_dsa_attn_kv_plan 返回 A5 BF16 或上游兼容 FP8 方案。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_supports_dsv4_compressed_cache</span><span class="item-desc">[2行] 判断当前硬件是否支持 DSV4 压缩 cache</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">resolve_dsv4_cache_dtype</span><span class="item-desc">[12行] 依据模型 dtype 解析 DSV4 cache 实际 dtype</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">is_a5_bf16_kv_enabled</span><span class="item-desc">[13行] 判断 A5 设备是否启用 BF16 KV 路径</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsv4_attn_kv_dtype</span><span class="item-desc">[7行] 返回 DSV4 attention KV 的目标 dtype</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_sparse_attn_metadata_op</span><span class="item-desc">[2行] 返回 DSA 稀疏 attention metadata 算子</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_sparse_attn_metadata_kwargs</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_sparse_attn_op</span><span class="item-desc">[2行] 返回 DSA 稀疏 attention 计算算子</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_sparse_attn_base_kwargs</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">add_dsa_sparse_attn_extra_kwargs</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_compressor_slot_mapping_format</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">format_dsa_slot_mapping</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dsa_kv_compress_scatter</span><span class="item-desc">[25行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dsa_attn_kv_plan</span><span class="item-desc">[45行] 返回当前配置对应的 DSA KV cache 布局</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\dsa_v1.py<a class="src-link" href="../src-viewer.html?file=attention/dsa_v1.py" target="_blank">查看源码</a></div><div class="file-desc-real">DSA（DeepSeek 稀疏注意力）后端族（1709 行）。定义 5 个后端变体：AscendDSABackend（基类）、C4/C128（不同压缩比缓存）、SWA（滑窗）、C4State/C128State（带 state 缓存）。AscendDSAMetadataBuilder 构建统一请求元数据（AscendDSAReqMetadata）：SAS 稀疏元数据、QLI 量化 lightning indexer 元数据、DSpark 滑窗可见 slot 索引、Hadamard 旋转初始化、draft 模式支持；AscendDSAImpl 实现前向：MLA prolog 单流/多流、压缩器 topk 选择、稀疏注意力计算、o_proj 输出（含 A5 FP8 量化路径、oproj TP 权重切换路径，用静态 buffer 保证 ACL graph 重放时 HCCL 通信地址稳定）。</div>
+<div class="file-classes">类: AscendDSABackend, AscendDSAC4Backend, AscendDSAC128Backend, AscendDSASWABackend, AscendDSAC4StateBackend, AscendDSAC128StateBackend, AscendDSAMetadataBuilder, AscendDSAImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">dsv4_dsa_overlap_stream</span><span class="item-desc">[5行] 获取 DSV4 与 DSA 重叠计算用的 NPU 流（懒初始化）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_w8a8_dynamic</span><span class="item-desc">[7行] 判断线性层是否使用 AscendW8A8Dynamic 量化方法</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_has_weight_scale</span><span class="item-desc">[2行] 判断线性层是否携带 weight_scale 张量</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dsa_layout_kv</span><span class="item-desc">[2行] 返回当前 VllmConfig 对应的 KV cache 布局字符串</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dsa_swa_only_cmp_ratio</span><span class="item-desc">[5行] BF16 SWA-only 场景下返回 0，否则保留主模型的压缩比</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[16行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_scale_shape</span><span class="item-desc">[2行] 返回 scale 张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[16行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[4行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_require_req_metadata</span><span class="item-desc">[3行] 校验 builder 是否已设置请求级 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dspark_sparse_sas_window</span><span class="item-desc">[5行] 计算 DSpark 稀疏 SAS 窗口大小</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_aligned_dspark_index_width</span><span class="item-desc">[3行] 返回对齐到硬件要求后的 DSpark index 宽度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_dspark_swa_indices</span><span class="item-desc">[49行] 构造 DSpark sliding window 索引表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[61行] 初始化类实例（绑定 vllm_config、layer_names、device）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_init_hadamard</span><span class="item-desc">[20行] 初始化 Hadamard 旋转矩阵</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[8行] 返回 backend 对 CUDA graph 捕获的支持程度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorder_batch</span><span class="item-desc">[46行] DSA 专用 batch 重排</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_num_actual_tokens</span><span class="item-desc">[5行] 写入实际 token 数到 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_num_compressor_metadata_rows</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_cudagraph_capture</span><span class="item-desc">[8行] Delegate to build() because DSA needs shared request metadata.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[85行] 构造 attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_sas_metadata</span><span class="item-desc">[54行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_qli_metadata</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_req_metadata</span><span class="item-desc">[113行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_drafting</span><span class="item-desc">[47行] 为 draft 模型构造 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_req_metadata_for_drafting</span><span class="item-desc">[110行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[20行] 为 CUDA graph 捕获构造 mock metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_layer_metadata</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[10行] DCP/PCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[6行] 权重加载后的后处理</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_o_proj</span><span class="item-desc">[111行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_caches_before_attention</span><span class="item-desc">[9行] Prepare cache updates and report whether local writes can be skipped.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_o_proj_input_shape</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[65行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mla_prolog_single_stream</span><span class="item-desc">[84行] Run the MLA prolog on the current stream.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mla_prolog_multistream</span><span class="item-desc">[116行] 3-block multi-stream: 3-stage CV parallel + serial tail</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_update_compressed_caches_and_select_topk</span><span class="item-desc">[69行] Update compressed caches and return Indexer top-k indices.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">compute_attention_compressed_kv</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">scatter_attention_compressed_kv</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_attention</span><span class="item-desc">[115行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\fa3_v1.py<a class="src-link" href="../src-viewer.html?file=attention/fa3_v1.py" target="_blank">查看源码</a></div><div class="file-desc-real">FA3（FlashAttention v3 接口）后端的轻量封装（144 行）。AscendFABackend 提供后端元信息与 KV cache 形状；AscendFAImpl 把 vLLM 的 flash_attn_with_kvcache 调用适配到 NPU 实现（_flash_attn_with_kvcache）并在 forward_impl 中按元数据分发，适用于直接使用 FA 接口的模型。</div>
+<div class="file-classes">类: AscendFABackend, AscendFAImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[17行] 初始化 AscendFAImpl（校验参数）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[2行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[2行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_flash_attn_with_kvcache</span><span class="item-desc">[36行] 调用 flash_attn_npu_v3 的 flash_attn_with_kvcache</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_impl</span><span class="item-desc">[47行] 执行 attention 前向（区分 decode/prefill）</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\indexer.py<a class="src-link" href="../src-viewer.html?file=attention/indexer.py" target="_blank">查看源码</a></div><div class="file-desc-real">SFA indexer 缓存独立分层的占位后端（93 行）。当 SFA 的 indexer K/scale 缓存作为独立 KV cache group 分层管理时使用：AscendSFAIndexerBackend 提供后端元信息（实际计算由主 SFA 后端完成），AscendSFAIndexerMetadataBuilder 只构建缓存写入所需的元数据（build 填充 slot 映射），不做注意力计算。</div>
+<div class="file-classes">类: AscendSFAIndexerBackend, AscendSFAIndexerMetadataBuilder</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[2行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">supports_pcp</span><span class="item-desc">[2行] 返回是否支持 prefill context parallel</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[2行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[8行] 初始化元数据构建器</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[6行] 返回 backend 对 CUDA graph 捕获的支持程度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[7行] 构造 attention metadata</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\mla_v1.py<a class="src-link" href="../src-viewer.html?file=attention/mla_v1.py" target="_blank">查看源码</a></div><div class="file-desc-real">MLA（Multi-head Latent Attention）后端（2087 行，DeepSeek 系列模型主力路径）。元数据体系：ChunkedContextMetadata（chunked prefill 上下文）、AscendMLAPrefillMetadata/AscendMLADecodeMetadata/AscendMLAMetadata、PCP 专用元数据；AscendMLAMetadataBuilder 处理 chunked prefill workspace 估算、MTP 场景 q 长度填充、prefill/decode 元数据分别构建；AscendMLAImpl 实现前向：fused 融合预处理（_process_weights_for_fused 把 fused_qkv_a_proj/q_proj 权重转成 prolog 消耗的 FRACTAL_NZ 格式并处理量化 scale）、mla_preprocess_decode/prefill（q/kv 投影 + RoPE + KV 写入）、FA3 与 PA 两条前向路径、chunked prefill 上下文重组织（_reorg_kvcache/_compute_prefill_context）；AscendMLAPCPImpl 支持 prefill 上下文并行（保留完整 PCP cache 写槽位）。</div>
+<div class="file-classes">类: AscendMLABackend, AscendMLAPCPMetadata, AscendMLAMetadataBuilder, AscendMLAPCPMetadataBuilder, DecodeMLAPreprocessResult, PrefillMLAPreprocessResult, AscendMLAImpl, AscendMLAPCPImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_npu_mla_prolog_v3_no_rope</span><span class="item-desc">[5行] 调用 AscendC MLA prolog（v3）算子，可省略 RoPE 入参</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[12行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[12行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__post_init__</span><span class="item-desc">[2行] MLA dataclass 后置初始化</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[65行] 初始化 MLA backend 或 metadata builder</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">determine_chunked_prefill_workspace_size</span><span class="item-desc">[2行] 估算 chunked prefill workspace 大小</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[8行] 返回 MLA backend 对 CUDA graph 捕获支持</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorder_batch</span><span class="item-desc">[46行] MLA 专用 batch 重排</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pad_actual_seq_len_q_mtp_enable_pad</span><span class="item-desc">[44行] MTP 启用 padding 时 pad 实际序列长度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">pad_actual_seq_len_q_mtp_disable_pad</span><span class="item-desc">[21行] MTP 禁用 padding 时直接使用原长度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">set_num_actual_tokens</span><span class="item-desc">[5行] 写入实际 token 数到 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[40行] 构造 MLA attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_chunked_metadata</span><span class="item-desc">[43行] 为 chunked prefill 构造 MLA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_block_table_size</span><span class="item-desc">[11行] 返回 block table 大小</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_prefill_metadata</span><span class="item-desc">[41行] 构造 MLA prefill metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_decode_metadata</span><span class="item-desc">[83行] 构造 MLA decode metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[17行] 为 CUDA graph 捕获构造 mock MLA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[113行] DCP/PCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_v_up_proj</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_v_up_proj_batch_major</span><span class="item-desc">[13行] Project a batch-major partial-attention result.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_q_proj_and_k_up_proj</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[68行] 权重加载后的 MLA layout cast</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_load_fa_quant_scales</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_weights_for_fused</span><span class="item-desc">[74行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_context_seq_len_npu</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reorg_kvcache</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_prefill_context</span><span class="item-desc">[108行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_prefill</span><span class="item-desc">[71行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_exec_kv_no_rope</span><span class="item-desc">[30行] Normalize and cache K3 MLA KV without rotating its raw slice.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">exec_kv_decode</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">exec_kv_prefill</span><span class="item-desc">[51行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rope_single</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_decode</span><span class="item-desc">[212行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorg_decode_q</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mla_preprocess_only_decode</span><span class="item-desc">[86行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_num_prefill_kv_tokens</span><span class="item-desc">[10行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mla_preprocess_prefill</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">mla_preprocess_decode</span><span class="item-desc">[23行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_mla_preprocess</span><span class="item-desc">[39行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_num_actual_tokens</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_mha</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_mqa</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[85行] MLA attention 前向入口</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\sfa_kv_offload.py<a class="src-link" href="../src-viewer.html?file=attention/sfa_kv_offload.py" target="_blank">查看源码</a></div><div class="file-desc-real">Sparse KV offload 专用 SFA 后端（470 行）。把主 MLA 的 K/V 经 CPU 内存池中转以支持超大上下文：AscendSFAKVOffloadMetadataBuilder 填充 offload 专属元数据（decode 拆分 + 请求 ID）；AscendSFAKVOffloadImpl 在 decode-only 且不在 graph 捕获/重放状态时把 K/V 路由到 CPU 池（_cpu_cache_pair/_resident_views 管理 topk buffer 的常驻视图），强制使用 native 预处理路径（sfa_prolog_v3/mlapo 被禁用），sparse flash attention 主计算在 _execute_sparse_flash_attention_process 中执行。</div>
+<div class="file-classes">类: AscendSFAKVOffloadMetadataBuilder, AscendSFAKVOffloadImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_check_device_kv_cache_exist</span><span class="item-desc">[9行] 检查当前 prefill/mixed 批次是否需要 keep_device_kv_cache</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[36行] 初始化类实例</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_populate_offload_metadata</span><span class="item-desc">[21行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[9行] 构造 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_drafting</span><span class="item-desc">[12行] 为 draft 模式构造 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_resolve_preprocess_type</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_cpu_cache_pair</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_resident_views</span><span class="item-desc">[26行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_offload_layer_name</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_is_decode_only</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_pad_to_input_tokens</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_in_graph_runtime</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[13行] 前向计算</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_kv_only</span><span class="item-desc">[25行] Decode-only KV generation that never touches an NPU paged cache.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">exec_kv</span><span class="item-desc">[47行] KV 路径入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_execute_sparse_flash_attention_process</span><span class="item-desc">[126行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\sfa_v1.py<a class="src-link" href="../src-viewer.html?file=attention/sfa_v1.py" target="_blank">查看源码</a></div><div class="file-desc-real">SFA（Sparse Flash Attention）后端（1742 行）。面向 DeepSeek-V3.2 等稀疏注意力模型：AscendSFAMetadataBuilder 构建稀疏注意力元数据（支持 DSA-CP token 分片、DCP KV 视图的并行元数据准备）；AscendSFAImpl 按量化方法选择融合预处理路径——PROLOG_V3（W8A8 dynamic/MXFP8，走 npu_mla_prolog_v3 系算子）或 MLAPO（W8A8，权重转 FRACTAL_NZ + trans_rope_weight 重排），否则回退 native；indexer 选择前后处理（indexer_select_pre/post_process）完成 lightning indexer 的 K 缓存写入与 topk 选择；_execute_sparse_flash_attention_process 执行稀疏主计算；_v_up_proj 用 batch_matmul_transpose/npu_transpose_batchmatmul 完成 V 上投影；custom_kv_rmsnorm_rope 为融合 RMSNorm+RoPE+FP8 量化的自定义算子入口。</div>
+<div class="file-classes">类: PreprocessType, AscendSFABackend, AscendSFAMetadataBuilder, AscendSFAImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_indexer_types</span><span class="item-desc">[8行] 从 config tuple 提取 indexer_types 字段</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_has_shared_indexer_layers</span><span class="item-desc">[5行] 判断是否有 shared 类型的 indexer 层</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_config_bool</span><span class="item-desc">[5行] 从 config tuple 中按顺序读取 bool 属性</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_name</span><span class="item-desc">[2行] 返回后端的注册名称</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_builder_cls</span><span class="item-desc">[8行] 返回 attention metadata builder 类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_kv_cache_shape</span><span class="item-desc">[8行] 返回 KV 缓存张量形状</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_impl_cls</span><span class="item-desc">[8行] 返回 attention 实现类</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_supported_kernel_block_sizes</span><span class="item-desc">[2行] 返回支持的 kernel 块大小列表</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[115行] 初始化 AscendSFAImpl / Builder</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_parallel_metadata</span><span class="item-desc">[12行] 为 parallel 模式准备 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_parallel_slot_mapping</span><span class="item-desc">[8行] 更新 parallel slot_mapping（基于 indexer 范围）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">determine_chunked_prefill_workspace_size</span><span class="item-desc">[2行] 估算 SFA chunked prefill workspace</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[8行] 返回 SFA backend 对 CUDA graph 的支持</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorder_batch</span><span class="item-desc">[3行] SFA 专用 batch 重排</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[12行] 构造 SFA attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_drafting</span><span class="item-desc">[13行] 为 draft 模型构造 SFA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_with_metadata_view</span><span class="item-desc">[11行] 在已有 metadata 视图上填充 SFA 专用字段</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build</span><span class="item-desc">[68行] 底层构造 SFA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[15行] 为 CUDA graph 捕获构造 mock SFA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">kv_cache_indexer_k_idx</span><span class="item-desc">[14行] 计算 indexer K 缓存的物理 slot 索引</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">kv_cache_indexer_scale_idx</span><span class="item-desc">[3行] Index of the indexer scale cache in the KV cache tuple.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[10行] DCP/PCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[66行] 权重加载后 SFA layout cast</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_layer_quant_method</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_resolve_preprocess_type</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_try_enable_type</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_fused_type_unsupported_reasons</span><span class="item-desc">[19行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_weights_for_fused_prolog_v3</span><span class="item-desc">[47行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_weights_for_fused_mlapo</span><span class="item-desc">[73行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_mha</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_mqa</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rope_single</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">exec_kv</span><span class="item-desc">[44行] KV 路径入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_q_proj_and_k_up_proj</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_v_up_proj</span><span class="item-desc">[26行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sfa_preprocess_prolog_v3</span><span class="item-desc">[113行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_sfa_preprocess_mlapo</span><span class="item-desc">[65行] A3 MLAPO via ``torch.ops._C_ascend.mla_preprocess`` (W8A8, ≤ 1024 tokens).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">indexer_select_pre_process</span><span class="item-desc">[48行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">indexer_select_post_process</span><span class="item-desc">[83行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_indexcache_topk_indices</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_indexcache_topk_indices</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_use_li_c8_reshape_optim</span><span class="item-desc">[3行] Whether this layer can use the LI C8 cache-write operator.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_execute_sparse_flash_attention_process</span><span class="item-desc">[22行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_query_gather_context</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parallel_query_gather_dim</span><span class="item-desc">[3行] Dimension restored by an outer DCP query gather.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_kv_for_parallel</span><span class="item-desc">[16行] Prepare native KV tensors for an optional parallel layout.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_store_parallel_kv</span><span class="item-desc">[40行] Store KV produced by native preprocessing.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_parallel_forward_context</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_native_hidden_states</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_o_proj</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_sfa_kv_slot_mapping</span><span class="item-desc">[5行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compose_sfa_kv_cache</span><span class="item-desc">[57行] Compose split cache handles into the tuple expected by SFA kernels.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_write_indexer_cache</span><span class="item-desc">[45行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[201行] SFA attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">custom_kv_rmsnorm_rope</span><span class="item-desc">[37行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\sparse_flash_mla.py<a class="src-link" href="../src-viewer.html?file=attention/sparse_flash_mla.py" target="_blank">查看源码</a></div><div class="file-desc-real">SparseFlashMla BF16 KV 适配层（62 行）。惰性加载 SparseFlashMla 算子（不引入对 vllm_ascend.ops 的依赖），把现有 DSA 元数据 kwargs（sparse_flash_mla_metadata）和注意力 kwargs（sparse_flash_mla）适配为 SparseFlashMla BF16 KV 所需格式（附加压缩 KV 长度参数），供 A5 平台 BF16 DSA 路径调用。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_sparse_flash_mla_ops</span><span class="item-desc">[10行] 懒加载 SparseFlashMla 算子</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_add_compressed_kv_lengths</span><span class="item-desc">[9行] 为 kwargs 添加压缩 KV 长度信息</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sparse_flash_mla_metadata</span><span class="item-desc">[14行] 将 DSA metadata 适配到 SparseFlashMla BF16 KV</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">sparse_flash_mla</span><span class="item-desc">[11行] 将 DSA attention 适配到 SparseFlashMla BF16 KV 并执行</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\utils.py<a class="src-link" href="../src-viewer.html?file=attention/utils.py" target="_blank">查看源码</a></div><div class="file-desc-real">注意力模块共享工具集（565 行）。包含：共享 buffer 注册（get_or_register_attention_buffer）、SFA topk 掩码构建、graph workspace 缓存与 PA/FIA 共图重放参数（PagedAttentionGraphParam/update_paged_attention_graph_param）、chunked prefill workspace 尺寸估算；AscendCommonAttentionMetadata 定义跨层共享的批次级注意力元数据，split_decodes_and_prefills 按阈值拆分 decode/prefill 段；KV connector 协作钩子（wait_for_kv_layer_from_connector/maybe_save_kv_layer_to_connector/notify_kv_cache_written）；权重变换工具 trans_rope_weight（RoPE 维度重排）与 transdata（FRACTAL_NZ 分块重排）；DCP/PCP 开关（enable_dcp/enable_pcp）与 AscendDCPMetadata。</div>
+<div class="file-classes">类: AscendCommonAttentionMetadata</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_or_register_attention_buffer</span><span class="item-desc">[33行] 注册跨 attention 层共享的非-persistent 缓冲</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_valid_topk_mask</span><span class="item-desc">[6行] 生成 top-k 行中的合法位置掩码</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_sfa_qsfa_packed_head_dim</span><span class="item-desc">[12行] 计算 SFA/QSFA packed KV 缓存的 head_dim 字节数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__iter__</span><span class="item-desc">[2行] 迭代队列</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_paged_attention_graph_param</span><span class="item-desc">[45行] 更新 ACL graph 中 PA 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">cache_graph_workspace</span><span class="item-desc">[20行] 按 graph 大小缓存 FIA workspace 张量</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">needs_layer_aware_fia_graph_replay</span><span class="item-desc">[12行] 是否需要逐层感知的 FIA 图 replay</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">ascend_chunked_prefill_workspace_size</span><span class="item-desc">[26行] 计算 chunked prefill 所需的 workspace</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">using_paged_attention</span><span class="item-desc">[17行] 判断是否使用 paged attention</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enable_dcp</span><span class="item-desc">[3行] 判断当前配置是否启用 decode context parallel</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enable_pcp</span><span class="item-desc">[3行] 判断当前配置是否启用 prefill context parallel</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">unpadded</span><span class="item-desc">[56行] dataclass 字段：原始未对齐 KV 长度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_slice_reqs</span><span class="item-desc">[2行] 按请求 id 切片 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">filter_chunked_req_indices</span><span class="item-desc">[23行] 过滤 chunked prefill 阶段请求索引</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">split_decodes_and_prefills</span><span class="item-desc">[89行] 把请求 batch 拆为 decode / prefill 子集</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">wait_for_kv_layer_from_connector</span><span class="item-desc">[12行] 从 KV connector 等待指定层 KV</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">maybe_save_kv_layer_to_connector</span><span class="item-desc">[15行] 如需 offloading，把层 KV 提交给 connector</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">notify_kv_cache_written</span><span class="item-desc">[18行] 通知 connector 当前层 cache 已写入</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">round_up</span><span class="item-desc">[4行] 向上取整到对齐单位</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">trans_rope_weight</span><span class="item-desc">[7行] 把 RoPE 权重从 (B,A) 转 (A,B) 存储布局</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">transdata</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">enabling_mlapo</span><span class="item-desc">[11行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\__init__.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/__init__.py" target="_blank">查看源码</a></div><div class="file-desc-real">attention.context_parallel 子包标记。该子包实现 NPU 注意力的上下文并行：DCP（decode context parallel，序列分片 decode）与 PCP（prefill context parallel，prefill 上下文并行），覆盖 GQA/MLA/SFA/DSA 四类后端。</div>
+<div class="file-classes">类: 无</div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\attention_cp.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/attention_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">GQA 注意力的 DCP 实现（610 行）。AscendAttentionDCPMetadataBuilder 拆分 decode/prefill 并构建 DCP 专属元数据（AscendAttentionDCPMetadata）；AscendAttentionDCPImpl 的 decode 路径（_forward_decode_dcp）在 rank 本地 KV 分片上计算；prefill chunked 路径：all-gather query（_prefill_query_all_gather）、按 chunk 用 DeviceOperator.kv_cache_load 从分页缓存加载 K/V（_load_kv_for_chunk）、本地注意力输出经 all_to_all 汇聚（_gather_global_context_output）、各 rank 输出与 LSE 在 _update_global_context_output 中用 log-sum-exp 合并，_update_chunk_attn_out_lse_with_current_attn_out_lse 处理 chunk 间增量合并。</div>
+<div class="file-classes">类: AscendAttentionDCPMetadata, AscendAttentionDCPMetadataBuilder, AscendAttentionDCPImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_decodes_and_prefills</span><span class="item-desc">[9行] 把 batch 拆为 decode / prefill 子集</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_chunked_req_mask</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_backend_metadata</span><span class="item-desc">[58行] 构造后端 metadata（内部 helper）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[102行] DCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_decode_dcp</span><span class="item-desc">[116行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_chunk_attn_out_lse_with_current_attn_out_lse</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prefill_query_all_gather</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_prefill_context</span><span class="item-desc">[50行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_load_kv_for_chunk</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gather_global_context_output</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_global_context_output</span><span class="item-desc">[12行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward_impl</span><span class="item-desc">[85行] attention 前向底层实现</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\common_cp.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/common_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">DCP 共享基础设施（233 行）。get_dcp_local_seq_lens 按 interleave 布局计算每个 DCP rank 持有的 KV 长度；DCPMetadataBuilderMixin 提供元数据构建器对 DCP 元数据的访问与本地/rank 上下文长度提取；DCPImplMixin 封装组生命周期与集合通信（_dcp_all_gather、_dcp_all_gather_fragments 多张量异步 all-gather、_merge_dcp_attention_output）；_process_attn_out_lse/_npu_attention_update/_npu_attn_out_lse_update 处理带掩码/无掩码两路输出与 LSE 的合并（npu_attention_update 算子），_update_out_and_lse 实现 LSE=log(sum(exp(LSE_i))) 的数值稳定合并。</div>
+<div class="file-classes">类: 无</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_dcp_local_seq_lens</span><span class="item-desc">[19行] Return the interleave-aware KV length of every DCP rank.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[6行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_require_dcp_metadata</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_dcp_context_lens</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_dcp_rank_context_lens</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dcp_all_gather</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_dcp_all_gather_fragments</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_merge_dcp_attention_output</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_process_attn_out_lse</span><span class="item-desc">[27行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_npu_attention_update</span><span class="item-desc">[28行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_npu_attn_out_lse_update</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_out_lse_reshape</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_out_and_lse</span><span class="item-desc">[12行] LSE_final = log(sum(exp(LSE_i))), O_final = sum(exp(LSE_i - LSE_final) * O_i)</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\dsa_cp.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/dsa_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">DSA 上下文并行实现（2291 行，子包最大文件）。覆盖两种并行：DSA-CP（TP 组内 token 分片）与 DCP/PCP（序列分片）。AscendDSACPMetadataBuilder 在共享 SFA builder 上叠加 token 分片元数据（compressor 行数计算、SAS/QLI 元数据、比较 seqlens）；AscendDSACPImpl 实现核心逻辑：o_proj 的 TP 全量权重切换（_enable_o_proj_tp_full_weight_switch/_switch_o_proj_to_full_weight，配合 TPWeightSwitchMixin 在计算期临时切全量权重）、隐藏层恢复布局（_restore_tp_head_layout）、indexer 缓存更新与 topk 选择（_update_indexer_cache/_indexer_select_topk）、Hadamard 激活旋转（rotate_activation）；PCP 侧：AscendDSAPCPMetadataBuilder 构建本地元数据 + 全局规范缓存元数据，AscendDSAPCPImpl 先做批量全局 DSA 缓存更新（SWA/compressor/indexer 三类缓存）再做 rank 本地注意力。from_local_metadata 把本地元数据映射为带规范 cache 写视图的全局元数据。</div>
+<div class="file-classes">类: AscendDSACPMetadataBuilder, AscendDSACPImpl, AscendDSAPCPMetadata, AscendDSAPCPMetadataBuilder, AscendDSAPCPImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">hadamard_transform_ref</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">rotate_activation</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[5行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_cudagraph_support</span><span class="item-desc">[6行] 返回 backend 对 CUDA graph 捕获的支持程度</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build</span><span class="item-desc">[38行] 构造 attention metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_drafting</span><span class="item-desc">[66行] 为 draft 模型构造 metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_req_metadata_for_drafting</span><span class="item-desc">[149行] Build DSA-CP metadata for one draft step.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_num_compressor_metadata_rows</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_ensure_device_local_metadata</span><span class="item-desc">[61行] Return device local metadata, cached across kv-cache groups.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_req_metadata</span><span class="item-desc">[146行] Build a single unified metadata for all requests (prefill + decode).</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_local_token_metadata</span><span class="item-desc">[103行] For example:</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_cmp_seqlens_for_metadata</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_sas_metadata</span><span class="item-desc">[73行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_qli_metadata</span><span class="item-desc">[33行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[20行] 为 cudagraph 捕获构造 mock metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_layer_metadata</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_compute_compressor_metadata</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[8行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_tp_weight_switch_method</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_enable_linear_tp_weight_switch</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_enable_o_proj_tp_full_weight_switch</span><span class="item-desc">[13行] Allocate o_proj TP/full buffers when the DSA-CP backend is enabled.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_maybe_all_gather_o_proj_full_weight</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_switch_o_proj_to_full_weight</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_switch_o_proj_to_tp_weight</span><span class="item-desc">[11行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_wo_b</span><span class="item-desc">[8行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_batched_wo_a_weight</span><span class="item-desc">[17行] Return wo_a in the DSA batched-matmul layout [group, input, rank].</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_batched_wo_a_scale</span><span class="item-desc">[14行] Move the output-sharded wo_a scale's group axis to the front.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_split_full_hidden_states_for_cp</span><span class="item-desc">[30行] Return this TP rank's token shard from the replicated model state.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gather_cp_output</span><span class="item-desc">[44行] Restore the replicated model-state layout after DSA-CP.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">forward</span><span class="item-desc">[100行] attention 前向入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward</span><span class="item-desc">[221行] 内部前向实现</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_restore_tp_head_layout</span><span class="item-desc">[31行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_indexer_cache</span><span class="item-desc">[59行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_indexer_select_topk</span><span class="item-desc">[70行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">from_local_metadata</span><span class="item-desc">[21行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_global_common_attn_metadata</span><span class="item-desc">[27行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_local_common_attn_metadata</span><span class="item-desc">[15行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_local_dsa_metadata</span><span class="item-desc">[29行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_global_dsa_metadata</span><span class="item-desc">[18行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_gather_and_restore_hidden_states</span><span class="item-desc">[15行] All-gather one padded rank slice and restore scheduler token order.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_global_swa_cache</span><span class="item-desc">[30行] Update the replicated SWA cache from the canonical global batch.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_global_compressor_cache</span><span class="item-desc">[20行] Update the DSA compressor cache from the canonical global batch.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_global_indexer_cache</span><span class="item-desc">[16行] Update the Indexer cache from the canonical global batch.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_caches_before_attention</span><span class="item-desc">[53行] Restore one global batch and update each replicated cache once.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_o_proj_input_shape</span><span class="item-desc">[13行]</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\mla_cp.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/mla_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">MLA 的 DCP 实现（529 行）。DCPChunkedContextMetadata 维护 DCP 本地上下文分片的 chunk 元数据（含 padding 后的 NPU seq lens）；AscendMlaDCPMetadataBuilder 构建 chunked/decode 元数据；AscendMlaDCPImpl 的 decode 前向先 all-gather q（reorg_decode_q 聚合 nope/pe 两段），再在本地 KV 分片上执行 _forward_decode，get_context_seq_len_npu 返回 padding 后的 chunk 长度，_reorg_kvcache 处理 KV 重组织。</div>
+<div class="file-classes">类: DCPChunkedContextMetadata, AscendMLADCPDecodeMetadata, AscendMlaDCPMetadataBuilder, AscendMlaDCPImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[16行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_chunked_metadata</span><span class="item-desc">[59行] 为 chunked prefill 构造 MLA metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_decode_metadata</span><span class="item-desc">[18行] 构造 MLA decode metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">update_graph_params</span><span class="item-desc">[96行] DCP/PCP 模式下更新 graph 参数</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">get_context_seq_len_npu</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">reorg_decode_q</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_forward_decode</span><span class="item-desc">[161行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_reorg_kvcache</span><span class="item-desc">[85行] reorg and unpad kvcache after cp local gather to tp layout for attn kernel.</span></div>
+</div>
+<div class="file-block">
+<div class="file-name">attention\context_parallel\sfa_cp.py<a class="src-link" href="../src-viewer.html?file=attention/context_parallel/sfa_cp.py" target="_blank">查看源码</a></div><div class="file-desc-real">SFA 的上下文并行全家桶（1315 行）。三条路径按两个独立开关组合：DSA-CP（TP token 分片）× DCP（序列分片）。AscendSFADSACPMetadataBuilder/AscendSFADSACPImpl：token 分片下 KV 异步 all-gather（_prepare_kv_for_parallel/_store_parallel_kv，含 indexer K/scale）、o_proj 全量权重切换（复用 TPWeightSwitchMixin + 权重池）、query 聚合；AscendSFADCPMetadataBuilder/AscendSFADCPImpl：序列分片下构建复制视图（block table/slot mapping 的 replicated view）、稀疏索引从全局视图重映射到本地视图（_remap_sparse_indices，Triton kernel 或 fp32 回退实现，无效索引置无效值后按 topk 序紧凑排列）、输出与 LSE 合并；AscendSFADSADCPMetadataBuilder/Impl 把两者复合；resolve_sfa_metadata_builder/resolve_sfa_impl 按开关解析出唯一实现。AscendSFAPCPImpl 处理 PCP 的 KV slot 映射与 indexer 缓存写入。</div>
+<div class="file-classes">类: AscendSFAPCPImpl, AscendSFADSACPMetadata, DCPGatherContext, AscendSFADCPMetadata, AscendSFADSADCPMetadata, AscendSFADSACPMetadataBuilder, AscendSFADSACPImpl, AscendSFADCPMetadataBuilder, AscendSFADCPImpl, AscendSFADSADCPMetadataBuilder, AscendSFADSADCPImpl</div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_sfa_kv_slot_mapping</span><span class="item-desc">[7行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">exec_kv</span><span class="item-desc">[28行] SFA CP KV 路径入口</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_write_indexer_cache</span><span class="item-desc">[25行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">__init__</span><span class="item-desc">[17行] 初始化类实例（绑定配置、参数、模块）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_parallel_metadata</span><span class="item-desc">[81行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_update_parallel_slot_mapping</span><span class="item-desc">[20行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">process_weights_after_loading</span><span class="item-desc">[6行] 权重加载后的后处理（如 layout cast、NZ 转换）</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_fused_type_unsupported_reasons</span><span class="item-desc">[4行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_parallel_query_gather_dim</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_native_hidden_states</span><span class="item-desc">[16行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_parallel_forward_context</span><span class="item-desc">[24行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_prepare_kv_for_parallel</span><span class="item-desc">[38行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_store_parallel_kv</span><span class="item-desc">[34行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_enable_o_proj_tp_full_weight_switch</span><span class="item-desc">[17行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_o_proj_linear_method</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_apply_o_proj_full_weight</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finalize_o_proj</span><span class="item-desc">[56行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_dcp_local_seq_lens</span><span class="item-desc">[6行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_get_dcp_local_block_table</span><span class="item-desc">[3行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_ensure_replicated_view_buffers</span><span class="item-desc">[27行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_block_table_replicated_view</span><span class="item-desc">[35行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_slot_mapping_replicated_view</span><span class="item-desc">[43行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_compact_kv_gather_metadata</span><span class="item-desc">[13行] Build the compact cross-DCP KV view used by prefill attention.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_build_with_metadata_view</span><span class="item-desc">[60行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">build_for_graph_capture</span><span class="item-desc">[19行] 为 cudagraph 捕获构造 mock metadata</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_has_prefill</span><span class="item-desc">[2行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_dcp_kv_gather_context</span><span class="item-desc">[39行] Start the compact KV all-gather used by prefill/mixed DCP batches.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_start_dcp_gather</span><span class="item-desc">[13行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_finish_dcp_gather</span><span class="item-desc">[9行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_all_gather_dim_async</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_remap_sparse_indices</span><span class="item-desc">[48行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_merge_dcp_outputs</span><span class="item-desc">[40行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_start_dcp_query_gather</span><span class="item-desc">[24行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_record_query_gather_context</span><span class="item-desc">[14行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">_execute_sparse_flash_attention_process</span><span class="item-desc">[88行]</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">resolve_sfa_metadata_builder</span><span class="item-desc">[11行] Resolve one SFA metadata builder from the two independent CP switches.</span></div>
+<div class="item"><span class="item-type type-func">func</span><span class="item-name">resolve_sfa_impl</span><span class="item-desc">[13行] Resolve one SFA implementation from the two independent CP switches.</span></div>
+</div>
+</body>
+</html>

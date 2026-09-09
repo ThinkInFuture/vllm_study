@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可疑点 · DeepSeek-V3.2 MTP2 PD 精度劣化</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f7f4f0; color: #2b2b2b; margin: 0; padding: 26px 0; line-height: 1.78; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #5d1a1a; font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { color: #5d1a1a; font-size: 1.16rem; margin: 32px 0 8px; background: #f5e3e3; border-left: 6px solid #b71c1c; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #7a3b3b; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #a1887f; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #5d1a1a; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #e8dcdc; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fbf7f7; }
+  code { background: #f1e9e9; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #ad3a5c; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 18px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.y { background: #fff8e1; border-left: 5px solid #f9a825; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="../index.html">⌂ 案件总览</a> ·
+    <a href="phenomena.html">① 现象</a> ·
+    <a href="analysis.html">② 分析</a> ·
+    <a href="suspects.html">③ 可疑点（本页）</a> ·
+    <a href="../glm51/phenomena.html">GLM-5.1 案件</a>
+  </div>
+
+  <h1>可疑点清单 · DSV32 案件</h1>
+  <p class="meta">核心事实：劣化在 <code>e6a133f7</code>（08-29，60 分），恢复在 <code>c1bb35f7</code>（09-05，90 分），两版本同为 vLLM 0.27.1 —— <b>可疑点 = 这 7 天窗口内"先引入后消失"的变更</b>。</p>
+
+  <h2>1 · 头号可疑点：wq_b chunk 分块的引入与回退（时间线三点对齐）</h2>
+  <div class="card">
+    <table>
+      <tr><th>时间</th><th>事件</th><th>证据链接</th></tr>
+      <tr><td>06-02</td><td><a href="https://github.com/vllm-project/vllm-ascend/pull/9780">#9780</a> 合入「Chunk wq_b matmul for NPU 65536 dimension limit」：<code>w8a8_dynamic.py</code> +<code>dsa_cp.py</code> 加 chunk 分块</td><td><a href="https://github.com/vllm-project/vllm-ascend/commit/0b527eade">0b527eade</a></td></tr>
+      <tr><td>08-29</td><td class="bad">DSV32 精度 60.00（chunk 分支存在期间）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331">job</a></td></tr>
+      <tr><td><b>09-01 17:24</b></td><td><a href="https://github.com/vllm-project/vllm-ascend/commit/7388730ff"><b>7388730ff</b></a> Revert #9780：删除 chunk 分支（w8a8_dynamic.py -75 / dsa_cp.py -43）</td><td><a href="https://github.com/vllm-project/vllm-ascend/commit/7388730ff">commit</a></td></tr>
+      <tr><td>09-05</td><td class="ok">DSV32 精度 90.00（恢复，revert 已生效）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33975742339/job/101367614879">job</a></td></tr>
+    </table>
+    <div class="box y">
+      <b>判决实验（实锤用）</b>：把 7388730ff 反向加回（恢复 chunk 分支）在当前 main 重跑该 case →
+      回到 ~60 分即实锤「chunk 分块 × 0.27.1 窗口变更」的交互劣化；仍 90 分 → 转向下方 Mooncake 修复候选。
+    </div>
+    <p><b>机制解释（为什么 chunk 分块会导致精度劣化）</b>：分块 matmul 与直通 matmul 的<b>累加顺序不同</b>，
+    数值结果本身就有微小差异（正常时在噪声内）。#9780 引入 chunk 的目的是绕 NPU 65536 维度限制；
+    8 月末的大变更窗口（vLLM 0.27.1 升级、<a href="https://github.com/vllm-project/vllm-ascend/commit/a7997713">a7997713</a> MoE/量化重构、SFA 重构）
+    改变了流经 wq_b 的张量形状/分布，使 chunk 分支的数值偏差越出噪声 —— 部分题目答错（-30 分，非归零）。
+    09-01 的 revert 删除 chunk 分支 → 直通 matmul → 09-05 恢复 90 分。三个观测全部被该机制覆盖。</p>
+  </div>
+
+  <h2>2 · 可疑点总表（按侦查优先级）</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:70px">编号</th><th style="width:250px">可疑点</th><th>为什么可疑</th><th>如何证实/证伪</th></tr>
+      <tr><td><b>S1</b></td><td><b><a href="https://github.com/vllm-project/vllm-ascend/commit/7388730ff">7388730ff</a> 回退 wq_b chunk 分块（09-01）</b>——即 #9780 分块与 8 月末大变更（vLLM 0.27.1 / <a href="https://github.com/vllm-project/vllm-ascend/commit/a7997713">a7997713</a> MoE 重构 / SFA 重构）的交互劣化，revert 后恢复</td><td><b>实证（本地 git）</b>：<code>git log e6a133f7..c1bb35f7 --grep=Revert -- vllm_ascend/</code> 的结果<b>只有这一个 revert</b> —— 窗口内唯一被回退的运行时变更，恰与 60→90 恢复一一对应；revert 改的 w8a8_dynamic（量化）+ dsa_cp（DSA 跨卡）都在 DSV32 推理路径上</td><td>判决实验（见上）</td></tr>
+      <tr><td><b>S2</b></td><td><b><a href="https://github.com/vllm-project/vllm-ascend/commit/85e432985">85e432985</a> Mooncake PD 传输 block IDs 修复（09-03 合入）</b></td><td>DSV32 是 PD 分离，KV 走 Mooncake 跨机传输；block ID 分组错误会让部分请求 KV 错位 → 部分题错 → 60 分形态吻合；修复后恢复</td><td>拉 08-29 job 的 Mooncake 传输日志找 block 错位/重试记录；重放修复前后对比</td></tr>
+      <tr><td>S3</td><td>PD 传输链路偶发故障（无 commit 对应）</td><td>偶发降频/重试只影响部分请求</td><td>当前 main 重跑 ×2：稳定 90 → S1/S2 已修复关闭；波动 → 转此</td></tr>
+      <tr><td>S4</td><td>MTP 接受率下降</td><td>窗口内有 SFA/MTP 接受率相关提交（<code>035b8d407</code> 等）</td><td>对比两次运行 acceptance rate（若日志收集）</td></tr>
+      <tr><td class="muted">S5</td><td class="muted">数据集缓存 / 采样波动</td><td class="muted">modelscope 缓存警告存在，但 -30 分幅度偏大</td><td class="muted">清缓存重跑，低优先级</td></tr>
+    </table>
+  </div>
+
+
+  <h2>3 · 已排除</h2>
+  <div class="card">
+    <table>
+      <tr><th>假设</th><th>排除依据</th></tr>
+      <tr><td>vLLM 0.27.1 升级</td><td>08-29（60 分）与 09-05（90 分）<b>都是 0.27.1</b> —— 版本未变而结果翻转</td></tr>
+      <tr><td>08-22 就在劣化</td><td>08-22 job 是部署级失败（77.4min，未到 benchmark），没有出分记录，不能当劣化证据</td></tr>
+      <tr><td>与 GLM 案同根因</td><td>症状不同（60 部分受损 vs 严格 0.00）、恢复状态不同（已恢复 vs 未恢复）、组网不同（PD 分离 4 机 vs internal-DP 双机）—— 两案在同一时间窗相继出事属"共享环境变化"层面的关联，根因应分开追</td></tr>
+    </table>
+  </div>
+
+  <h2>4 · 实验清单</h2>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>实验</th><th>成本</th><th>判据</th></tr>
+      <tr><td>1</td><td>git 翻 <code>e6a133f7..c1bb35f7</code> 窗口的 revert 与 MTP/PD 修复清单（本地仓库 <code>vllm-ascend-git/</code> 可直接查）</td><td class="ok">零（考古）</td><td>找到"修复对"即定位 X/Y 两个 commit</td></tr>
+      <tr><td>2</td><td>拉 08-29 job 的 PD 传输/Mooncake 日志段</td><td class="ok">零（工件已有链接）</td><td>发现传输重试/降级 → 支持 S3 偶发假说</td></tr>
+      <tr><td>3</td><td>当前 main 重跑该 case ×2</td><td>2 次重跑</td><td>稳定 90 → 已修复关闭；波动 → 存在间歇问题，转 S3/S4</td></tr>
+      <tr><td>4</td><td>（如 3 波动）对比 08-29 与现在的 acceptance rate / PD 传输成功率指标</td><td>指标考古</td><td>量化定位受损子路径</td></tr>
+    </table>
+  </div>
+
+  <p class="meta" style="text-align:center">dsv32/suspects.html · 2026-09-08 · 输入：<a href="analysis.html">② 分析</a> · 本地仓库：../vllm-ascend-git/</p>
+</div>
+</body>
+</html>

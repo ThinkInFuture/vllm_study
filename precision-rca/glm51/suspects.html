@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>③ 可疑点 · GLM-5.1-198k 精度 0 分</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f4f6f9; color: #263238; margin: 0; padding: 28px 0; line-height: 1.8; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #0d2c54; font-size: 1.6rem; margin: 0 0 6px; }
+  h2 { color: #0d2c54; font-size: 1.22rem; margin: 38px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #d7e0ea; }
+  h3 { color: #33556e; font-size: 1.02rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px 24px; margin: 14px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .86rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .9rem; background: #fff; }
+  th { background: #0d2c54; color: #fff; padding: 7px 10px; text-align: left; }
+  td { border: 1px solid #dde5ec; padding: 6px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  code { background: #edf1f5; padding: 1px 6px; border-radius: 4px; font-family: Consolas, monospace; font-size: .87em; color: #ad3a5c; }
+  pre { background: #273238; color: #e0e0e0; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: .82rem; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .banner { border-radius: 10px; padding: 18px 24px; margin: 14px 0; }
+  .banner.result { background: #e8f5e9; border: 1px solid #a5d6a7; }
+  .nav { background: #fff; border-radius: 10px; padding: 11px 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 20px; font-weight: 700; }
+  a { color: #1565c0; }
+  a:hover { text-decoration: underline; }
+  a code { color: inherit; }
+  ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .hyp { border-left: 6px solid #999; padding-left: 20px; }
+  .hyp.main { border-left-color: #c62828; }
+  .hyp.sec { border-left-color: #f9a825; }
+  .tag { display: inline-block; background: #eceff1; color: #455a64; border-radius: 4px; padding: 0 8px; font-size: .8rem; font-weight: 700; margin-left: 8px; }
+  .tag.red { background: #c62828; color: #fff; }
+  .tag.orange { background: #ef6c00; color: #fff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    
+    <a href="analysis.html">② 分析</a> <a href="suspects.html">③ 可疑点（本页）</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a>
+  </div>
+
+  <h1>可疑点清单</h1>
+
+  <div class="banner result">
+    <b>最佳解释（当前）</b>：08-29 合入的 <a href="https://github.com/vllm-project/vllm-ascend/commit/5c59cfba9">5c59cfba9</a>（SFA DCP 输出 all-to-all 融合）破坏了 <code>enable_sparse_sfa_c8=true</code> 路径的推理数值 —— 时间精确对齐（08-27 满分 → 08-29 合入 → 08-30 起三次 0 分）、影响面精确对齐（只有 SFA-C8 多机组网坏）。<br>
+    并列嫌疑：vLLM 上游 0.27.1 的变更（08-30 镜像同时带入）。两者一次对照实验即可分离（见实验 #2）。
+  </div>
+
+  <h2>1 · 假设一览</h2>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>假设</th><th>一句话</th><th>地位</th></tr>
+      <tr><td>H1</td><td><b>SFA-C8 路径被窗口变更碰坏</b></td><td>5c59cfba9（SFA all-to-all 融合）或 vLLM 0.27.1 破坏了 <code>sfa_c8=true</code> 的稀疏注意力数值 → 输出全错</td><td><span class="tag red">主假设</span></td></tr>
+      <tr><td>H2</td><td><b>窗口内其他 vllm-ascend 变更</b></td><td>配置系统 pydantic 迁移（<a href="https://github.com/vllm-project/vllm-ascend/commit/9cf7a0a23">9cf7a0a23</a>）、采样 non-reduce 改写（<a href="https://github.com/vllm-project/vllm-ascend/commit/994765d7a">994765d7a</a>）、MTP×SFA FullGraph（<a href="https://github.com/vllm-project/vllm-ascend/commit/bb4d264f8">bb4d264f8</a>）等 141 个运行时 commit 之一</td><td>次级</td></tr>
+      <tr><td>H3</td><td><b>aime2025 数据集缓存损坏</b></td><td>modelscope 缓存的题目/参考答案坏了，输出正常也判 0</td><td>弱（08-27 同缓存得过 100）</td></tr>
+    </table>
+  </div>
+
+
+  <h2>1b · SFA-C8 路径内部：为什么开了就会出问题（机制级怀疑）</h2>
+  <div class="card">
+    <p>基于对 <code>sfa_v1.py</code>（<a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/attention/sfa_v1.py">main</a>）的数据流走读 + 回归窗口 diff（<code>git diff 85625bd7 e6a133f7 -- vllm_ascend/attention/sfa_v1.py</code>，该文件窗口内被大幅重构），
+    SFA-C8=true 的 eager 推理数据流为：<b>KV 经 prolog v3 量化写入 packed_kv（int8+scale）→ Lightning Indexer 选 top-k → npu_kv_quant_sparse_flash_attention 反量化计算 → W_UV 输出投影</b>。
+    窗口内这段数据流有三个<b>实际发生了变更</b>的薄弱点：</p>
+    <table>
+      <tr><th style="width:70px">编号</th><th style="width:230px">机制怀疑</th><th>为什么开 sfa_c8 才触发</th><th>窗口内证据</th><th>如何证实</th></tr>
+      <tr><td><b>M1</b></td><td><b>KV 写入 slot mapping 重构出错位</b></td><td>只有 sfa_c8=true 才写 <code>packed_kv</code> 打包布局；slot 与 packed 槽位的对齐关系比默认布局更复杂</td><td>metadata 结构从 <code>DSACPContext</code> 等多字段重构为统一的 <code>SFAForwardContext.kv_slot_mapping</code>；KV 写入路径被重写</td><td>output_accuracy.txt 看输出是否为"内容错乱但流畅"（检索错位特征）；或 msprobe dump 指定请求对比 KV</td></tr>
+      <tr><td><b>M2</b></td><td><b>Hadamard 共享缓存污染</b></td><td>q/k Hadamard 变换只在 dsa c8 启用时使用（L414/L625-629），且是<b>类级静态共享张量</b>（所有层/所有实例共用一份）</td><td>窗口内 sfa_v1.py 重构涉及这些静态缓存的初始化时序</td><td>单请求复现测试；检查 draft/target、不同 DP rank 间共享张量的形状与值</td></tr>
+      <tr><td><b>M3</b></td><td><b>Impl 动态解析选择漂移</b></td><td>SFA Impl 从静态判断改为运行时 <code>resolve_sfa_impl(get_current_vllm_config())</code> —— DP 部署下解析结果可能从 <code>AscendSFAImpl</code> 漂移到其他变体</td><td>diff：<code>resolve_sfa_impl / resolve_sfa_metadata_builder</code> 取代原 <code>enable_sfa_dcp_replicated_indexer()</code> 静态分支</td><td>日志打印实际选中的 Impl 类名，对比 0.26.0 / 0.27.1 两次运行</td></tr>
+    </table>
+    <p class="meta">另注：<code>BMM_TRANS_MAX_SUPPORTED_TOKENS = 1024</code>（窗口内新增常量，W_UV 输出投影按 token 数分支选算子）为低嫌疑 —— 两个分支都是标准 matmul；但长 decode 场景分支切换行为可在 msprobe 中一并覆盖。</p>
+  </div>
+  <h2>2 · 假设卡片</h2>
+
+  <div class="card" style="background:#fffde7;">
+    <h3 style="margin-top:0;">回归窗口内的事实清单（现象页 3.2 的归因视角）</h3>
+    <p style="margin:4px 0">08-27（100 分）→ 08-30（0 分）之间同时发生了两件事，因此触发候选按以下顺序排查：</p>
+    <table>
+      <tr><th>候选</th><th>内容</th><th>对齐点 / 反对点</th></tr>
+      <tr><td><b>候选 A′（头号）</b><br><code>_v_up_proj</code> 新增<br><code>torch.ops._C_ascend.batch_matmul_transpose</code> 分支<br><span class="meta">（窗口内 sfa_v1.py 重构引入）</span></td><td>SFA 的 V 输出投影被换成新自定义算子：token≤1024 时走 <code>batch_matmul_transpose</code>。精度评估 decode 每步 128 token → 走新算子；prefill（198656 token）走旧算子 —— <b>精确解释"perf 出数、精度全错"</b>。另：08-19 的 <a href="https://github.com/vllm-project/vllm-ascend/commit/11921514a">11921514a</a> 已从 C++ 内核删除该算子 —— Python 分支（08-29 后进 sfa_v1.py）与被删的 C++ 实现<b>版本错配</b></td><td><span class="bad">对齐</span>：diff 铁证（<code>git diff 85625bd7 e6a133f7 -- sfa_v1.py</code>）+ 时间（08-27 满分 → 08-30 零分）+ 范围（只影响走 sfa_v1.py 的 SFA 推理）<br><span class="warn">待验证</span>：新算子输出数值 vs <code>npu_transpose_batchmatmul</code>；dual-nodes（w8a8 checkpoint）是否走 SFA</td></tr>
+<tr><td>候选 A<br><a href="https://github.com/vllm-project/vllm-ascend/commit/5c59cfba9">5c59cfba9</a><br>(<a href="https://github.com/vllm-project/vllm-ascend/pull/14457">#14457</a>)</td><td>08-29 11:53 合入「fuse SFA DCP output all-to-all」，改 <code>sfa_cp.py</code>（SFA 跨卡输出路径融合，56 行变更）</td><td><span class="warn">降级</span>：该融合代码要求 <code>dcp_size &gt; 1</code> 才激活，而 08-30 job 日志无任何 DCP 分组记录（DP8/TP4 无 DCP 参数）→ 198k 部署下大概率不走此路径（dcp_size=1）</td></tr>
+      <tr><td><b>候选 B</b><br>vLLM 0.27.1 上游</td><td>08-30 镜像带入的上游数百提交，GLM 专属敏感面：GlmMoeDsa 模型实现、glm45 reasoning 输出结构、采样器</td><td><span class="bad">对齐</span>：版本切换时刻与 0 分起点一致<br><span class="warn">未知</span>：上游具体 PR 未定位（需 vLLM 仓库 bisect）</td></tr>
+      <tr><td>候选 C<br><a href="https://github.com/vllm-project/vllm-ascend/commit/657df3efa">657df3efa</a></td><td>08-24 合入的 SFA prolog v3 KV 写入修复</td><td><span class="ok">排除</span>：合入早于 08-27 满分</td></tr>
+      <tr><td>候选 D<br><a href="https://github.com/vllm-project/vllm-ascend/commit/a7997713">a7997713</a></td><td>08-04 合入的 MoE/量化重构（w8a8_dynamic 23 文件）</td><td><span class="warn">存疑</span>：早于 08-27 满分，单看时间应在满分前已生效却不致命——若 0.27.1 或窗口内其他提交改变了它的触发条件，则可能"旧雷新响"</td></tr>
+    </table>
+  </div>
+
+  <div class="card hyp main">
+    <h3>H1 · SFA-C8 路径被窗口变更碰坏 <span class="tag red">主假设</span></h3>
+
+    <p><b>位置论证</b>（完整逐项排除推理见 <a href="analysis.html">② 分析·分析一</a>）：09-04 同日同版本对照 —— sfa_c8=false 的 dual-nodes 得 93.33（= baseline），sfa_c8=true 的 ★198k 得 0.00 —— 坏点被夹逼在 SFA-C8 路径；再叠加 08-27 同开关在 0.26.0 下得 100 分，触发变更锁定在 08-27→08-30 窗口。</p>
+    <h3>H1 正文</h3>
+    <p><b>机制</b>：<code>enable_sparse_sfa_c8=true</code> 时，decode 走 SFA 稀疏注意力 + KV int8 索引。08-29 合入的 5c59cfba9 把 SFA 的跨卡输出通信改成融合算子（all-to-all），如果融合引入数值错误 → 每个生成的 token 都受污染 → 30 题全错 → 严格 0.00。sfa_c8=false 的组网不走这条路，所以毫发无损。</p>
+    <p><b>证据链</b>（全部可复核）：</p>
+    <ul>
+      <li>时间对齐：08-27 100 分 → 08-29 11:53 合入 → 08-30 起三次 0 分</li>
+      <li>开关对齐：09-04 同日同版本，sfa_c8=false 得 93.33、sfa_c8=true 得 0.00</li>
+      <li>范围对齐：非 C8 组网（w8a8 双机/单机、w4a8、glm-4.7）与其它模型精度全绿</li>
+      <li>文件对齐：5c59cfba9 改的正是 <code>vllm_ascend/attention/context_parallel/sfa_cp.py</code>（SFA 跨卡路径），而 ★198k 的两个开关键（dsa_cp + sfa_c8）都在这条路径上</li>
+    </ul>
+    <p><b>未决</b>：与 vLLM 0.27.1 变更尚未分离（实验 #2）；"输出乱码"尚未亲眼确认（实验 #0）。</p>
+  </div>
+
+  <div class="card hyp sec">
+    <h3>H2 · 窗口内其他 vllm-ascend 变更 <span class="tag orange">次级</span></h3>
+    <p>481 个 commit 中改运行时代码的 141 个里，除 SFA 外的高危区：配置系统整体迁移到 pydantic（additional-config 里 mlapo/balance/mc2 等开关的解析层重写，语义可能变）、采样器 non-reduce 路径重构（与日志中 <code>rejection_sampler fallback</code> 警告同层）、MTP×SFA 组合新特性。若实验 #2 排除了 vLLM 版本、实验 #3 排除了 5c59cfba9，按此清单继续二分。</p>
+  </div>
+
+  <div class="card hyp sec">
+    <h3>H3 · 数据集缓存 / 评估链 <span class="tag orange">弱</span></h3>
+    <p>modelscope 有"缓存文件版本无法确认"的警告。但 08-27 用同一缓存、同一解析链路得过 100 分 —— 除非 08-27 之后缓存被更新坏。清缓存重拉重跑即可彻底关闭（近零成本）。</p>
+  </div>
+
+  <h2>3 · 已排除的假设（每条有实测依据）</h2>
+  <div class="card">
+    <table>
+      <tr><th>假设</th><th>排除依据</th></tr>
+      <tr><td>max_out_len=77824 截断</td><td>截断应得中间分（难题丢分简单题保分），实际三次严格 0.00</td></tr>
+      <tr><td>服务崩溃 / 请求失败 / 空输出</td><td>31/31 请求 200 OK，每题真实生成 1~2 分钟，服务零报错</td></tr>
+      <tr><td>glm45 答案提取坏</td><td>09-04 同 parser 的 dual-nodes 得 93.33，提取链路正常</td></tr>
+      <tr><td>数据集缺题 / 参考答案缺失</td><td>30 题全部发出；09-03 前同一数据集得过 100 分</td></tr>
+      <tr><td>模型本体 / CANN 算子 / NaN</td><td>非 C8 组网全绿；plog 干净无算子失败</td></tr>
+      <tr><td>vLLM 0.27.1 全局坏</td><td>0.27.1 下 qwen/deepseek 精度 job 全绿；sfa_c8=false 的 GLM 组网也正常</td></tr>
+      <tr><td>09-03→09-06 的 41 个 commit（含 0990fc08 改 yaml、a7997713 MoE 重构）</td><td>08-30 已经 0 分，晚于这些 commit 的变更不可能是首因（0990fc08 只改 repo 侧 yaml，nightly 实际生效的是 OBS 配置，是两条链）</td></tr>
+      <tr><td>748acedf draft 检测变更</td><td>投机解码有 target 验证兜底，draft 变化只降速不降正确性</td></tr>
+    </table>
+  </div>
+
+  <h2>4 · 判决树</h2>
+  <div class="card">
+    <div class="mermaid-box" style="background:#fafbfc;border:1px solid #e0e6ec;border-radius:10px;padding:18px;">
+      <div style="color:#5c6bc0;font-weight:700;text-align:center;margin-bottom:12px;">按成本从低到高，每一步都能排除一批假设</div>
+      <pre class="mermaid">
+flowchart TD
+  S["实验0: CI 收集 output_accuracy.txt<br/>(打包脚本加一行 cp) + 重跑"] --> Q{"模型输出长什么样?"}
+  Q -->|"乱码/重复循环"| N1["数值损坏 → H1/H2 继续二分"]
+  Q -->|"正常可读但无答案"| N2["思考跑偏 → 仍指向 SFA-C8 数值<br/>(答案格式依赖完整推理)"]
+  N1 --> E1["实验1: sfa_c8 改 false 重跑<br/>(或直接在 128k_90_50 同款配置上复测)"]
+  E1 -->|"恢复 90+"|"C1["确认: 坏点在 SFA-C8 路径"]
+  E1 -->|"仍 0 分"| X1["推翻 H1 → 转 H2 逐 commit 二分"]
+  C1 --> E2["实验2: 镜像 vLLM 固定回 ba07e4a (0.26.0) 重跑"]
+  E2 -->|"恢复"| R1["坏点 = vLLM 上游 0.27.1 变更<br/>→ 在 vLLM 仓库 bisect"]
+  E2 -->|"仍 0 分"| E3["实验3: revert 5c59cfba9 重跑"]
+  E3 -->|"恢复"| R2["坏点 = 5c59cfba9 (SFA A2A 融合)<br/>→ 找 PR 14457 作者"]
+  E3 -->|"仍 0 分"| R3["窗口内继续二分 (H2)"]
+      </pre>
+    </div>
+    <p class="meta">注意实验 0 与实验 1 可以合并在同一次重跑里做（先加收集，再改开关）。</p>
+  </div>
+
+  <h2>5 · 实验清单</h2>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>实验</th><th>成本</th><th>判据</th></tr>
+      <tr><td>0</td><td>CI 收集 <code>output_accuracy.txt</code>（<a href="https://github.com/vllm-project/vllm-ascend/blob/main/.github/workflows/schedule_nightly_test_a3.yaml">工作流</a>的打包步骤加一行 cp），/nightly 指定本 case 重跑</td><td class="ok">一行改动 + 1 次重跑</td><td>输出形态三分类：乱码 / 无答案 / 正常却判 0</td></tr>
+      <tr><td>1</td><td>198k yaml 临时改 <code>enable_sparse_sfa_c8: false</code> 重跑</td><td>1 次重跑</td><td>恢复 90+ → 坏点在 SFA-C8 路径实锤</td></tr>
+      <tr><td>2</td><td>镜像 vLLM 固定 <a href="https://github.com/vllm-project/vllm/commit/ba07e4a48fc951300d97eb506217dd530583dea3">ba07e4a</a>（0.26.0）重跑</td><td>1 次重跑</td><td>恢复 → 坏点在上游 0.27.1；不恢复 → 上游排除，锁定 vllm-ascend 窗口</td></tr>
+      <tr><td>3</td><td>revert <a href="https://github.com/vllm-project/vllm-ascend/commit/5c59cfba9">5c59cfba9</a> 重跑</td><td>1 次重跑</td><td>恢复 → 实锤 A2A 融合引入数值错误</td></tr>
+      <tr><td>4</td><td>清 modelscope aime2025 缓存重拉重跑</td><td class="ok">近零</td><td>恢复 → H3 成立（缓存损坏）</td></tr>
+    </table>
+    <p style="margin:6px 0 0">建议组合：第 0 步先做（一次改动永久受益），第 1 + 4 步合并为同一次重跑，最后按需做 2 / 3。</p>
+  </div>
+
+  <h2>6 · 给维护者的问题（可直接贴 issue）</h2>
+  <div class="card">
+    <pre><code>Nightly-A3 GLM-5.1-W8A8C8-198k_function: aime2025 accuracy 100 -> 0.00 right after
+the 0.27.1 image bump, and stays 0.00 on every rerun (08-30 / 09-04 / 09-06).
+
+Facts:
+- Deployment cmdline is byte-identical between the 100-point run (08-27, vLLM 0.26.0)
+  and the 0-point runs (vLLM 0.27.1). Same seed, same parsers, same MTP config.
+- Same day 09-04: the non-SFA-C8 sibling (GLM5_1-W8A8-A3-dual-nodes, sfa_c8=false)
+  scores 93.33 (== baseline) on the exact same image -> parser/extraction chain is fine.
+- Another SFA-C8 job (128k-1k-90-50-PD) also scores 0.00 on 08-30, with perf throughput
+  degraded 469 vs 1265 baseline.
+- Prime suspect: 5c59cfba9 "fuse SFA DCP output all-to-all" (#14457), merged 08-29 11:53
+  -- exactly between the last 100-point run and the first 0.00 run. It only touches the
+  SFA-CP multi-node path (sfa_cp.py), which matches the blast radius exactly.
+
+Asks:
+1. Is the SFA-C8 path accuracy-verified anywhere besides this case?
+2. Can nightly collect aisbench's output_accuracy.txt into ascend-logs?
+   Currently /tmp/benchmark_results is empty and per-sample outputs are lost.
+3. Could 5c59cfba9's fused A2A output path be numerically validated
+   (sfa_c8=true, multi-node, long decode)?</code></pre>
+  </div>
+
+  <p class="meta" style="text-align:center">precision-rca/hypotheses.html · 2026-09-08 · 证据细节见 <a href="phenomena.html">① 现象</a></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+</body>
+</html>

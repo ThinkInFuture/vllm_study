@@ -1,0 +1,23 @@
+{
+ "grab_time": "2026-09-08T11:46:31.264887",
+ "files": {
+  "merged": {
+   "number": 15978,
+   "file": "pr_merged_15978.html",
+   "ok": true,
+   "size": 458250
+  },
+  "open": {
+   "number": 16004,
+   "file": "pr_open_16004.html",
+   "ok": true,
+   "size": 380416
+  },
+  "rejected": {
+   "number": 7255,
+   "file": "pr_rejected_7255.html",
+   "ok": true,
+   "size": 459736
+  }
+ }
+}

@@ -1,0 +1,317 @@
+{
+ "15978": {
+  "title": "[v0.27.1rc][Performance][KDA] Compose and overlap gate projections",
+  "state": "closed",
+  "merged": true,
+  "author": "Dawn952",
+  "created_at": "2026-09-07T15:28:47Z",
+  "closed_at": "2026-09-08T03:27:39Z",
+  "merged_at": "2026-09-08T03:27:39Z",
+  "base": "releases/v0.27.1rc",
+  "additions": 606,
+  "deletions": 86,
+  "changed_files": 7,
+  "commits": 6,
+  "comments": 2,
+  "review_comments": 1,
+  "body": "### What this PR does / why we need it?\n\nBackport #15416 to `releases/v0.27.1rc`, retaining its Kimi K3 KDA mixed-precision projection schedule and v0.27-compatible dispatch. The backport also includes the release branch CI-selection commit and the compatibility fix for the v0.27.1 `AttentionSelectorConfig` constructor.\n\nFor the existing mixed-precision Kimi K3 KDA layout, this change:\n\n- composes `f_proj.weight = f_b_proj.weight @ f_a_proj.weight` after checkpoint loading and source-weight reloads;\n- packs beta, the composed F projection, and the output gate into a floating-point BFG projection;\n- overlaps main-stream MXFP DynamicQuant with the auxiliary BFG GEMM, then overlaps main-stream QKV GEMM with auxiliary B/F/G split, beta FP32 sigmoid, and gate reshape;\n- marks mixed-path beta as preprocessed so the v0.27 dispatch path slices it, while ordinary raw beta retains its existing FP32 sigmoid path;\n- preserves the configured W8A8 MXFP8 `scale_alg` when DynamicQuant is split from the linear method;\n- supports both global and local F shards through the v0.27 packed loader;\n- leaves the ordinary upstream `in_proj_qkvgfab` path unchanged.\n\n### ACL graph and stream ordering\n\nThe auxiliary stream records `bfg_ready` only after its complete BFG tail. The main stream waits for that event before KDA consumes the outputs, so the auxiliary stream is joined for ACLGraph capture.\n\nThe intended order is `hidden_states_ready` (fork BFG), `bfg_projection_ready` (serialize BFG/QKV Cube matmuls), `quant_ready` (start beta vector work after DynamicQuant), then `bfg_ready` (join the auxiliary tail). Live-token slicing remains at the eager dispatch boundary and does not add an NPU kernel dependency.\n\n### Release-branch differences\n\nThis is a manual backport of #15416 commits `858b61937e81de059ac6ed593fb7aec2941f6f47`, `ca19043f2ef7ce798a18982f29970a2aa6e18d1e`, `7513b78278e4aa1f43da6a9082f18f50884235da`, and `0059617c5d9e85c4ee2185110ee2cec950698533`, plus the v0.27.1 CI-selection commit `da4846002da04346772c12774418bc2cc8d40ed4` and the release-only `AttentionSelectorConfig` compatibility fix.\n\n### Does this PR introduce any user-facing change?\n\nNo API or configuration change. Runtime behavior changes only for Kimi K3 KDA layers using the existing mixed-precision full-rank gate layout.\n\n### How was this patch tested?\n\n- Focused Kimi K3 adapter and KDA unit coverage is included in the backport.\n- PR CI on `releases/v0.27.1rc` completed successfully (26 checks passed; 3 intentionally skipped).\n\n- vLLM main: https://github.com/vllm-project/vllm/commit/ba07e4a48fc951300d97eb506217dd530583dea3",
+  "files": [
+   {
+    "name": ".github/workflows/pr_test.yaml",
+    "add": 6,
+    "del": 4,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/models/test_kimi_k3_adapter.py",
+    "add": 26,
+    "del": 10,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/ops/test_kimi_kda.py",
+    "add": 314,
+    "del": 1,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/test_platform.py",
+    "add": 2,
+    "del": 29,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/models/kimi_k3.py",
+    "add": 12,
+    "del": 4,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/ops/kimi_kda.py",
+    "add": 245,
+    "del": 37,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/platform.py",
+    "add": 1,
+    "del": 1,
+    "status": "modified"
+   }
+  ],
+  "discussion": [
+   {
+    "user": "gemini-code-assist[bot]",
+    "at": "2026-09-07T15:28:59Z",
+    "text": "## Summary of Changes\n\nHello, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!\n\nThis pull request optimizes the performance of the Kimi Delta Attention (KDA) mechanism by fusing gate projections and enabling concurrent execution. By composing the B, F, and G projections into a single linear layer and offloading projection computations to an auxiliary NPU stream, the implementation effectively overlaps critical path operations, resulting in improved "
+   },
+   {
+    "user": "github-actions[bot]",
+    "at": "2026-09-07T15:30:41Z",
+    "text": "👋 Hi! Thank you for contributing to the vLLM Ascend project. The following points will speed up your PR merge:‌‌\n\n- A PR should do only one thing, smaller PRs enable faster reviews.\n- Every PR should include unit tests and end-to-end tests ‌to ensure it works and is not broken by other future PRs.\n- Write the commit message by fulfilling the PR description to help reviewer and future developers understand.\n\nIf CI fails, you can run linting and testing checks locally according [Contributing](https://docs.vllm.ai/projects/ascend/zh-cn/latest/developer_guide/contribution/index.html) and [Testing]"
+   }
+  ],
+  "reviews": [
+   {
+    "user": "gemini-code-assist[bot]",
+    "path": "vllm_ascend/ops/kimi_kda.py",
+    "text": "![critical](https://www.gstatic.com/codereviewagent/critical.svg)\n\n### Critical Bug: Weight Loading Fails on Meta Device Initialization\n\nWhen the model is initialized on a `meta` device (which is the default in vLLM to optimize memory usage and loading speed), `self.weight` is initially a meta tensor. Consequently, `self.f_a_weight` and `self.f_b_weight` are also created as meta tensors.\n\nThis cau"
+   }
+  ]
+ },
+ "16004": {
+  "title": "[Feature]Adapt Mooncake layerwise range sessions",
+  "state": "open",
+  "merged": false,
+  "author": "Eric-dot",
+  "created_at": "2026-09-08T03:43:35Z",
+  "closed_at": null,
+  "merged_at": null,
+  "base": "main",
+  "additions": 2171,
+  "deletions": 51,
+  "changed_files": 17,
+  "commits": 2,
+  "comments": 3,
+  "review_comments": 2,
+  "body": "### What this PR does / why we need it?\r\n\r\n### Does this PR introduce _any_ user-facing change?\r\n\r\n### How was this patch tested?\r\n\n- vLLM main: https://github.com/vllm-project/vllm/commit/e6bfe03ad73a3330cb427885aa90d97a12e1c704\n",
+  "files": [
+   {
+    "name": "MOONCAKE_LAYERWISE_ADAPTATION_AND_OPTIMIZATION.md",
+    "add": 238,
+    "del": 0,
+    "status": "added"
+   },
+   {
+    "name": "docs/source/user_guide/feature_guide/layerwise_kv_pool.md",
+    "add": 45,
+    "del": 13,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/distributed/ascend_store/_mock_deps.py",
+    "add": 4,
+    "del": 0,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/distributed/ascend_store/test_backend.py",
+    "add": 34,
+    "del": 0,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/distributed/ascend_store/test_mooncake_layerwise.py",
+    "add": 368,
+    "del": 0,
+    "status": "added"
+   },
+   {
+    "name": "tests/ut/distributed/ascend_store/test_pool_scheduler.py",
+    "add": 26,
+    "del": 0,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/distributed/ascend_store/test_pool_worker.py",
+    "add": 10,
+    "del": 0,
+    "status": "modified"
+   },
+   {
+    "name": "tests/ut/test_envs.py",
+    "add": 23,
+    "del": 1,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/ascend_store_connector.py",
+    "add": 17,
+    "del": 3,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/backend/base.py",
+    "add": 60,
+    "del": 0,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/backend/mooncake_backend.py",
+    "add": 121,
+    "del": 5,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/kv_transfer.py",
+    "add": 519,
+    "del": 9,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/metadata.py",
+    "add": 85,
+    "del": 2,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/mooncake_session_tracker.py",
+    "add": 132,
+    "del": 0,
+    "status": "added"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/pool_scheduler.py",
+    "add": 104,
+    "del": 2,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/pool_worker.py",
+    "add": 374,
+    "del": 16,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/envs.py",
+    "add": 11,
+    "del": 0,
+    "status": "modified"
+   }
+  ],
+  "discussion": [
+   {
+    "user": "gemini-code-assist[bot]",
+    "at": "2026-09-08T03:43:47Z",
+    "text": "## Summary of Changes\n\nHello, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!\n\nThis pull request introduces layerwise KV cache transfer support for the Mooncake backend in vLLM-Ascend. By transitioning from a per-layer object storage model to a block-major object layout, the implementation significantly reduces the number of remote metadata objects and improves efficiency during chunked-prefill. The changes include robust session tracking, per-laye"
+   },
+   {
+    "user": "github-actions[bot]",
+    "at": "2026-09-08T03:43:56Z",
+    "text": "This pull request has conflicts, please resolve those before we can evaluate the pull request."
+   },
+   {
+    "user": "github-actions[bot]",
+    "at": "2026-09-08T03:45:22Z",
+    "text": "👋 Hi! Thank you for contributing to the vLLM Ascend project. The following points will speed up your PR merge:‌‌\n\n- A PR should do only one thing, smaller PRs enable faster reviews.\n- Every PR should include unit tests and end-to-end tests ‌to ensure it works and is not broken by other future PRs.\n- Write the commit message by fulfilling the PR description to help reviewer and future developers understand.\n\nIf CI fails, you can run linting and testing checks locally according [Contributing](https://docs.vllm.ai/projects/ascend/zh-cn/latest/developer_guide/contribution/index.html) and [Testing]"
+   }
+  ],
+  "reviews": [
+   {
+    "user": "gemini-code-assist[bot]",
+    "path": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/mooncake_session_tracker.py",
+    "text": "![critical](https://www.gstatic.com/codereviewagent/critical.svg)\n\nWhen a get-start session fails (`succeeded` is `False`), calling `self._load_key_owners.pop(key, None)` completely removes all active owners of that key. If another request (e.g., `old-owner`) already has a successful active session on the same key, its ownership is discarded. This will prevent `batch_get_session_end` from being ca"
+   },
+   {
+    "user": "gemini-code-assist[bot]",
+    "path": "vllm_ascend/distributed/kv_transfer/kv_pool/ascend_store/backend/mooncake_backend.py",
+    "text": "![high](https://www.gstatic.com/codereviewagent/high-priority.svg)\n\nThe `json` module is used in `_emit_whole_key_debug_event` via `json.dumps`, but it is not imported in this file. This will raise a `NameError` which is caught by the `except Exception` block, silently disabling the debug logging feature. Please import `json` at the top of the file.\n\n```suggestion\nimport json\n\nfrom vllm_ascend imp"
+   }
+  ]
+ },
+ "7255": {
+  "title": "[Bugfix] Handle non-2D tensor in npu_weight_quant_batchmatmul",
+  "state": "closed",
+  "merged": false,
+  "author": "NJX-njx",
+  "created_at": "2026-03-14T08:39:09Z",
+  "closed_at": "2026-09-08T03:12:07Z",
+  "merged_at": null,
+  "base": "main",
+  "additions": 14,
+  "deletions": 1,
+  "changed_files": 2,
+  "commits": 1,
+  "comments": 7,
+  "review_comments": 3,
+  "body": "## Summary\n- Fix the issue where npu_weight_quant_batchmatmul requires 2D input tensor\n- Added conversion for non-2D tensors (3D) to 2D before the operation\n- Reshape back to original shape after the operation\n\n## Related Issue\n- Fixes #3210\n\n## Testing\n- Unit tests pass\n- Tested with quantized models that have 3D input tensors\n- vLLM version: v0.17.0\n- vLLM main: https://github.com/vllm-project/vllm/commit/4034c3d32e30d01639459edd3ab486f56993876d\n",
+  "files": [
+   {
+    "name": "vllm_ascend/quantization/methods/w4a8.py",
+    "add": 8,
+    "del": 1,
+    "status": "modified"
+   },
+   {
+    "name": "vllm_ascend/quantization/methods/w8a16.py",
+    "add": 6,
+    "del": 0,
+    "status": "modified"
+   }
+  ],
+  "discussion": [
+   {
+    "user": "chatgpt-codex-connector[bot]",
+    "at": "2026-03-14T08:39:15Z",
+    "text": "You have reached your Codex usage limits for code reviews. You can see your limits in the [Codex usage dashboard](https://chatgpt.com/codex/settings/usage)."
+   },
+   {
+    "user": "gemini-code-assist[bot]",
+    "at": "2026-03-14T08:39:26Z",
+    "text": "## Summary of Changes\n\nHello, I'm Gemini Code Assist[^1]! I'm currently reviewing this pull request and will post my feedback shortly. In the meantime, here's a summary to help you and other reviewers quickly get up to speed!\n\nThis pull request enhances the `npu_weight_quant_batchmatmul` function by enabling it to handle 3D input tensors. Previously, the function was restricted to 2D inputs, causing issues with certain quantized models. The changes introduce a robust reshaping strategy, converting 3D inputs to 2D for processing and then reverting them to their original 3D form. This ensures br"
+   },
+   {
+    "user": "github-actions[bot]",
+    "at": "2026-03-14T08:47:22Z",
+    "text": "👋 Hi! Thank you for contributing to the vLLM Ascend project. The following points will speed up your PR merge:‌‌\n\n- A PR should do only one thing, smaller PRs enable faster reviews.\n- Every PR should include unit tests and end-to-end tests ‌to ensure it works and is not broken by other future PRs.\n- Write the commit message by fulfilling the PR description to help reviewer and future developers understand.\n\nIf CI fails, you can run linting and testing checks locally according [Contributing](https://docs.vllm.ai/projects/ascend/zh-cn/latest/developer_guide/contribution/index.html) and [Testing]"
+   },
+   {
+    "user": "github-actions[bot]",
+    "at": "2026-05-28T13:16:35Z",
+    "text": "This pull request has conflicts, please resolve those before we can evaluate the pull request."
+   },
+   {
+    "user": "yiz-liu",
+    "at": "2026-06-03T09:21:21Z",
+    "text": "@kunpengW-code PTAL"
+   },
+   {
+    "user": "kunpengW-code",
+    "at": "2026-06-03T09:26:17Z",
+    "text": "LGTM. The code can be modified according to the suggested approach, and conflicts need to be resolved."
+   },
+   {
+    "user": "kunpengW-code",
+    "at": "2026-09-08T03:12:07Z",
+    "text": "The W4A8 linear quantization has been discarded in the new version, so this PR can be closed for now."
+   }
+  ],
+  "reviews": [
+   {
+    "user": "gemini-code-assist[bot]",
+    "path": "vllm_ascend/quantization/methods/w4a8.py",
+    "text": "![high](https://www.gstatic.com/codereviewagent/high-priority.svg)\n\nThe logic to handle 3D tensors by reshaping them before and after the `npu_weight_quant_batchmatmul` call is also implemented in `vllm_ascend/quantization/methods/w8a16.py`. To improve maintainability and avoid code duplication, this logic should be extracted into a shared utility function. This would ensure that any future bug fi"
+   },
+   {
+    "user": "gemini-code-assist[bot]",
+    "path": "vllm_ascend/quantization/methods/w8a16.py",
+    "text": "![high](https://www.gstatic.com/codereviewagent/high-priority.svg)\n\nThis logic for handling 3D tensors is a duplication of the implementation in `vllm_ascend/quantization/methods/w4a8.py`. Please consider refactoring this into a common helper function to adhere to the DRY (Don't Repeat Yourself) principle. This will make the codebase easier to maintain."
+   },
+   {
+    "user": "yiz-liu",
+    "path": "vllm_ascend/quantization/methods/w4a8.py",
+    "text": "```suggestion\n        original_shape = x.shape\n\n        x = x.flatten(0, -2) if x.dim() > 2 else x\n        \n        output = torch_npu.npu_weight_quant_batchmatmul(\n            x,\n            layer.weight,\n            antiquant_scale=layer.weight_scale_second.to(x.dtype),\n            antiquant_group_size=self.group_size,\n        )\n\n        return output.view(original_shape)\n```"
+   }
+  ]
+ }
+}

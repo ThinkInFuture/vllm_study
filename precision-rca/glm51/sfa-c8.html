@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识页 · SFA-C8 是什么</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f2f7f2; color: #263238; margin: 0; padding: 26px 0; line-height: 1.8; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #1b5e20; font-size: 1.55rem; margin: 0 0 4px; }
+  h2 { color: #1b5e20; font-size: 1.18rem; margin: 34px 0 8px; background: #e5f0e5; border-left: 6px solid #2e7d32; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #2f5d33; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #1b5e20; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #d5e3d5; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f6faf6; }
+  code { background: #e8efe8; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #2e7d32; }
+  pre { background: #263238; color: #dcedc8; padding: 12px 16px; border-radius: 8px; overflow-x: auto; font-size: .8rem; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 18px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; } a code { color: inherit; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.g { background: #e8f5e9; border-left: 5px solid #2e7d32; }
+  .box.o { background: #fff8e1; border-left: 5px solid #f9a825; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="phenomena.html">① 现象</a>
+    <a href="analysis.html">② 分析</a>
+    <a href="suspects.html">③ 可疑点</a>
+    <a href="sfa-c8.html">④ 知识：SFA-C8（本页）</a>
+  </div>
+
+  <h1>知识页 · SFA-C8 是什么</h1>
+  <p class="meta">代码基线：<code>precision-rca/vllm-ascend-git</code>（main，e89f87ddb）· 主文件 <a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/attention/sfa_v1.py">vllm_ascend/attention/sfa_v1.py</a></p>
+
+  <div class="box g">
+    <b>一句话</b>：<code>enable_sparse_sfa_c8=true</code>（简称 sfa_c8）让 GLM-5.1 这类稀疏注意力模型在 NPU 上，
+    把 <b>SFA（Sparse Flash Attention）主注意力的 KV Cache 打包成 int8/fp8 量化布局</b>，供专有算子
+    <code>npu_kv_quant_sparse_flash_attention</code> 消费 —— 目的是省 KV 内存、提升长上下文吞吐。
+    它是<b>性能/内存优化开关</b>，不是功能开关。
+  </div>
+
+  <h2>1 · 背景：GLM-5.1 的稀疏注意力架构（DSA）</h2>
+  <div class="card">
+    <p>GLM-5.1 的模型类型是 <code>glm_moe_dsa</code>（sfa_v1.py L401 显式判断），采用 DeepSeek V3.2 式的
+    <b>稀疏注意力</b>架构，两个组件配合：</p>
+    <table>
+      <tr><th>组件</th><th>作用</th><th>对应代码</th></tr>
+      <tr><td><b>Lightning Indexer</b>（轻量索引器）</td><td>对每个 query，从全部 KV 块里快速挑出 top-k 个重要块（<code>index_topk</code>），决定注意力"看哪里"</td><td><code>self.indexer</code> / <code>use_torch_npu_lightning_indexer=True</code>（glm_moe_dsa 专属，L402-404）</td></tr>
+      <tr><td><b>SFA 主注意力</b>（Sparse Flash Attention）</td><td>只对索引器选中的 top-k 块做精确注意力计算</td><td><code>AscendSFAImpl</code>（L408）→ NPU 算子 <code>npu_kv_quant_sparse_flash_attention</code></td></tr>
+    </table>
+    <p class="meta">哪些模型走 SFA：<code>model_uses_sfa_sparse()</code>（utils.py）—— hf config 含 <code>index_topk</code> 且无 <code>compress_ratios</code> 即判定为 SFA 模型。GLM-5.1（glm_moe_dsa）与 DeepSeek V3.2 系都属于此类。</p>
+  </div>
+
+  <h2>2 · C8 的两层含义（源码注释原文）</h2>
+  <div class="card">
+    <p><code>sfa_v1.py</code> L507-511 的注释是理解这个开关的钥匙：</p>
+    <pre><code># Sparse C8 has two independent meanings in SFA:
+# - SFA packed KV cache for npu_kv_quant_sparse_flash_attention.
+# - C8 indexer cache for lightning indexer.
+# The user-facing switches control these layouts independently. LI C8
+# applies only to layers that own an indexer cache.</code></pre>
+    <table>
+      <tr><th>开关</th><th>量化对象</th><th>消费算子</th></tr>
+      <tr><td><code>enable_sparse_sfa_c8</code>（本案开的）</td><td><b>SFA 主注意力的 packed KV Cache</b>：把 k_nope（量化压缩维）+ k_pe（rope 维）打包进单个量化张量</td><td><code>npu_kv_quant_sparse_flash_attention</code></td></tr>
+      <tr><td><code>enable_sparse_li_c8</code>（独立开关）</td><td><b>Lightning Indexer 的索引缓存</b>（只对拥有 indexer cache 的层生效）</td><td>indexer 算子</td></tr>
+    </table>
+    <p class="meta">GLM-5.1 的 128k/198k 两个配置：<b>都开 li_c8</b>，差别只在 sfa_c8 —— 即 198k 额外把<b>主注意力的 KV</b> 也做成 int8 量化打包。</p>
+  </div>
+
+  <h2>3 · 打包后 KV Cache 布局改变（代码里的布局表）</h2>
+  <div class="card">
+    <p><code>sfa_v1.py</code> L538-548：开启 Sparse C8 后，KV cache 张量元组的<b>槽位排列会变</b>：</p>
+    <pre><code>================  ===========  ===========  =============  ==============
+Layout            kv_cache[0]  kv_cache[1]  kv_cache[2]    kv_cache[3]
+================  ===========  ===========  =============  ==============
+Default           k_nope       k_pe         indexer_k      indexer_scale
+Sparse C8         packed_kv    indexer_k    indexer_scale  (unused)
+================  ===========  ===========  =============  ==============</code></pre>
+    <p>即：sfa_c8 开启后，k_nope 与 k_pe 被<b>量化打包成一个 <code>packed_kv</code></b>，indexer 缓存整体前移一位。
+    任何按旧槽位读取缓存的代码（KV 迁移、offload、P/D 分离传输）都需要适配这个布局。</p>
+  </div>
+
+  <h2>4 · 量化数据类型（依硬件能力分支）</h2>
+  <div class="card">
+    <pre><code>if enable_sparse_sfa_c8 or enable_sparse_li_c8:            # L514
+    if get_current_hardware_profile().supports(FP8_ATTENTION):
+        self.c8_k_cache_dtype     = torch.float8_e4m3fn    # FP8 平台
+        self.c8_k_scale_cache_dtype = torch.float32
+    else:
+        self.c8_k_cache_dtype     = torch.int8             # A3 等平台
+        self.c8_k_scale_cache_dtype = torch.float16</code></pre>
+    <p class="meta">"C8" 即 8-bit 量化 KV：目标平台支持 FP8 注意力则用 e4m3fn，否则用 int8 + fp16 scale。</p>
+  </div>
+
+  <h2>5 · 开关的生效条件（不是想开就开）</h2>
+  <div class="card">
+    <pre><code># ascend_config.py（pydantic 定义，默认 False）
+enable_sparse_sfa_c8: bool = False
+enable_sparse_li_c8:  bool = False
+
+# 生效前的与运算（ascend_config.py 后处理）：
+use_sparse = model_uses_sfa_sparse(vc.model_config)   # 模型必须是 SFA 稀疏类
+self.enable_sparse_sfa_c8 = self.enable_sparse_sfa_c8 and use_sparse
+self.enable_sparse_li_c8  = self.enable_sparse_li_c8  and use_sparse</code></pre>
+    <ul>
+      <li>yaml 里写 <code>"enable_sparse_sfa_c8": true</code> → 经 additional-config 注入 AscendConfig；</li>
+      <li>仅当模型是 SFA 稀疏类（含 <code>index_topk</code>）才真正生效；</li>
+      <li>相关辅助机制：量化时伴随 <b>Hadamard 变换</b>（<code>q_hadamard / k_hadamard</code>，dsa c8 启用时共享，L414/L625/L629），用于降低量化离群影响。</li>
+    </ul>
+  </div>
+
+  <h2>6 · 与本案的关系（事实引用，归因见可疑点页）</h2>
+  <div class="card">
+    <table>
+      <tr><th>事实</th><th>出处</th></tr>
+      <tr><td>★198k_function 开 sfa_c8=true；同版本同日姊妹组网（sfa_c8=false）精度 93.33、★198k 得 0.00</td><td><a href="analysis.html">② 分析一/分析二</a></td></tr>
+      <tr><td>0.26.0 下同配置得过 100 分 → 该路径曾是好的</td><td><a href="analysis.html">② 分析二</a></td></tr>
+      <tr><td>窗口内 SFA 相关变更较多（PCP support / FlashComm v1 移除 / SFA graph mode 等），具体触发候选见可疑点页</td><td><a href="suspects.html">③ 可疑点</a></td></tr>
+    </table>
+  </div>
+
+  <h2>7 · 代码导航</h2>
+  <div class="card">
+    <table>
+      <tr><th>内容</th><th>位置（main 分支）</th></tr>
+      <tr><td>SFA 实现主体（含上面全部注释/布局表）</td><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/attention/sfa_v1.py">vllm_ascend/attention/sfa_v1.py</a>（L408 AscendSFAImpl · L507 C8 注释 · L538 布局表）</td></tr>
+      <tr><td>开关定义（pydantic）</td><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/ascend_config.py">vllm_ascend/ascend_config.py</a>（enable_sparse_sfa_c8 / enable_sparse_li_c8）</td></tr>
+      <tr><td>SFA 模型判定</td><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/utils.py">vllm_ascend/utils.py</a> · <code>model_uses_sfa_sparse()</code></td></tr>
+      <tr><td>SFA 跨机上下文并行</td><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/attention/context_parallel/sfa_cp.py">vllm_ascend/attention/context_parallel/sfa_cp.py</a></td></tr>
+      <tr><td>本案两份配置</td><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/internal_dp/config/GLM-5.1-W8A8C8-A3_198k_function.yaml">198k（sfa_c8=true）</a> · <a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/internal_dp/config/GLM-5.1-W8A8C8-A3_128k_90_50.yaml">128k_90_50（sfa_c8=false）</a></td></tr>
+    </table>
+  </div>
+
+  <h2>7 · 为什么开了会出问题 —— 数据流走读与薄弱点（结合回归窗口）</h2>
+  <div class="card">
+    <p>SFA-C8=true 的一次 decode，KV 数据要经过四步（全部在 <a href="https://github.com/vllm-project/vllm-ascend/blob/main/vllm_ascend/attention/sfa_v1.py">sfa_v1.py</a>）：</p>
+    <table>
+      <tr><th>步骤</th><th>做什么</th><th>出错后果</th></tr>
+      <tr><td>① 量化写入</td><td>新 token 的 KV 经 prolog v3 量化（int8 + fp16 scale，A3 平台），按 <code>kv_slot_mapping</code> 写入 <code>packed_kv</code>（k_nope+k_pe 打包 + Hadamard 变换）</td><td>slot 错位 / scale 算错 → 之后每次检索读到的都是"错位的错值"</td></tr>
+      <tr><td>② 稀疏检索</td><td>Lightning Indexer 用 <code>indexer_k/indexer_scale</code>（li_c8 量化缓存）为每个 query 选 top-k 块</td><td>检索偏 → 注意力看错地方 → 答非所问</td></tr>
+      <tr><td>③ 反量化注意力</td><td><code>npu_kv_quant_sparse_flash_attention</code> 对选中块反量化并计算注意力</td><td>反量化 scale 用错 → 输出数值系统性偏差</td></tr>
+      <tr><td>④ 输出投影</td><td>W_UV 投影（按 token 数 ≤1024 与否分支选 <code>batch_matmul_transpose</code> / <code>npu_transpose_batchmatmul</code>）</td><td class="muted">两个分支均为标准 matmul，低嫌疑</td></tr>
+    </table>
+    <p>对照回归窗口 diff（<code>git diff 85625bd7 e6a133f7 -- vllm_ascend/attention/sfa_v1.py</code>），这段数据流里有三处<b>恰好被重构过</b>的薄弱点：
+    ① 的 slot mapping 被统一重写（<code>SFAForwardContext.kv_slot_mapping</code> 取代旧的 <code>DSACPContext</code> 等多字段）、
+    Hadamard 共享静态张量的初始化时序变动、
+    Impl 选择改为运行时 <code>resolve_sfa_impl()</code> 动态解析 ——
+    三个机制级怀疑（M1 slot 错位 / M2 Hadamard 缓存污染 / M3 Impl 漂移）的详细论证见 <a href="suspects.html">③ 可疑点 · 1b 节</a>。</p>
+  </div>
+  <p class="meta" style="text-align:center">precision-rca/sfa-c8.html · 2026-09-08 · 相关：<a href="phenomena.html">① 现象</a> · <a href="analysis.html">② 分析</a> · <a href="suspects.html">③ 可疑点</a></p>
+</div>
+</body>
+</html>

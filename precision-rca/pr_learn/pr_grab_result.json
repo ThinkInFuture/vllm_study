@@ -1,0 +1,33 @@
+{
+ "grab_time": "2026-09-08T11:44:25.698947",
+ "merged": {
+  "number": 15978,
+  "title": "[v0.27.1rc][Performance][KDA] Compose and overlap gate projections",
+  "url": "https://github.com/vllm-project/vllm-ascend/pull/15978",
+  "state": "closed",
+  "merged": true,
+  "created_at": "2026-09-07T15:28:47Z",
+  "closed_at": "2026-09-08T03:27:39Z",
+  "merged_at": "2026-09-08T03:27:39Z"
+ },
+ "open": {
+  "number": 16004,
+  "title": "[Feature]Adapt Mooncake layerwise range sessions",
+  "url": "https://github.com/vllm-project/vllm-ascend/pull/16004",
+  "state": "open",
+  "merged": false,
+  "created_at": "2026-09-08T03:43:35Z",
+  "closed_at": null,
+  "merged_at": null
+ },
+ "rejected": {
+  "number": 7255,
+  "title": "[Bugfix] Handle non-2D tensor in npu_weight_quant_batchmatmul",
+  "url": "https://github.com/vllm-project/vllm-ascend/pull/7255",
+  "state": "closed",
+  "merged": false,
+  "created_at": "2026-03-14T08:39:09Z",
+  "closed_at": "2026-09-08T03:12:07Z",
+  "merged_at": null
+ }
+}

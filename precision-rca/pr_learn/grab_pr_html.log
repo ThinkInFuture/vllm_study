@@ -1,0 +1,9 @@
+2026-09-08 11:45:44,951 - INFO - grab_pr_html_service.py:48 - HTML 抓取服务启动
+2026-09-08 11:46:06,082 - WARNING - grab_pr_html_service.py:41 - 第 1 次抓取 https://github.com/vllm-project/vllm-ascend/pull/15978 失败: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。>
+2026-09-08 11:46:26,451 - INFO - grab_pr_html_service.py:38 - 抓取成功 https://github.com/vllm-project/vllm-ascend/pull/15978 -> pr_merged_15978.html (458250 bytes)
+2026-09-08 11:46:26,452 - INFO - grab_pr_html_service.py:60 - [merged] PR#15978 完成
+2026-09-08 11:46:28,456 - INFO - grab_pr_html_service.py:38 - 抓取成功 https://github.com/vllm-project/vllm-ascend/pull/16004 -> pr_open_16004.html (380416 bytes)
+2026-09-08 11:46:28,458 - INFO - grab_pr_html_service.py:60 - [open] PR#16004 完成
+2026-09-08 11:46:31,263 - INFO - grab_pr_html_service.py:38 - 抓取成功 https://github.com/vllm-project/vllm-ascend/pull/7255 -> pr_rejected_7255.html (459736 bytes)
+2026-09-08 11:46:31,264 - INFO - grab_pr_html_service.py:60 - [rejected] PR#7255 完成
+2026-09-08 11:46:31,265 - INFO - grab_pr_html_service.py:64 - 清单已写入 D:\demo\202609\vllm-ascend\precision-rca\pr_html_manifest.json，服务退出

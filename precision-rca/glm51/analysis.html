@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>② 基于现象的分析 · GLM-5.1-198k 精度 0 分</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f3f7; color: #263238; margin: 0; padding: 26px 0; line-height: 1.78; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #4a148c; font-size: 1.55rem; margin: 0 0 4px; }
+  h2 { color: #4a148c; font-size: 1.18rem; margin: 34px 0 8px; background: #ede7f6; border-left: 6px solid #7e57c2; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #4527a0; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #4527a0; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #dde5ec; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #faf8ff; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  .ctr { text-align: center; }
+  code { background: #edf1f5; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #ad3a5c; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 20px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; } a code { color: inherit; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.b { background: #ffebee; border-left: 5px solid #c62828; }
+  .box.g { background: #e8f5e9; border-left: 5px solid #1a7f37; }
+  .box.p { background: #f3e5f5; border-left: 5px solid #7e57c2; }
+  .star td { background: #fff8e1 !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="phenomena.html">← ① 现象</a>
+    <a href="analysis.html">② 基于现象的分析（本页）</a>
+    <a href="suspects.html">③ 可疑点 →</a>
+  </div>
+
+  <h1>基于现象的分析</h1>
+  <p class="meta">本页只做一件事：把 <a href="phenomena.html">① 现象</a> 里的四组事实放在一起推演，得出从现象<b>直接可证</b>的结论。具体是哪个 commit / 哪个上游变更干的，见 <a href="suspects.html">③ 可疑点</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a>。</p>
+
+  <div class="box p">
+    <b>分析结论（先行）</b>：坏点被<b>夹逼</b>在 <b>SFA-C8 路径（enable_sparse_sfa_c8=true 的稀疏注意力 + KV int8 索引）</b>上；
+    该路径在 <b>vLLM 0.26.0 下是好的（08-27 得 100 分）</b>，在 <b>0.27.1 下全灭（0.00 ×3）</b>——
+    即 <b>"0.27.1 窗口的变更 × SFA-C8 路径"的组合问题</b>，不是任何单一因素的普遍故障。
+  </div>
+
+  <!-- 分析一 -->
+  <h2>分析一 · 同日对照逐项排除（最硬的一组推理）</h2>
+  <div class="card">
+    <p>分析输入（现象页 2.1）：<b>09-04 同一天、同 vLLM 0.27.1、同一份模型权重（Eco-Tech/GLM-5.1-w8a8c8）、同 glm45/glm47 parser、同 MTP 配置（deepseek_mtp ×3 eager）、同 seed 1024</b> ——
+    <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101143496817">dual-nodes（sfa_c8 关）得 93.33</a>，<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101161960890">★198k（sfa_c8 开）得 0.00</a>。</p>
+    <table>
+      <tr><th style="width:60px">#</th><th>两者相同的部分</th><th>一好一坏 → 推出的结论</th></tr>
+      <tr><td>1</td><td>同一份模型权重与加载流程</td><td>模型本体、权重加载、tokenizer、前向计算<b>没有坏</b></td></tr>
+      <tr><td>2</td><td>同一个 vLLM 0.27.1</td><td>0.27.1 的通用路径（调度/采样/chat 模板）<b>没有全局坏</b>——"升级把一切都搞坏"不成立；这也回答了"为什么 qwen/deepseek 精度 job 全绿"</td></tr>
+      <tr><td>3</td><td>同一个 <code>--reasoning-parser glm45</code> + aisbench 提取</td><td>93.33 正好 = baseline，思考与答案的输出结构与提取<b>完全匹配</b>——"reasoning 结构变了导致提取失败"不成立</td></tr>
+      <tr><td>4</td><td>同一个 MTP 配置（deepseek_mtp ×3，eager）</td><td>MTP 组合与坏<b>无关</b>（两边都开，一好一坏）</td></tr>
+      <tr><td>5</td><td class="bad">唯一实质差异：<b>sfa_c8 开关</b>。另一处差异 max-model-len（133120 → 202752）对 AIME 短题（远小于两上限）无解释力</td><td class="bad">坏点被<b>夹逼</b>在 <b>SFA-C8 = 稀疏注意力 + KV int8 索引路径</b></td></tr>
+    </table>
+  </div>
+
+  <!-- 分析二 -->
+  <h2>分析二 · 得分时间线对齐（坏点"曾经是好的"）</h2>
+  <div class="card">
+    <p>分析输入（现象页 2.1 时间线行）：</p>
+    <table>
+      <tr><th>日期</th><th>镜像 vLLM</th><th>sfa_c8=true 的精度</th><th>推论</th></tr>
+      <tr><td>08-19 ~ 08-26</td><td>0.25.x → 0.26.0</td><td class="muted">全部没跑到出分（部署/aisbench 故障）</td><td>历史数据空缺，无法追溯更早</td></tr>
+      <tr><td><b>08-27</b></td><td class="ok"><b>0.26.0</b></td><td class="ok"><b>100.00</b>（30/30 全对）</td><td>该路径在 0.26.0 下<b>完全正常</b></td></tr>
+      <tr><td><b>08-30 / 09-04 / 09-06</b></td><td class="bad"><b>0.27.1</b></td><td class="bad"><b>0.00 ×3</b>（严格一致）</td><td>切换版本后<b>立即且持续</b>全灭</td></tr>
+      <tr><td>09-03</td><td>0.27.1</td><td class="muted">当日配置仅 perf</td><td>0.27.1 下该路径的吞吐仍能出数 → 坏的是"对错"不是"能不能跑"</td></tr>
+    </table>
+    <div class="box p">
+      <b>推论</b>：SFA-C8 路径并非从来就坏 —— <b>0.26.0 下好、0.27.1 下坏</b>，坏点与版本窗口严格绑定。
+      同时说明 100 分不是运气（30/30 全对），0 分也不是波动（三次严格一致）—— 两个方向都是确定性机制。
+    </div>
+  </div>
+
+  <!-- 分析三 -->
+  <h2>分析三 · 家族矩阵归纳（开关分化，两种症状分层）</h2>
+  <div class="card">
+    <p>分析输入（现象页 2.1 / 2.2）：</p>
+    <table>
+      <tr><th>观测</th><th>事实</th><th>推论</th></tr>
+      <tr><td>sfa_c8=true 的 2 个组网（★198k、128k-1k-90-50-PD）</td><td>精度 <b class="bad">0.00</b>；后者 perf 同时从基线 1265 劣化到 469</td><td class="bad">同开关同病 → 交叉印证，非孤例</td></tr>
+      <tr><td>sfa_c8=false 的组网（dual-nodes、128k_90_50）</td><td>精度 93.33 / 吞吐正常（0.27.1 下）</td><td class="ok">开关关闭即免疫 → 坏点在开关引入的路径里</td></tr>
+      <tr><td>weekly W8A8C8 系列（sfa_c8=false）时红时绿</td><td>红 = TPOT 吞吐阈值不达标，与精度无关</td><td>吞吐波动是<b>另一层问题</b>，与本案精度归因解耦（此前曾误把它们混为 SFA-C8 证据，已修正）</td></tr>
+      <tr><td>其他模型精度 job（qwen aime2024 / gpqa / R1 等）</td><td>0.27.1 下全绿</td><td>与"0.27.1 通用路径没坏"（分析一 #2）互相印证</td></tr>
+    </table>
+  </div>
+
+  <!-- 分析四 -->
+  <h2>分析四 · 评估链排除（"会不会是判分冤枉了它"）</h2>
+  <div class="card">
+    <table>
+      <tr><th>质疑</th><th>现象证据</th><th>结论</th></tr>
+      <tr><td>会不会模型输出正常、aisbench 判 0？</td><td>dual-nodes 用<b>同一 aisbench、同一 glm45 parser、同一数据集</b>得 93.33</td><td>提取/判分链路对该模型正常 → "冤判"不成立（剩余可能仅限 aime2025 与 aime2024 链路差异，极弱）</td></tr>
+      <tr><td>会不会输出被截断（max_out_len=77824）？</td><td>截断应得中间分；实测三次严格 0.00；且 09-04 同版本 perf 的生成正常出数</td><td>截断假说不成立</td></tr>
+      <tr><td>会不会数据集缓存坏了？</td><td>08-27 同缓存得过 100 分</td><td>只剩"08-27 后缓存变坏"一种窄可能（弱）</td></tr>
+    </table>
+  </div>
+
+  <!-- 结论 -->
+  <h2>分析结论汇总</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:120px">结论项</th><th>内容</th><th>由哪些分析得出</th></tr>
+      <tr><td class="bad">坏点位置</td><td>SFA-C8 = <code>enable_sparse_sfa_c8=true</code> 引入的稀疏注意力 + KV int8 索引路径（decode/推理输出）</td><td>分析一（夹逼）+ 分析三（交叉印证）</td></tr>
+      <tr><td class="bad">触发条件</td><td>vLLM 0.26.0 → 0.27.1 窗口的变更（与 SFA-C8 路径组合后才坏）</td><td>分析二（时间线绑定）</td></tr>
+      <tr><td class="ok">免疫范围</td><td>sfa_c8=false 的所有组网、所有非 GLM 模型、单机场景</td><td>分析一 #2 + 分析三</td></tr>
+      <tr><td class="warn">未决问题</td><td>① 触发变更在 vllm-ascend 侧还是 vLLM 上游侧（未分离）② 输出形态是乱码还是思考跑偏（output_accuracy.txt 缺失）</td><td>→ 转 <a href="suspects.html">③ 可疑点</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a> 与判决实验</td></tr>
+    </table>
+  </div>
+
+  <div class="box p">
+    <b>下一步</b>：以上结论把范围压缩到"SFA-C8 × 0.27.1 窗口"。具体可疑对象（commit / 上游变更）与判决实验 → <a href="suspects.html"><b>③ 可疑点</b></a>
+  </div>
+
+  <p class="meta" style="text-align:center">precision-rca/analysis.html · 2026-09-08 · 输入：<a href="phenomena.html">① 现象</a> · 输出：<a href="suspects.html">③ 可疑点</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a></p>
+</div>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PR 学习解读 · 三个 PR 教你看懂 GitHub Pull Request</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f7f5f0; color: #33261d; margin: 0; padding: 26px 0; line-height: 1.8; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #5d4037; font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { color: #5d4037; font-size: 1.16rem; margin: 34px 0 8px; background: #efe7db; border-left: 6px solid #a1887f; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #6d4c41; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #a1887f; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #5d4037; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #e2d9cf; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fbf9f5; }
+  code { background: #efe9e0; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #8d5524; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 18px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; }
+  .badge { display: inline-block; padding: 1px 10px; border-radius: 12px; font-size: .8rem; font-weight: 700; }
+  .b-merged { background: #f3e5f5; color: #7b1fa2; }
+  .b-open { background: #e8f5e9; color: #1a7f37; }
+  .b-closed { background: #ffebee; color: #c62828; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.tip { background: #fff8e1; border-left: 5px solid #f9a825; }
+  .box.note { background: #e3f2fd; border-left: 5px solid #1976d2; }
+  .timeline { border-left: 3px solid #d7ccc8; margin: 8px 0 8px 10px; padding-left: 18px; }
+  .timeline p { margin: 6px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="phenomena.html">① 现象</a>
+    <a href="analysis.html">② 分析</a>
+    <a href="suspects.html">③ 可疑点</a>
+    <a href="sfa-c8.html">④ 知识：SFA-C8</a>
+    <a href="README.html">⑤ PR 学习（本页）</a>
+  </div>
+
+  <h1>PR 学习解读 · 三个 PR 教你看懂 GitHub Pull Request</h1>
+  <p class="meta">数据来源：本目录三个网页快照（GitHub 页面抓取）+ GitHub API 全量数据（<code>pr_data.json</code>）· 整理 2026-09-08</p>
+
+  <!-- Part A 教程 -->
+  <h2>Part A · 先教你看：一个 PR 页面长什么样</h2>
+  <div class="card">
+    <p>打开本目录任何 <code>pr_*.html</code> 快照（就是 GitHub PR 页面），从上到下看这五样东西：</p>
+    <table>
+      <tr><th style="width:190px">看哪里</th><th>是什么</th><th>怎么判断</th></tr>
+      <tr><td>① 标题栏</td><td><code>标题 #编号</code>，旁边一个<b>状态徽章</b></td><td>徽章：<span class="badge b-open">Open</span> 还在审 / <span class="badge b-merged">Merged</span> 已合入 / <span class="badge b-closed">Closed</span> 被关闭（未合入）</td></tr>
+      <tr><td>② 描述区（第一条评论）</td><td>作者写的"这个 PR 做什么 / 为什么 / 怎么测的"。本仓库强制模板三段式</td><td>看第一段就知道这个 PR 的目的</td></tr>
+      <tr><td>③ 标签页</td><td><b>Conversation</b>（讨论时间线）· <b>Commits</b>（提交历史）· <b>Checks</b>（CI 结果）· <b>Files changed</b>（代码差异）</td><td>看懂改了什么 → Files changed；看为什么没合 → Conversation</td></tr>
+      <tr><td>④ Merge 框</td><td>讨论区底部的合并按钮框</td><td>绿勾=可合；<b>"has conflicts" = 和主分支冲突，必须先解决</b>（本目录 #16004 就卡在这）</td></tr>
+      <tr><td>⑤ 机器人评论</td><td><code>github-actions[bot]</code>（CI/格式提示）、<code>gemini-code-assist[bot]</code>（AI 代码摘要）</td><td>"This pull request has conflicts" 这类机器人消息经常是状态关键</td></tr>
+    </table>
+    <div class="box tip">
+      <b>三种结局怎么读</b>：<b>Merged</b> = 代码进入主分支；<b>Closed 未合入</b> = 不合了 —— 原因通常在最后几条评论（功能废弃 / 长期无响应 / 方案被替代）；<b>Open</b> = 还在流程里（等 review、等改冲突、等 CI）。
+    </div>
+  </div>
+
+  <!-- Part B 三个 PR -->
+  <h2>Part B · 三个 PR 逐个解读</h2>
+
+  <div class="card">
+    <h3>案例 1 · <a href="https://github.com/vllm-project/vllm-ascend/pull/15978">PR #15978</a> <span class="badge b-merged">Merged 已合入</span> —— 教你认识"Backport（回移植）"</h3>
+    <table>
+      <tr><th style="width:150px">作者 / 时间</th><td>Dawn952 · 09-07 创建，09-08 合入（<b>1 天</b>，极快）</td></tr>
+      <tr><td>改动规模</td><td class="ok">+606 / -86，7 个文件，2 commits</td></tr>
+      <tr><td>做了什么</td><td>把主分支的 <a href="https://github.com/vllm-project/vllm-ascend/pull/15416">#15416</a>（Kimi K3 KDA 混合精度投影优化）<b>回移植</b>到 <code>releases/v0.27.1rc</code> 发布分支：加载权重后把 <code>f_proj.weight = f_b_proj.weight @ f_a_proj.weight</code> 现场合成，并把 beta / F 投影 / 输出门打包成一个 BFG 投影</td></tr>
+    </table>
+    <div class="box tip">
+      <b>知识点：Backport 是什么</b>——新功能先在 main 分支落地（就是 #15416，我们在可疑点页查过它的同族 commit <code>222677fc</code>），
+      然后把修复"搬"到旧的发布分支（v0.27.1rc），让已发布的版本也能享受。所以你会看到同一个标题出现两次、
+      PR 描述里写着 "Backport #15416 to releases/v0.27.1rc"。<b>Backport PR 几乎必合</b>（维护者自己搬的），审查也快。
+    </div>
+    <p class="meta">快照：<a href="pr_merged_15978.html">pr_merged_15978.html</a> · 数据：pr_data.json</p>
+  </div>
+
+  <div class="card">
+    <h3>案例 2 · <a href="https://github.com/vllm-project/vllm-ascend/pull/16004">PR #16004</a> <span class="badge b-open">Open 待合入</span> —— 教你认识"conflicts 卡住"</h3>
+    <table>
+      <tr><th style="width:150px">作者 / 时间</th><td>Eric-dot · 09-08 创建（就在昨天）</td></tr>
+      <tr><td>改动规模</td><td class="warn">+2171 / -51，17 个文件 —— 大改动</td></tr>
+      <tr><td>做了什么</td><td>给 KV Pool 的 layerwise 传输适配 Mooncake 的 range sessions（分布式 KV 缓存传输协议的会话范围接口）</td></tr>
+      <tr><td>当前卡在哪</td><td>机器人明确提示 <b>"This pull request has conflicts"</b> —— 主分支这几天动了同一片代码（17 文件的大 PR 很容易撞），作者需要 rebase/解冲突后才能进入正式 review</td></tr>
+    </table>
+    <div class="box note">
+      <b>知识点："待合入"不等于"会合入"</b>——Open 状态只代表流程未结束。判断 Open PR 的真实前景看三样：
+      是否有 conflicts、是否有人（maintainer）留了 review、CI Checks 是否在跑。
+      这个 PR 昨天刚建、有冲突、正文模板还没填完 —— 属于<b>早期阶段</b>。
+    </div>
+    <p class="meta">快照：<a href="pr_open_16004.html">pr_open_16004.html</a></p>
+  </div>
+
+  <div class="card">
+    <h3>案例 3 · <a href="https://github.com/vllm-project/vllm-ascend/pull/7255">PR #7255</a> <span class="badge b-closed">Closed 未合入</span> —— 教你认识"功能废弃型拒绝"</h3>
+    <table>
+      <tr><th style="width:150px">作者 / 时间线</th><td>NJX-njx · <b>3 月 14 日创建</b> → 5-28 机器人报冲突 → 6-03 reviewer 说"方案可以，先解冲突" → <b>9-08（今天）被关闭</b>，存活 6 个月</td></tr>
+      <tr><td>改动规模</td><td class="ok">+14 / -1，2 个文件 —— 改动极小</td></tr>
+      <tr><td>做了什么</td><td>修复 <code>npu_weight_quant_batchmatmul</code> 只接受 2D 输入的问题：3D 张量先转 2D、算完再转回来（关联 issue #3210）</td></tr>
+    </table>
+    <div class="timeline">
+      <p><b>03-14</b> 创建，CI 机器人例行打招呼</p>
+      <p><b>05-28</b> 机器人：与主分支冲突了</p>
+      <p><b>06-03</b> 作者 @ 维护者 kunpengW-code；维护者回：<b>"LGTM，按建议的方式改，冲突需要解决"</b> —— 看起来要合了</p>
+      <p><b>09-08</b> 维护者：<b>"W4A8 线性量化在新版本中已被弃用，此 PR 暂时可以先关闭了"</b> → 关闭</p>
+    </div>
+    <div class="box tip">
+      <b>知识点：拒绝 ≠ 写得差</b>——这个 PR 质量没问题（改动小、reviewer 都说 LGTM），
+      它死于<b>目标代码被废弃</b>：它修的是 W4A8 线性量化的算子，而新版本把 W4A8 线性量化整条路扔掉了。
+      读 Closed PR 时，翻到<b>最后一条人类评论</b>基本就是答案。
+      <br>顺带一提：这个 PR 的主题（batch matmul 量化算子）和我们正在追的头号嫌疑
+      <code>_v_up_proj</code> 新算子是同家族 —— 这个仓库里 batch matmul 类自定义算子的更替一直很频繁。
+    </div>
+    <p class="meta">快照：<a href="pr_rejected_7255.html">pr_rejected_7255.html</a></p>
+  </div>
+
+  <!-- Part C 文件清单 -->
+  <h2>Part C · 本目录文件清单</h2>
+  <div class="card">
+    <table>
+      <tr><th>文件</th><th>说明</th></tr>
+      <tr><td><code>pr_merged_15978.html</code> / <code>pr_open_16004.html</code> / <code>pr_rejected_7255.html</code></td><td>GitHub 页面快照（动态页，正文数据由脚本异步加载，<b>读内容请以本页解读 + pr_data.json 为准</b>）</td></tr>
+      <tr><td><code>pr_data.json</code></td><td>三个 PR 的 GitHub API 全量数据：正文 / 文件清单（+add -del）/ 讨论时间线 / review 批注</td></tr>
+      <tr><td><code>pr_grab_result.json</code> / <code>pr_html_manifest.json</code></td><td>抓取服务的结果与清单</td></tr>
+      <tr><td><code>grab_pr_service.py</code> / <code>grab_pr_html_service.py</code></td><td>两个可复用的后台抓取服务（改参数即可抓其他 PR）</td></tr>
+    </table>
+  </div>
+
+  <p class="meta" style="text-align:center">pr_learn/README.html · 2026-09-08 · 相关页面：<a href="phenomena.html">① 现象</a> · <a href="analysis.html">② 分析</a> · <a href="suspects.html">③ 可疑点</a> · <a href="sfa-c8.html">④ SFA-C8 知识</a></p>
+</div>
+</body>
+</html>

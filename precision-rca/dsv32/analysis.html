@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分析 · DeepSeek-V3.2 MTP2 PD 精度劣化</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f4f8; color: #263238; margin: 0; padding: 26px 0; line-height: 1.78; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #4a148c; font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { color: #4a148c; font-size: 1.16rem; margin: 32px 0 8px; background: #ede7f6; border-left: 6px solid #7e57c2; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #4527a0; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #4527a0; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #dde5ec; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #faf8ff; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  code { background: #edf1f5; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #ad3a5c; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 18px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.p { background: #f3e5f5; border-left: 5px solid #7e57c2; }
+  .box.b { background: #ffebee; border-left: 5px solid #c62828; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="../index.html">⌂ 案件总览</a> ·
+    <a href="phenomena.html">① 现象</a> ·
+    <a href="analysis.html">② 分析（本页）</a> ·
+    <a href="suspects.html">③ 可疑点</a> ·
+    <a href="../glm51/phenomena.html">GLM-5.1 案件</a>
+  </div>
+
+  <h1>基于现象的分析</h1>
+  <p class="meta">输入：<a href="phenomena.html">① 现象</a>（60 分 @08-29 / 90 分 @09-05 / 都是 0.27.1 / head e6a133f7 → c1bb35f7）。输出：劣化性质判定 + 修复窗口定位 + 与 GLM 案的关系。</p>
+
+  <div class="box p">
+    <b>分析结论（先行）</b>：
+    ① <b>不是 vLLM 版本问题</b>（坏/好都是 0.27.1）—— 与 GLM 案相同的排除逻辑；
+    ② 劣化发生在 <code>e6a133f7</code>（08-29），恢复发生在 <code>c1bb35f7</code>（09-05）之前 —— <b>回归与修复都落在 vllm-ascend 的 08-29 → 09-05 代码窗口内</b>；
+    ③ 劣化幅度 89.9 → 60（-30 分）而非归零 —— <b>部分题受损</b>，与 GLM 案的严格全零是<b>不同性质的机制</b>，两案根因大概率不同。
+  </div>
+
+  <h2>分析一 · 排除 vLLM 版本（与 GLM 案同一逻辑、不同结果）</h2>
+  <div class="card">
+    <table>
+      <tr><th>运行</th><th>vLLM</th><th>得分</th><th>推论</th></tr>
+      <tr><td>08-29 #112</td><td>0.27.1</td><td class="bad">60.0</td><td rowspan="2">同一 vLLM 版本下一坏一好 → <b>坏点不在 vLLM 上游</b>，而在两次运行之间的 <b>vllm-ascend 代码变更</b>（e6a133f7 → c1bb35f7，约 7 天 500+ commits）之中：要么某个 commit 引入劣化后被另一个 commit 修复/回退，要么 08-29 为偶发劣化（见分析三）</td></tr>
+      <tr><td>09-05 #130</td><td>0.27.1</td><td class="ok">90.0</td></tr>
+    </table>
+    <p class="meta">与 GLM 案对照：GLM 案是"同版本下从好变坏且<b>未恢复</b>"（指向窗口内单向引入）；DSV32 案是"同版本下坏→好"（指向窗口内<b>引入后又被修复/回退</b>，或偶发）。两案机制不同。</p>
+  </div>
+
+  <h2>分析二 · 劣化幅度形态：-30 分的部分受损，不是全灭</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:220px">得分形态</th><th>典型机制</th><th>本案</th></tr>
+      <tr><td>严格 0.00（GLM 案）</td><td>每个 token 都经过的路径被污染（量化/注意力数值错）→ 输出整体不可用</td><td class="bad">GLM 案属于此类</td></tr>
+      <tr><td><b>89.9 → 60（部分受损）</b></td><td>影响<b>部分</b>题目的机制：如 MTP 接受率下降导致思考链断裂、PD 分离传输的 KV 部分损坏、长序列场景特定分支出错、或采样参数下的质量下降</td><td><b>DSV32 案属于此类</b>：MTP2 + PD 分离 + 4 机，劣化集中在"部分题答错"，模型整体仍能作答</td></tr>
+    </table>
+    <p style="margin:6px 0 0"><b>含义</b>：DSV32 的坏点更可能在 <b>MTP 投机解码质量 / PD 分离 KV 传输 / 长上下文特定分支</b>，而不是 GLM 案那种全局数值污染。两案不值得强行合并归因。</p>
+  </div>
+
+  <h2>分析三 · 偶发劣化假说（必须正视的备选）</h2>
+  <div class="card">
+    <p><b>反方观点</b>：AIME2025 只有 30 题、采样 temperature 较高，60 分也可能是"某次运行状态差"（如硬件降频、网络抖动导致的 PD 传输重试、-prefix 缓存污染）的偶发表现 —— 毕竟 09-05 就恢复了。</p>
+    <p><b>正方观点</b>：60 分 = 30 题里只对 18 题，比基线少对 11 题 —— 对一个 89.9 分水平的模型来说，这种幅度靠"运气差"解释偏弱；且 60.0 是三的倍数、与"部分题系统性答错"（如特定题型/特定 PD 路径的请求全部出错）吻合。</p>
+    <p><b>判决方法</b>：找到 08-22 之前最近一次出分的记录（baseline 89.9 的测量时点），确认"好"的历史稳定性；或在当前 main 上重跑该 case 2 次 —— 稳定 90 → 当时的偶发/已修复；波动在 60~90 → 存在活着的间歇性问题。</p>
+  </div>
+
+  <h2>分析四 · 与 GLM-5.1 案件的关系（同版本交汇，不同命运）</h2>
+  <div class="card">
+    <table>
+      <tr><th></th><th>GLM-5.1-198k 案（glm51/）</th><th>DSV32 案（本页）</th></tr>
+      <tr><td>任务</td><td>Nightly-A3 双机 internal-DP + MTP + SFA-C8</td><td>Weekly-A3 4 机 PD 分离 + MTP×2，W8A8</td></tr>
+      <tr><td>首个坏例</td><td>08-30（Nightly #15451，head e6a133f7）</td><td>08-29（Weekly #112，<b>head 相同 e6a133f7</b>）</td></tr>
+      <tr><td>症状</td><td class="bad">严格 0.00 ×3（全灭）</td><td class="warn">60.0（部分受损）×1</td></tr>
+      <tr><td>当前状态</td><td class="bad">未恢复（09-04/09-06 仍 0 分）</td><td class="ok">已恢复（09-05 = 90.0）</td></tr>
+      <tr><td>触发面</td><td>SFA-C8 路径（sfa_c8=true 独有）</td><td>MTP2 / PD 分离 / 4 机相关（待定位）</td></tr>
+    </table>
+    <p style="margin:6px 0 0"><b>交汇含义</b>：两案在同一天（08-29/08-30）以同一 head（e6a133f7）相继出事，当时的镜像与代码环境发生了共性变化（vLLM 0.27.1 镜像 + 8 月末大批合入）；但 DSV32 一周后自愈、GLM 未愈 ——
+    <b>DSV32 的坏点已被窗口内后续提交修复/掩盖，GLM 案的坏点仍活着</b>。两案应分开追，但 e6a133f7..c1bb35f7 窗口内的 revert/修复清单对两案都是高价值线索（见可疑点页）。</p>
+  </div>
+
+  <div class="box b">
+    <b>分析小结</b>：① 排除 vLLM 版本（坏好同版本）；② 劣化为 -30 分部分受损，机制上区别于 GLM 案的全灭；③ 修复/恢复发生在 e6a133f7 → c1bb35f7 代码窗口内；④ 待办：找出该窗口内的 revert/修复提交（→ <a href="suspects.html">③ 可疑点</a>），以及 08-22 之前的最后出分记录。
+  </div>
+
+  <div class="box b">
+    <b>分析小结</b>：① 排除 vLLM 版本（坏、好同为 0.27.1）；② 劣化为 -30 分的部分受损，区别于 GLM 案的严格全灭 —— 机制不同，两案分开追；
+    ③ 修复/恢复发生在 e6a133f7 → c1bb35f7 代码窗口内。
+    具体可疑对象（wq_b chunk 分块回退 / Mooncake PD 传输修复）与判决实验见 <a href="suspects.html">③ 可疑点</a>。
+  </div>
+
+  <p class="meta" style="text-align:center">dsv32/analysis.html · 2026-09-08</p>
+</div>
+</body>
+</html>

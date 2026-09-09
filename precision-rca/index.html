@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>精度问题定位 · 案件总览</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #eef2f6; color: #263238; margin: 0; padding: 30px 0; line-height: 1.8; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #1a2733; font-size: 1.55rem; margin: 0 0 6px; }
+  .meta { color: #78909c; font-size: .88rem; }
+  .case { background: #fff; border-radius: 12px; padding: 22px 26px; margin: 18px 0; box-shadow: 0 2px 6px rgba(0,0,0,.08); border-top: 6px solid #999; }
+  .case.glm { border-top-color: #c62828; }
+  .case.dsv { border-top-color: #0277bd; }
+  .case h2 { margin: 0 0 8px; font-size: 1.2rem; }
+  .case.glm h2 { color: #c62828; }
+  .case.dsv h2 { color: #0277bd; }
+  .links a { display: inline-block; background: #37474f; color: #fff; text-decoration: none; border-radius: 6px; padding: 6px 16px; margin: 4px 8px 4px 0; font-size: .9rem; }
+  .links a:hover { background: #1565c0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #37474f; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #d8e0e8; padding: 5px 10px; vertical-align: top; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  .warn { color: #e65100; font-weight: 700; }
+  code { background: #eceff1; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #455a64; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>精度问题定位 · 案件总览</h1>
+  <p class="meta">vllm-ascend 精度回归排查 · 两个已立案案件 + 共享知识库 · 2026-09-08</p>
+
+  <div class="case glm">
+    <h2>案件一 · GLM-5.1-198k 精度归零（未恢复）</h2>
+    <p><b>现象</b>：Nightly-A3 <code>GLM-5.1-W8A8C8-MTP-A3_198k_function</code>（双机 internal-DP + MTP + SFA-C8）的 AIME2025 精度
+    <b>08-27 = 100 分（vLLM 0.26.0）→ 08-30 / 09-04 / 09-06 = 0.00 ×3（vLLM 0.27.1）</b>，严格全零，未恢复。</p>
+    <p><b>分析结论</b>：坏点夹逼在 <b>SFA-C8 路径（sfa_c8=true 稀疏注意力 + KV int8）× 0.27.1 窗口</b>；头号嫌疑为窗口内 <code>_v_up_proj</code> 新增的
+    <a href="https://github.com/vllm-project/vllm-ascend/commit/e6a133f7"><code>batch_matmul_transpose</code></a> 自定义算子分支（decode ≤1024 token 必走，prefill 不走 —— 完美解释"perf 出数、精度全错"）。</p>
+    <div class="links">
+      <a href="glm51/phenomena.html">① 现象</a>
+      <a href="glm51/analysis.html">② 分析</a>
+      <a href="glm51/suspects.html">③ 可疑点</a>
+      <a href="glm51/sfa-c8.html">④ SFA-C8 知识</a>
+    </div>
+    <p class="meta">归档：glm51/logs/（9 份 job 日志快照）· benchmarks_audit.json · configs_extract.json</p>
+  </div>
+
+  <div class="case dsv">
+    <h2>案件二 · DeepSeek-V3.2 MTP2 PD 精度劣化（已恢复）</h2>
+    <p><b>现象</b>：Weekly-A3 <code>DeepSeek_V3.2T_MTP2_PD</code>（4 机 PD 分离 + MTP×2，W8A8）的 AIME2025 精度
+    <b>08-29 = 60.0（基线 89.9，劣化 -29.9 判负，head e6a133f7）→ 09-05 = 90.0（恢复，head c1bb35f7）</b>。两次都是 vLLM 0.27.1。</p>
+    <p><b>分析结论</b>：非 vLLM 版本问题（坏好同版本 0.27.1）；劣化为 <b>-30 分的部分受损</b>（区别于 GLM 案全灭）。
+    <b>头号解释（考古实证）</b>：e6a133f7 → c1bb35f7 窗口内<b>唯一的运行时 revert</b> ——
+    <a href="https://github.com/vllm-project/vllm-ascend/commit/7388730ff">7388730ff</a>（09-01）回退 #9780「wq_b matmul chunk 分块」（改 w8a8_dynamic/dsa_cp，恰在 DSV32 推理路径上）——
+    与 60→90 的恢复一一对应；坏因为该 chunk 分支与 8 月末大变更窗口的交互劣化。</p>
+    <div class="links">
+      <a href="dsv32/phenomena.html">① 现象</a>
+      <a href="dsv32/analysis.html">② 分析</a>
+      <a href="dsv32/suspects.html">③ 可疑点</a>
+    </div>
+    <p class="meta">归档：dsv32/（3 份 job 日志快照：0822 / 0830 / 0905）</p>
+  </div>
+
+  <div class="case" style="border-top-color:#2e7d32;">
+    <h2 style="color:#2e7d32;">共享资源</h2>
+    <table>
+      <tr><th style="width:220px">资源</th><th>说明</th></tr>
+      <tr><td><a href="pr_learn/README.html">PR 学习解读</a></td><td>三个 PR（已合入 #15978 / 待合入 #16004 / 被拒 #7255）的页面教学与逐个解读 + 页面快照 + API 数据</td></tr>
+      <tr><td><code>vllm-ascend-git/</code></td><td>完整代码仓库（token clone），两案件共用的考古工具</td></tr>
+      <tr><td><code>mermaid.min.js</code></td><td>本地渲染库</td></tr>
+    </table>
+  </div>
+
+  <div class="case" style="border-top-color:#f9a825;">
+    <h2 style="color:#8d6e00;">两案关系备注</h2>
+    <p style="margin:4px 0">两案在同一时间窗（08-29/08-30）以<b>同一 head（e6a133f7）</b>相继出事，但：症状不同（GLM 全灭 vs DSV32 部分受损）、
+    恢复状态不同（GLM 未恢复 vs DSV32 一周自愈）、组网与开关不同（SFA-C8 internal-DP vs PD 分离 4 机）——
+    <b>判定为两个独立案件分开追查</b>；共同背景是 8 月末 vLLM 0.27.1 镜像切换 + 大批量合入。详见各自分析页。</p>
+  </div>
+
+  <p class="meta" style="text-align:center">precision-rca/index.html · 2026-09-08</p>
+</div>
+</body>
+</html>

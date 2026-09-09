@@ -1,0 +1,4 @@
+2026-09-08 11:44:25,698 - INFO - grab_pr_service.py:50 - 服务启动，开始抓取三类 PR（每类 1 个）
+2026-09-08 11:44:27,675 - INFO - grab_pr_service.py:59 - 已合入: PR#15978 | 拒绝合入: PR#7255
+2026-09-08 11:44:28,772 - INFO - grab_pr_service.py:65 - 待合入: PR#16004
+2026-09-08 11:44:28,773 - INFO - grab_pr_service.py:69 - 结果已写入 D:\demo\202609\vllm-ascend\precision-rca\pr_grab_result.json，服务退出

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>① 现象 · GLM-5.1-198k 精度 0 分</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f3f7; color: #263238; margin: 0; padding: 26px 0; line-height: 1.75; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #0d2c54; font-size: 1.55rem; margin: 0 0 4px; }
+  h2 { color: #0d2c54; font-size: 1.18rem; margin: 34px 0 8px; background: #e8eef4; border-left: 6px solid #1565c0; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #33556e; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .87rem; background: #fff; }
+  th { background: #0d2c54; color: #fff; padding: 6px 8px; text-align: left; }
+  td { border: 1px solid #dde5ec; padding: 5px 8px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  .warn { color: #e65100; font-weight: 700; }
+  .muted { color: #90a4ae; }
+  .ctr { text-align: center; }
+  code { background: #edf1f5; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #ad3a5c; }
+  .logline { background: #22303c; color: #b2dfdb; padding: 9px 13px; border-radius: 6px; font-family: Consolas, monospace; font-size: .78rem; margin: 6px 0; overflow-x: auto; white-space: pre; }
+  .logline.bad { color: #ef9a9a; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 20px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; } a code { color: inherit; }
+  .star td { background: #fff8e1 !important; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.b { background: #ffebee; border-left: 5px solid #c62828; }
+  .box.g { background: #e8f5e9; border-left: 5px solid #1a7f37; }
+  .box.o { background: #fff8e1; border-left: 5px solid #f9a825; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="phenomena.html">① 现象（本页）</a>
+    <a href="analysis.html">② 基于现象的分析</a><a href="suspects.html">③ 可疑点</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a>
+  </div>
+
+  <h1>现象全景 · GLM-5.1-198k 精度 0 分</h1>
+  <p class="meta">对象：Nightly-A3 每日定时任务 <code>multi-node-GLM-5.1-W8A8C8-MTP-A3_198k_function</code>（GLM-5.1 W8A8C8 双机 MTP，198k 长序列功能/精度验证）· 入口 job 样例：<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">run#15540 / job 101549426683</a> · 取证：2026-09-07/08</p>
+
+  <div class="box b">
+    <b>现象一句话</b>：该任务的 AIME2025 精度评估，<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33089528459/job/98634959727"><b>08-27 得 100 分满分</b></a>；镜像升级到 vLLM 0.27.1 后，<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33320515446/job/99307665911"><b>08-30</b></a>、<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101161960890"><b>09-04</b></a>、<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683"><b>09-06</b></a> <b>连续三次精确 0.00 分</b>（基线 93.33 ±10），任务持续失败。而完全相同部署、只关掉 <code>enable_sparse_sfa_c8</code> 开关的姊妹任务（128k_90_50）在 0.27.1 下一切正常。
+  </div>
+
+  <!-- ========== 方向一 ========== -->
+  <h2>方向一 · 日志：正常的部分 与 异常的部分</h2>
+
+  <div class="card">
+    <h3>1.1 正常的日志（用来排除一整类原因）—— 证据全部来自 <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">09-06 job 101549426683</a> 等可点击入口</h3>
+    <table>
+      <tr><th style="width:150px">排查项</th><th>日志证据</th><th style="width:120px">日志入口</th><th style="width:190px">排除掉的原因</th></tr>
+      <tr><td>服务可用性</td><td>两节点（2×16 卡）全程无 ERROR / Traceback，健康检查 <code>GET /health 200</code> 贯穿全程</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td><td>❌ 服务崩溃、节点掉线</td></tr>
+      <tr><td>请求层</td><td>精度窗口内 <b>31 个 POST /v1/chat/completions 全部 200 OK</b>（AIME2025 共 30 题 + 1），无 429/5xx/断连</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td><td>❌ 请求失败、限流、网络断</td></tr>
+      <tr><td>数据集完整性</td><td>请求数与题目数吻合（30 题全部发出），modelscope 正常加载</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td><td>❌ 数据集缺条目</td></tr>
+      <tr><td>真实生成</td><td>首题 57 秒返回、末题 51 分钟，每题真实生成 1~2 分钟</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td><td>❌ 空输出、秒回、请求被拒</td></tr>
+      <tr><td>CANN / 算子层</td><td>device-0~15 的 plog 零算子失败；出分时刻（21:09）plog 仅生命周期记录；全量日志无 NaN / Inf / overflow</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/artifacts/9997354480">ascend-logs 工件</a></td><td>❌ 算子崩溃、显式数值异常</td></tr>
+      <tr><td>perf 能力</td><td>09-04 同 job 内 perf 出数（吞吐 8.13 tok/s @198k）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101161960890">job 日志</a></td><td>❌ 模型无法推理（但 perf 不判对错，不能为精度背书）</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>1.2 异常的日志（6 条硬线索，每条附日志入口）</h3>
+    <table>
+      <tr><th style="width:52px">#</th><th>线索</th><th>日志/事实原文</th><th style="width:130px">日志入口</th></tr>
+      <tr><td>①</td><td class="bad">三次严格 0.00</td><td>08-30、09-04、09-06 三次独立运行完全一致 0.00 —— 不是采样波动、不是"部分题难"能解释的</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33320515446/job/99307665911">08-30</a> / <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101161960890">09-04</a> / <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">09-06</a></td></tr>
+      <tr><td>②</td><td class="bad">与满分只差一次镜像升级</td><td>08-27 得 <b>100</b>（<code>vLLM server version 0.26.0</code>）→ 08-30 得 <b>0.00</b>（<code>vLLM server version 0.27.1</code>），部署命令行逐字节一致</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33089528459/job/98634959727">08-27</a> / <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33320515446/job/99307665911">08-30</a></td></tr>
+      <tr><td>③</td><td class="warn">结果文件从未落盘</td><td><code>No files found for path: /tmp/benchmark_results/</code> —— 每题模型原始回答 <code>output_accuracy.txt</code> 从未被收集，<b>无法直接看到输出内容</b></td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td></tr>
+      <tr><td>④</td><td class="warn">数据集缓存警告</td><td><code>modelscope WARNING: We can not confirm the cached file is for revision: master</code>（每次精度启动都出现）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td></tr>
+      <tr><td>⑤</td><td class="warn">投机采样走 fallback 路径</td><td><code>rejection_sampler.py:763 Using fallback (non-reduce-sample) path</code>（4 个 DP rank 全部）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td></tr>
+      <tr><td>⑥</td><td class="warn">eager 目标下仍有 aclgraph replay</td><td><code>Replaying aclgraph</code>（draft/MTP 侧走图执行），说明该任务实际执行路径 = eager 目标 + 图化 draft，比表面配置更复杂</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/34043280161/job/101549426683">job 日志</a></td></tr>
+    </table>
+  </div>
+
+  <!-- ========== 方向二 ========== -->
+  <h2>方向二 · 组网 × 成功失败日期（GLM-5.1 全家族）</h2>
+
+  <div class="card">
+    <h3>2.1 测精度的组网（全家族只有 3 个，逐日得分矩阵）</h3>
+    <p class="meta">vLLM 版本按镜像日期标注：<b>0.26.0</b> = 08-25~08-29 的镜像；<b>0.27.1</b> = 08-30 起的镜像。★ = 本案对象。</p>
+    <table>
+      <tr><th>组网 / 配置</th><th class="ctr">开关</th><th class="ctr">08-19</th><th class="ctr">08-23</th><th class="ctr">08-25</th><th class="ctr">08-26</th><th class="ctr">08-27</th><th class="ctr">08-30</th><th class="ctr">08-31</th><th class="ctr">09-01</th><th class="ctr">09-03</th><th class="ctr">09-04</th><th class="ctr">09-06</th></tr>
+      <tr><th class="ctr">— 当日镜像 vLLM —</th><td class="ctr muted">—</td><td class="ctr">0.25.x</td><td class="ctr">0.26.0</td><td class="ctr">0.26.0</td><td class="ctr">0.26.0</td><td class="ctr">0.26.0</td><td class="ctr bad">0.27.1</td><td class="ctr bad">0.27.1</td><td class="ctr bad">0.27.1</td><td class="ctr bad">0.27.1</td><td class="ctr bad">0.27.1</td><td class="ctr bad">0.27.1</td></tr>
+      <tr class="star"><td>★ <a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/internal_dp/config/GLM-5.1-W8A8C8-A3_198k_function.yaml">198k_function.yaml</a><br>双机 internal-DP</td><td class="ctr bad">sfa_c8=<b>true</b></td><td class="ctr warn">无分<a href="#fn1">¹</a></td><td class="ctr muted">—</td><td class="ctr warn">无分¹</td><td class="ctr warn">无分¹</td><td class="ctr ok">100</td><td class="ctr bad">0.00</td><td class="ctr muted">取消</td><td class="ctr muted">取消</td><td class="ctr muted">未测</td><td class="ctr bad">0.00</td><td class="ctr bad">0.00</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/external_dp/config/GLM-5.1-W8A8C8-128k-1k-90-50-PD.yaml">128k-1k-90-50-PD.yaml</a><br>多机外部分离DP</td><td class="ctr bad">sfa_c8=<b>true</b></td><td class="ctr bad">F¹</td><td class="ctr muted">—</td><td class="ctr bad">F¹</td><td class="ctr bad">F¹</td><td class="ctr bad">F¹</td><td class="ctr bad">0.00</td><td class="ctr bad">F</td><td class="ctr bad">F</td><td class="ctr bad">F</td><td class="ctr bad">F</td><td class="ctr bad">F</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/internal_dp/config/GLM5_1-W8A8-A3-dual-nodes.yaml">GLM5_1-W8A8-A3-dual-nodes.yaml</a><br>双机（无 C8、无 SFA）</td><td class="ctr ok">sfa_c8=false</td><td class="ctr bad">F</td><td class="ctr ok">O</td><td class="ctr ok">O</td><td class="ctr ok">O</td><td class="ctr ok">O</td><td class="ctr muted">—</td><td class="ctr bad">F</td><td class="ctr ok">O</td><td class="ctr ok">O</td><td class="ctr ok">93.33</td><td class="ctr ok">O</td></tr>
+    </table>
+    <p class="meta"><a name="fn1"></a>¹ = aisbench 运行时错误或部署失败，<b>没跑到出分那一步</b>（所以没有"0 分"记录）；"—" = 当日该组网未安排。09-04 的 93.33 为 <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33891266526/job/101143496817">dual-nodes 实测日志</a>；★ 与 128k-PD 的 0.00 均有 <code>accuracy 0.0 / not within 10 of baseline 93.33</code> 判分日志原文。</p>
+
+    <div class="box g">
+      <b>矩阵读出的三条铁律</b>：
+      ① <b>开 sfa_c8 的两个组网精度全灭</b>（★三次 0.00 + 128k-PD 08-30 实测 0.00）；② <b>关 sfa_c8 的组网精度正常</b>（dual-nodes 同日 93.33，恰好 = baseline，说明 glm45 parser 和答案提取链路完全正常）；③ 0.26.0 时代 sfa_c8=true 得过 <b>100 分</b> —— <b>唯一坏格 = sfa_c8=true × 0.27.1</b>，是组合出的问题，不是单方面坏。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>2.2 只测吞吐的组网（红了也与精度无关）</h3>
+    <table>
+      <tr><th>组网</th><th>开关</th><th>近期表现</th><th>说明</th></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/multi_node/internal_dp/config/GLM-5.1-W8A8C8-A3_128k_90_50.yaml">128k_90_50.yaml</a>（双机 MTP）</td><td>sfa_c8=false</td><td class="ok">09-01 在 0.27.1 下跑通</td><td>精度 case 于 09-04 被 <a href="https://github.com/vllm-project/vllm-ascend/commit/0990fc08">0990fc08</a> 移走；93.33 基线最初出自这里</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/weekly/multi_node/external_dp/config/GLM-5.1-W8A8C8-3.5k-1.5k-0-20-PD.yaml">weekly W8A8C8-3.5k/64k-PD</a>、<a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/weekly/multi_node/internal_dp/config/GLM-5.1-W8A8C8-A3_64k_90_50.yaml">MTP-3.5k/64k</a></td><td><b>sfa_c8=false</b></td><td class="warn">时红时绿（吞吐阈值）</td><td>它们的红绿波动与精度无关，不能作为 SFA-C8 证据（此前表述有误，已修正）</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/weekly/multi_node/external_dp/config/GLM_5_1_PD_in32k_bs16-0.yaml">weekly PD 系列</a> ×3</td><td>—（无 C8）</td><td class="warn">时红时绿</td><td>同上，纯吞吐</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/nightly/single_node/models/configs/GLM-5.1-W8A8-PrefillMC2.yaml">prefill-mc2</a>、<a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/weekly/single_node/configs/GLM-5_1-W8A8_A3_weekly.yaml">weekly 单机</a>、<a href="https://github.com/vllm-project/vllm-ascend/blob/main/tests/e2e/weekly/single_node/configs/GLM-5.yaml">glm-5-w4a8</a></td><td>—</td><td class="ok">基本常绿</td><td>单机/非 C8 组网健康</td></tr>
+      <tr><td>（对照组）qwen aime2024-acc、gpqa-acc、DeepSeek-R1-W8A8 等精度任务</td><td>—</td><td class="ok">09-04、09-06 全绿</td><td>其他模型不受影响 → 问题限定在 GLM-5.1 × sfa_c8=true</td></tr>
+    </table>
+  </div>
+
+  <!-- ========== 方向三 ========== -->
+  <h2>方向三 · 提交记录与版本切换</h2>
+
+  <div class="card">
+    <h3>3.1 main2main 版本切换时间线（精度得分直接受它驱动）</h3>
+    <div class="mermaid-box" style="background:#fafbfc;border:1px solid #e0e6ec;border-radius:10px;padding:16px;">
+      <div style="color:#5c6bc0;font-weight:700;text-align:center;margin-bottom:10px;">图 1 · vLLM 版本（main2main 指针）× ★198k 精度得分（LR）</div>
+      <pre class="mermaid">
+flowchart LR
+  A["08-22 合入<br/>main2main vllm 0814<br/>(cdc4824)"] --> B["08-24 合入<br/>main2main vllm 0821<br/>(ba07e4a = vLLM 0.26.0)"]
+  B --> C["08-30 镜像起<br/>vLLM main 前进<br/>(= 0.27.1)"]
+  A -.->|"- "| T1["08-19~08-26<br/>精度无分<br/>(环境故障)"]
+  B -.->|"镜像 08-25~27"| T2["08-27<br/>精度 100 分"]
+  C -.->|"镜像 08-30"| T3["08-30 / 09-04 / 09-06<br/>精度 0.00 ×3"]
+      </pre>
+    </div>
+    <table>
+      <tr><th>main2main commit</th><th>合入</th><th>vLLM 指针变化</th><th>链接</th></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/175ef4d49">175ef4d49</a> main2main vllm 0814</td><td>08-22 17:05</td><td>58d3918e → <a href="https://github.com/vllm-project/vllm/commit/cdc4824a21eaa986d4d1fee90a7e6465c9f706e6">cdc4824</a></td><td class="muted">—</td></tr>
+      <tr><td><b><a href="https://github.com/vllm-project/vllm-ascend/commit/649582947">649582947</a> main2main vllm 0821</b></td><td>08-24 17:09</td><td>cdc4824 → <a href="https://github.com/vllm-project/vllm/commit/ba07e4a48fc951300d97eb506217dd530583dea3">ba07e4a（0.26.0）</a></td><td>指针文件：<a href="https://github.com/vllm-project/vllm-ascend/blob/main/.github/vllm-main-verified.commit">vllm-main-verified.commit</a></td></tr>
+      <tr><td>（镜像侧跟进，无对应 commit）</td><td>08-28/29</td><td>vLLM main → <b>0.27.1</b></td><td class="muted">—</td></tr>
+    </table>
+    <p class="meta">同窗口 vllm-ascend 侧还有一次直接触碰 SFA 路径的提交：<a href="https://github.com/vllm-project/vllm-ascend/commit/5c59cfba9"><b>5c59cfba9</b></a>「fuse SFA DCP output all-to-all」（<a href="https://github.com/vllm-project/vllm-ascend/pull/14457">#14457</a>，08-29 11:53 合入，改 <code>sfa_cp.py</code> 56 行）—— 合入时间精确落在 100 分（08-27）与 0 分（08-30）之间。</p>
+  </div>
+
+  <div class="card">
+    <h3>3.2 回归窗口的事实清单（08-27 → 08-30）</h3>
+    <table>
+      <tr><th style="width:240px">事实项</th><th>内容</th></tr>
+      <tr><td>代码窗口</td><td><a href="https://github.com/vllm-project/vllm-ascend/commit/85625bd7">85625bd7</a>（08-27 100 分时 HEAD）→ <a href="https://github.com/vllm-project/vllm-ascend/commit/e6a133f7">e6a133f7</a>（08-30 0 分时 HEAD），共 <b>481 个 commit</b>；其中改运行时代码（vllm_ascend/）的 141 个</td></tr>
+      <tr><td>窗口内触碰 SFA 路径的提交</td><td><a href="https://github.com/vllm-project/vllm-ascend/commit/5c59cfba9">5c59cfba9</a>「fuse SFA DCP output all-to-all」（<a href="https://github.com/vllm-project/vllm-ascend/pull/14457">#14457</a>）08-29 11:53 合入，改 <code>sfa_cp.py</code> 56 行；<a href="https://github.com/vllm-project/vllm-ascend/commit/657df3efa">657df3efa</a> SFA prolog v3 KV 写入修复 08-24 合入（早于 08-27 满分）</td></tr>
+      <tr><td>vLLM 版本切换</td><td>同一窗口内镜像从 vLLM 0.26.0 切换到 0.27.1（main2main 机制，见 3.1 时间线）</td></tr>
+      <tr><td>同步发生的家族变化</td><td>sfa_c8=true 的另一个组网（128k-1k-90-50-PD）同日（08-30）精度同样 0.00，且 perf 吞吐从基线 1265 劣化到 469</td></tr>
+    </table>
+    <div class="box o">
+      <b>说明</b>：窗口内 (a) vllm-ascend 481 commits 与 (b) vLLM 0.27.1 两个变量同时变化，现有日志无法区分谁触发 —— 归因分析见<a href="analysis.html">② 基于现象的分析</a><a href="suspects.html">③ 可疑点</a> <a href="sfa-c8.html">④ 知识：SFA-C8</a>。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3.3 排除掉的提交（重点排查过、有依据）</h3>
+    <table>
+      <tr><th>commit</th><th>内容</th><th>排除理由</th></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/0990fc08">0990fc08</a> (#15790)</td><td>更新 128k_90_50 / 198k_function 两个 <b>repo 侧 yaml</b>（精度 case 对调、max_out_len 77824）</td><td>nightly 实际生效的 case 清单来自 OBS 配置（两条链）——08-19 起 OBS 已在跑精度，早于此 commit；它不改变部署行为</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/a7997713">a7997713</a> (#13773)</td><td>MoE mlp / 量化方法大重构（w8a8_dynamic 等 23 文件）</td><td>窗口内最大的运行时重构之一，发生在得分转折窗口之前；其影响范围评估见怀疑方向页</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/748acedf">748acedf</a> (#15265)</td><td>MLA draft 模型检测（runner_type）</td><td>投机解码有 target 验证兜底，draft 行为变化只影响接受率不影响正确性</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/6ca174b4">6ca174b4</a> (#15299) 等 09-05/09-06 提交</td><td>MoE routing weights 保持 fp32</td><td>时间上不可能（08-30 已 0 分）；且金标准仅第 3 位有效数字扰动</td></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/commit/d1ce8a1c">d1ce8a1c</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/827a11d3">827a11d3</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/b1098db5">b1098db5</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/222677fc">222677fc</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/3e30d711">3e30d711</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/8f94f0a5">8f94f0a5</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/d303011b">d303011b</a> / <a href="https://github.com/vllm-project/vllm-ascend/commit/e24e09ca">e24e09ca</a></td><td>DSA 融合（DSV4 专用）/ PA workspace（仅图模式）/ DSA-CP o_proj TP（仅 TP&gt;1）/ KDA（Kimi）/ GDN / MTP 元数据拷贝修复 / StartPlan / MC2 profiling（fused_mc2=0）</td><td>路径不匹配（GLM-5.1 走 sfa_v1.py、enforce_eager、TP1、无 GDN、fused_mc2=0）或方向为修复</td></tr>
+      <tr><td>其余约 30 个</td><td>文档 / CI 基建 / 测试用例 / A5 / DSV4 专用</td><td>不触推理路径</td></tr>
+    </table>
+  </div>
+
+  <!-- ========== 方向四 ========== -->
+  <h2>方向四 · 评估链路与取证缺口</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:150px">环节</th><th>事实</th></tr>
+      <tr><td>判分规则</td><td>aisbench：<code>accuracy 与 baseline 93.33 相差 ±10 内为过</code>；输出表格 <code>aime2025 | 4835d7 | accuracy | gen | 0.00</code></td></tr>
+      <tr><td>答案提取</td><td>aisbench 用 <code>extract_non_reasoning_content</code> 从响应提取非思考文本；deploy 侧 <code>--reasoning-parser glm45</code>。该链路在 dual-nodes（93.33）上已证正常</td></tr>
+      <tr><td>请求配置</td><td><code>vllm_api_general_chat</code> · batch 32 · temperature 1.0 · top_p 0.95 · max_out_len 77824</td></tr>
+      <tr><td class="bad">结果落盘</td><td><b>缺失</b>：<code>/tmp/benchmark_results/</code> 空目录 ×2；<code>output_accuracy.txt</code>（每题模型原始回答）未收集 —— <b>定案的最后一块拼图</b></td></tr>
+    </table>
+  </div>
+
+  <div class="box o">
+    <b>现象页小结（仅事实）</b>：① 精度 100 → 0.00 的转折与镜像 vLLM 0.26.0→0.27.1 的切换同步；② 代码窗口（481 commits）与版本切换同窗发生，未分离；③ 精度得分随 sfa_c8 开关分化（开=0 分 ×4，关=93.33）；④ 服务、请求、算子、答案提取链路日志均无异常；⑤ 每题模型原始回答未被收集。基于以上事实的归因与实验见<a href="analysis.html"><b>② 基于现象的分析</b></a>。
+  </div>
+
+  <p class="meta" style="text-align:center">precision-rca/clues.html · 2026-09-08 · 审计明细：benchmarks_audit.json（19 yaml）· configs_extract.json · 本地仓库 vllm-ascend-git/</p>
+</div>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+</body>
+</html>

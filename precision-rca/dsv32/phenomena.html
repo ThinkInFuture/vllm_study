@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>① 现象 · DeepSeek-V3.2 MTP2 PD 精度劣化</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f0f4f8; color: #263238; margin: 0; padding: 26px 0; line-height: 1.78; }
+  body > * { max-width: 1200px !important; margin-left: auto !important; margin-right: auto !important; }
+  .container { width: 1200px; padding: 0 16px; }
+  h1 { color: #0d3b4f; font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { color: #0d3b4f; font-size: 1.16rem; margin: 32px 0 8px; background: #e0ecf2; border-left: 6px solid #0277bd; padding: 8px 14px; border-radius: 0 6px 6px 0; }
+  h3 { color: #33667e; font-size: 1rem; margin: 14px 0 6px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 22px; margin: 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .meta { color: #78909c; font-size: .85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: .88rem; background: #fff; }
+  th { background: #0d3b4f; color: #fff; padding: 6px 10px; text-align: left; }
+  td { border: 1px solid #d8e4ea; padding: 5px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7fafc; }
+  .ok { color: #1a7f37; font-weight: 700; }
+  .bad { color: #c62828; font-weight: 700; }
+  .warn { color: #e65100; font-weight: 700; }
+  .muted { color: #90a4ae; }
+  code { background: #e8eff3; padding: 1px 5px; border-radius: 4px; font-family: Consolas, monospace; font-size: .86em; color: #ad3a5c; }
+  .logline { background: #22303c; color: #b2dfdb; padding: 9px 13px; border-radius: 6px; font-family: Consolas, monospace; font-size: .78rem; margin: 6px 0; overflow-x: auto; white-space: pre; }
+  .nav { background: #fff; border-radius: 10px; padding: 10px 20px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  .nav a { color: #1565c0; text-decoration: none; margin-right: 18px; font-weight: 700; }
+  a { color: #1565c0; } a:hover { text-decoration: underline; }
+  .box { border-radius: 8px; padding: 10px 16px; margin: 10px 0; }
+  .box.b { background: #ffebee; border-left: 5px solid #c62828; }
+  .box.g { background: #e8f5e9; border-left: 5px solid #1a7f37; }
+  .star td { background: #fff8e1 !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="nav">
+    <a href="../index.html">⌂ 案件总览</a> ·
+    <a href="phenomena.html">DSV32 ① 现象（本页）</a> ·
+    <a href="analysis.html">② 分析</a> ·
+    <a href="suspects.html">③ 可疑点</a> ·
+    <a href="../glm51/phenomena.html">GLM-5.1 案件</a> ·
+    <a href="../pr_learn/README.html">PR 学习</a>
+  </div>
+
+  <h1>案件 DSV32 · 现象全景（四个维度）</h1>
+  <p class="meta">任务：Weekly-A3 <code>DeepSeek_V3.2T_MTP2_PD</code>（DeepSeek-V3.2 W8A8，4 机 64 卡 PD 分离 + MTP×2）· AIME2025 精度 case（baseline 89.9 ±10）· 入案 job：<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331">run#112 / job 99153316331</a></p>
+
+  <div class="box b">
+    <b>现象一句话</b>：<a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331"><b>08-29 精度 60.00 分</b></a>（基线 89.9，劣化 -29.9 判负，head <code>e6a133f7</code>，镜像 vLLM 0.27.1）；
+    <a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33975742339/job/101367614879"><b>09-05 恢复 90.00 分</b></a>（head <code>c1bb35f7</code>，镜像仍是 vLLM 0.27.1）。
+  </div>
+
+  <!-- ===== 方向一 ===== -->
+  <h2>方向一 · 日志：正常的部分 与 异常的部分</h2>
+
+  <div class="card">
+    <h3>1.1 正常的日志（0830 与 0905 两份 job 日志逐行比对）</h3>
+    <table>
+      <tr><th style="width:210px">排查项</th><th>证据（两次运行一致）</th><th style="width:200px">排除掉的原因</th></tr>
+      <tr><td>执行链路完整</td><td>两次均为 <code>[1/1] Starting benchmark: acc (type=accuracy)</code> 单 case 跑完整流程（0830: 20:18→21:17 约 58 分钟；0905: 20:19→20:48 约 29 分钟）</td><td>❌ 部署/压测中途崩溃</td></tr>
+      <tr><td>判分链路一致</td><td>同一 aisbench、同一数据集标识（<code>4835d7</code>）、同一判分规则（±10 of baseline 89.9）</td><td>❌ 判分规则漂移</td></tr>
+      <tr><td>服务侧崩溃类错误</td><td>job 日志中的 ERROR 均为<b>结果收集/上传脚本</b>的共性错误（两次都有：No files found / Upload failed / exit code 1），无服务堆栈、无 NaN、无算子失败</td><td>❌ 服务崩溃、显式数值异常（注意：PD 分离的 Decode 节点服务日志不在 job 日志内，属取证缺口④）</td></tr>
+      <tr><td>得分形态</td><td class="bad">60.00 与 90.00 —— <b>90 分证明模型/权重/parser/提取链路在 0.27.1 下完全正常</b>（90 ≈ 基线）；60 分 = 30 题对 18 题，<b>部分题受损</b>而非全灭</td><td>❌ 模型本体坏、全量数值污染、答案提取失效</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>1.2 异常的日志与事实（4 条硬线索）</h3>
+    <table>
+      <tr><th style="width:52px">#</th><th>线索</th><th>日志/事实原文</th><th style="width:130px">日志入口</th></tr>
+      <tr><td>①</td><td class="bad">60.00 分（-29.9 超阈值）</td><td><code>Task vllm-api-general-chat/aime2025: {'accuracy': 60.0}</code> → <code>Accuracy verification failed ... not within 10 relative to baseline 89.9</code></td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331">08-29 job</a></td></tr>
+      <tr><td>②</td><td class="ok">09-05 同 case 90.00</td><td><code>Task ... aime2025: {'accuracy': 90.0}</code> → job success（46.7 min）</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33975742339/job/101367614879">09-05 job</a></td></tr>
+      <tr><td>③</td><td class="warn">两版本镜像相同、代码不同</td><td>0829 日志 <code>Tags: v0.27.1</code>；0905 日志 <code>Tags: v0.27.1</code>；head 分别为 <code>e6a133f7</code> / <code>c1bb35f7</code></td><td>两份 job 日志 + run API</td></tr>
+      <tr><td>④</td><td class="warn">取证缺口（同 GLM 案）</td><td>两次运行 <code>No files found for path: /tmp/benchmark_results/</code> —— 每题模型原始回答（output_accuracy.txt）未收集；PD 分离 Decode 节点服务日志也不在 job 日志内</td><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331">job 日志</a></td></tr>
+    </table>
+  </div>
+
+  <!-- ===== 方向二 ===== -->
+  <h2>方向二 · 组网 × 成功失败日期</h2>
+
+  <div class="card">
+    <h3>2.1 本组网精度得分时间线（Weekly 节奏）</h3>
+    <table>
+      <tr><th>日期</th><th>Weekly run</th><th>head</th><th>镜像 vLLM</th><th class="ctr">精度得分</th><th>说明</th></tr>
+      <tr><td>08-15</td><td>#89</td><td class="muted">—</td><td>0.27.1</td><td class="muted">无出分</td><td>job 1.8 分钟部署级失败</td></tr>
+      <tr><td>08-22</td><td>#97</td><td>182b75ea8</td><td>0.27.1</td><td class="muted">无出分</td><td>部署阶段失败（77.4min）</td></tr>
+      <tr class="star"><td><b>08-29</b></td><td>#112</td><td>e6a133f7</td><td>0.27.1</td><td class="ctr bad"><b>60.00</b></td><td><b>劣化出分</b>（首次出分即劣化）</td></tr>
+      <tr class="star"><td><b>09-05</b></td><td>#130</td><td>c1bb35f7</td><td>0.27.1</td><td class="ctr ok"><b>90.00</b></td><td>恢复（≈基线 89.9）</td></tr>
+      <tr><td>09-08</td><td>#144/#145</td><td>—</td><td>—</td><td class="muted">skipped</td><td>手动 run 未安排该任务</td></tr>
+    </table>
+    <p class="matrix-note">baseline 89.9 为历史测量值（早期 weekly）；08-15/08-22 连续部署失败导致劣化起点前无可比数据。</p>
+  </div>
+
+  <div class="card">
+    <h3>2.2 姊妹组网与家族任务（同窗口状态）</h3>
+    <table>
+      <tr><th>相关任务（同 Weekly #112，08-29）</th><th>结果</th><th>备注</th></tr>
+      <tr><td><a href="https://github.com/vllm-project/vllm-ascend/actions/runs/33261092260/job/99153316331">DeepSeek_V3.2T_MTP2_PD</a> ★（4 机 PD 分离 + MTP×2）</td><td class="bad">F（精度 60.00）</td><td>本案</td></tr>
+      <tr><td>GLM-5.2-198k（GLM 案件关联任务）</td><td class="bad">F（103.3 min）</td><td>同 run 亦红（GLM 案件已立案）</td></tr>
+      <tr><td>同 run 其余 DeepSeek/Qwen 系任务</td><td class="muted">部分 O 部分 F</td><td>详见 phenomena 快照数据</td></tr>
+    </table>
+    <p class="matrix-note">09-05 #130（下个 weekly）该任务恢复 90.00；期间 vLLM 版本未变（0.27.1），仅 vllm-ascend 代码前进。</p>
+  </div>
+
+  <!-- ===== 方向三 ===== -->
+  <h2>方向三 · 提交记录与版本切换</h2>
+
+  <div class="card">
+    <h3>3.1 本案窗口：e6a133f7（坏）→ c1bb35f7（好），共 162 个 commit</h3>
+    <table>
+      <tr><th style="width:220px">事实项</th><th>内容</th></tr>
+      <tr><td>两次运行的代码版本</td><td>08-29 run#112 head = <a href="https://github.com/vllm-project/vllm-ascend/commit/e6a133f7">e6a133f7</a>；09-05 run#130 head = <a href="https://github.com/vllm-project/vllm-ascend/commit/c1bb35f7">c1bb35f7</a></td></tr>
+      <tr><td>窗口提交数</td><td><code>git rev-list e6a133f7..c1bb35f7 --count</code> = 162（本地仓库实测）</td></tr>
+      <tr><td>vLLM 版本</td><td>两次均为 <b>0.27.1</b>（0829/0905 日志 <code>Tags: v0.27.1</code>）——版本未变</td></tr>
+      <tr><td>窗口内 revert</td><td>含 <a href="https://github.com/vllm-project/vllm-ascend/commit/7388730ff">7388730ff</a> Revert「Chunk wq_b matmul for NPU 65536 dimension limit」(09-01，改 w8a8_dynamic.py -75 行 / dsa_cp.py -43 行)、42e039a90 Revert CANN ops 9.2.0-beta.2 等 —— 详见 <a href="suspects.html">③ 可疑点</a></td></tr>
+    </table>
+  </div>
+
+  <!-- ===== 方向四 ===== -->
+  <h2>方向四 · 评估链路与取证缺口</h2>
+  <div class="card">
+    <table>
+      <tr><th style="width:150px">环节</th><th>事实</th></tr>
+      <tr><td>判分规则</td><td>aisbench acc case：accuracy 与 baseline 89.9 相差 ±10 内为过；输出 <code>aime2025 | 4835d7 | accuracy | gen | 60.00</code></td></tr>
+      <tr><td>请求配置</td><td><code>vllm_api_general_chat</code> · AIME2025 · <code>aime2025_gen_0_shot_chat_prompt</code></td></tr>
+      <tr><td class="bad">取证缺口</td><td>两次运行 <code>/tmp/benchmark_results/</code> 均为空 —— <b>output_accuracy.txt（每题模型原始回答）未收集</b>，无法确认 60 分时"哪些题错、错成什么样"（全错/错一半的分布直接指向不同机制）</td></tr>
+      <tr><td class="warn">日志盲区</td><td>PD 分离的 Decode 节点服务日志不在 job 日志内（本 job 日志仅驱动侧），传输/MTP 接受率等指标无取证</td></tr>
+    </table>
+  </div>
+
+  <div class="box g">
+    <b>现象小结（仅事实）</b>：① 精度 60.00（08-29）→ 90.00（09-05），劣化与恢复都发生在 vLLM 0.27.1 下；② 代码窗口 e6a133f7→c1bb35f7 共 162 commits；③ 同窗口 GLM-5.1 案件出 0 分且未恢复；④ 每题模型原始回答未收集。
+    归因与可疑点见 <a href="analysis.html">② 分析</a> 与 <a href="suspects.html">③ 可疑点</a>。
+  </div>
+
+  <p class="meta" style="text-align:center">dsv32/phenomena.html · 2026-09-08 · 日志快照：job_dsv32_0830.log / job_dsv32_0905.log / job_dsv32_0822.log</p>
+</div>
+</body>
+</html>

@@ -155,8 +155,21 @@ D:\demo\202609\vllm-ascend\
 ## 远程同步
 
 - 仓库：`github.com/ThinkInFuture/vllm_study`（main 分支，公开）
-- 同步范围（保持项目根目录格式）：AGENTS.md + docs\ + code-docs\（含 src\ 数据 + assets\highlight\）+ scripts\ + precision-rca\（分析产物，推前脱敏 token；**不含** vllm-ascend-git\ 克隆）；
-  **不推**源码目录与 zip。
-- **强制脱敏**：lessons 文档的 GitHub PAT、scripts 的 SMTP 授权码，staging 副本里替换为占位符后才可提交。
+- 同步范围（保持项目根目录格式）：`AGENTS.md` + `docs\` + `code-docs\`（含 src\ 数据 +
+  assets\highlight\）+ `scripts\` + `precision-rca\`（分析产物）。
+- **不推清单**（每次全量/增量同步前对照）：
+  | 不推项 | 原因 |
+  |---|---|
+  | `vllm-ascend-main\`、`vllm\` | 第三方源码仓库（本地分析用，非文档成果） |
+  | `precision-rca\vllm-ascend-git\` | 上游完整镜像（3779 文件/141MB 冗余），且 `.git\config` 的 remote URL **嵌着 token**，推上去等于泄漏 PAT |
+  | `archive\`、根目录 `*.zip` | 历史打包件，体积大且可随时重新生成 |
+- **强制脱敏清单**（staging 副本替换占位符后才可提交，**本地源文件不动**）：
+  | 位置 | 内容 | 替换为 |
+  |---|---|---|
+  | `docs\agent-requirements-lessons.md` | GitHub PAT（ghp_ 开头，约 2 处） | `<YOUR_GITHUB_PAT>` |
+  | `scripts\send_*.py`、`resend_attachments.py` 等 | SMTP 授权码 RVQ 开头（约 10 个文件） | `<SMTP_PASSWORD>` |
+  | `precision-rca\clone.log`、`pr_learn\grab_pr*.py` | clone/API 命令里嵌的 token（约 3 处） | `<YOUR_GITHUB_PAT>` |
+  - 兜底校验：提交前对 staging 全量正则扫 `ghp_[A-Za-z0-9]{20,}`，命中即未脱敏干净，禁止上传。
 - 通道：github.com 主站不可达时走 api.github.com Git Data API（blob→tree→commit→ref；
-  空仓库先 Contents API 播种；ref 冲突用 force+完整 40 位 sha）。详见设计文档 7b 节。
+  空仓库先 Contents API 播种；tree 大时用 base_tree 增量模式；ref 冲突用 force+完整 40 位 sha）。
+  详见设计文档 7b 节。

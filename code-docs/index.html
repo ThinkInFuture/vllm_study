@@ -318,7 +318,18 @@ graph LR
                 来自 PR #15416：Kimi K3 的 KDA 门控路径原本全串行在主流，本需求把权重离线组合、
                 门控打包成单次 BFG 投影，再搬上辅助流与主流两阶段重叠（四事件调度）。含改动前后时序图与真实 diff。</p>
             <a href="stories/perf-kda-gate-overlap.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
-            　<a href="stories/stories.html" style="color:#667eea;text-decoration:none;">需求故事目录 →</a>
+            
+<a href="stories/stories.html" style="color:#667eea;text-decoration:none;">需求故事目录 →</a>
+        </div>            <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
+                <h3 style="color:#333;margin-bottom:6px;">RoPE cos/sin 融合为单次 gather <span style="font-size:.8rem;color:#9a6700;background:#fff8c5;border-radius:4px;padding:1px 8px;">性能优化</span></h3>
+                <p style="color:#666;font-size:.92rem;margin-bottom:10px;">PR #14428：索引+拷贝两步式改 torch.gather(out=) 直写缓冲，4 ops → 2 ops，实测 -14%。</p>
+                <a href="stories/perf-rope-gather-fusion.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
+            </div>
+            <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
+                <h3 style="color:#333;margin-bottom:6px;">PA workspace 跨层复用 <span style="font-size:.8rem;color:#9a6700;background:#fff8c5;border-radius:4px;padding:1px 8px;">性能优化</span></h3>
+                <p style="color:#666;font-size:.92rem;margin-bottom:10px;">PR #15579：图参数更新每层查一次 workspace（36-54MB 分配+Setup 往返）改为每轮一次跨层复用，Setup/Execute 2.0→1.036。</p>
+                <a href="stories/perf-pa-workspace-reuse.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
+            </div>
         </div>
     </div>
 

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>需求故事 · RoPE cos/sin 索引+拷贝融合为单次 gather - vLLM Ascend</title>
+<link rel="stylesheet" href="../assets/highlight/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root { --accent:#667eea; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial,'Microsoft YaHei',sans-serif; background:#f5f7fa; color:#333; line-height:1.7; padding:20px; }
+body>* { max-width:1200px !important; margin-left:auto !important; margin-right:auto !important; }
+.nav { background:#fff; border-radius:12px; padding:12px 24px; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.nav a { color:#666; text-decoration:none; padding:5px 12px; border-radius:8px; font-size:.88rem; }
+.nav a:hover { background:var(--accent); color:#fff; }
+h1 { font-size:1.55rem; margin:6px 0 4px; }
+h2 { font-size:1.25rem; margin:28px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+.subtitle { color:#666; margin-bottom:20px; font-size:.95rem; }
+.card { background:#fff; border-radius:12px; padding:18px 22px; margin:14px 0; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+.badge { display:inline-block; border-radius:6px; padding:2px 10px; font-size:.8rem; font-weight:bold; margin-right:6px; }
+.b-purple { background:#f0e3ff; color:#8250df; }
+.b-yellow { background:#fff8c5; color:#9a6700; }
+.b-red { background:#ffebe9; color:#cf222e; }
+.b-green { background:#dafbe1; color:#1a7f37; }
+.fig-caption { font-weight:bold; color:var(--accent); margin:14px 0 6px; }
+.mermaid { overflow-x:auto; padding-bottom:4px; }
+pre { background:#f6f8fa; border-radius:8px; padding:14px 16px; overflow-x:auto; line-height:1.5; font-size:.85rem; }
+code { font-family:Consolas,monospace; }
+pre code { background:transparent; padding:0; }
+p code, li code, td code { background:#eef1f5; color:#be5026; padding:1px 5px; border-radius:4px; font-size:.85em; }
+table { width:100%; border-collapse:collapse; margin:10px 0; }
+th, td { border:1px solid #e3e8ef; padding:7px 10px; font-size:.88rem; text-align:left; vertical-align:top; }
+th { background:#f0f2fb; }
+footer { text-align:center; color:#999; padding:26px; font-size:.82rem; }
+.linklist li { margin:6px 0; }
+.linklist a { color:var(--accent); }
+.highlight { background:rgba(102,126,234,0.08); border-left:3px solid var(--accent); padding:0.5rem 1rem; margin:0.5rem 0; border-radius:0 4px 4px 0; }
+</style>
+</head>
+<body>
+<div class="nav">
+    <a href="../index.html">← 架构总览</a>
+    <span style="color:#999;font-size:.85rem;">需求故事 · 一个 HTML 讲清一个需求</span>
+    <a href="stories.html">需求故事目录</a>
+</div>
+
+<h1>RoPE cos/sin 索引+拷贝融合为单次 gather</h1>
+<p class="subtitle"><span class="badge b-purple">DeepSeek-V4</span><span class="badge b-yellow">性能优化</span><span class="badge b-red">PR #14428</span><span class="badge b-green">已合入 main</span>作者 ivyilike · 2026-09-03 · 改动 1 文件 +20/-7</p>
+
+<h2>一、需求背景</h2>
+<div class="card">
+<p>DeepSeek-V4 的 DSA 稀疏注意力需要按 token 位置取 RoPE 的 cos/sin 表
+（<code>get_cos_and_sin_dsa</code>，ops/rope_dsv4.py）。优化前的写法是经典的
+<strong>「先索引、再拷贝」</strong>两步式：</p>
+<ul>
+<li><code>curr_cos = full_rope_cos[pos_tensor]</code> —— 高级索引，<strong>分配一个新张量</strong>（host 侧 malloc）</li>
+<li><code>buf_cos[:num_tokens].copy_(curr_cos)</code> —— 再拷进常驻缓冲（又一次 kernel 分发）</li>
+</ul>
+<p>cos/sin 各来一遍 = <strong>每对 4 个算子</strong>。decode 路径每步、每层都要做，
+host 侧的分发次数和临时对象分配都翻倍——而真正想要的只是「把表里若干行写进缓冲」这一个动作。</p>
+</div>
+
+<h2>二、相关流程</h2>
+<div class="fig-caption">图1 · 改动前：index→copy 两步式（每对 cos/sin 共 4 ops）</div>
+<div class="mermaid">
+graph LR
+    T["pos_tensor<br/>（token 位置）"] --> I1["高级索引 full_rope_cos[pos]<br/>⚡分配临时张量"]
+    I1 --> C1["copy_ 写入 buf_cos<br/>⚡第二次分发"]
+    T --> I2["高级索引 full_rope_sin[pos]<br/>⚡分配临时张量"]
+    I2 --> C2["copy_ 写入 buf_sin"]
+    style I1 fill:#ffebe9,stroke:#cf222e,color:#1f2328
+    style I2 fill:#ffebe9,stroke:#cf222e,color:#1f2328
+</div>
+<div class="card">
+<p><strong>改动后</strong>：用 <code>torch.gather(..., out=...)</code> 把「选行 + 写入」合成一个算子、
+直接写进常驻缓冲——每对 <strong>4 ops → 2 ops</strong>，省 2 次分发和 2 次中间分配（消除 host 侧分配/GC 压力）。
+gather 索引的构造技巧：把 pos_tensor 变形为 (num_tokens,1,1,1) 再沿旋转维 expand，
+让 <code>dim=0</code> 的 gather 恰好选中 pos_tensor[i] 那一行。</p>
+</div>
+<div class="fig-caption">图2 · 改动后：单次 gather 直写常驻缓冲（每对 2 ops）</div>
+<div class="mermaid">
+graph LR
+    T["pos_tensor<br/>reshape→expand<br/>构造 gather 索引"] --> G1["torch.gather<br/>full_rope_cos → out=buf_cos"]
+    T --> G2["torch.gather<br/>full_rope_sin → out=buf_sin"]
+    style G1 fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+    style G2 fill:#dafbe1,stroke:#1a7f37,color:#1f2328
+</div>
+
+<h2>三、需求改动</h2>
+<div class="card">
+<p>单文件改动（<code>ops/rope_dsv4.py</code>，+20/-7）。缓存路径（use_cache）换成 gather 直写；
+无缓存路径保留原索引写法（本就要分配新张量，无收益）；语义完全等价，无 API 变化。</p>
+</div>
+<div class="fig-caption">代码 · 改动前（ops/rope_dsv4.py:106，当前文档附带源码即改动前版本）</div>
+<pre><code class="language-python">curr_cos = full_rope_cos[pos_tensor]
+curr_sin = full_rope_sin[pos_tensor]
+
+if use_cache:
+    group_buffers = (
+        _ROPE_STATE.runtime_buffer.get(config_key, {}).get(group_name)
+        if draft_index is None
+        else _ROPE_STATE.spec_runtime_buffer.get(config_key, {}).get(group_name)
+    )
+
+    if group_buffers is None:
+        continue
+
+    buf_cos, buf_sin = group_buffers
+    num_tokens = pos_tensor.size(0)
+</code></pre>
+<div class="fig-caption">改动 · diff（commit 2d5e56e0，含作者对 gather 索引构造的完整解释注释）</div>
+<pre><code class="language-python">                gather_idx = (
+                    pos_tensor.to(torch.long).reshape(-1, 1, 1, 1).expand(num_tokens, 1, 1, full_rope_cos.size(-1))
+                )
+                 if draft_index is None:
+-                    buf_cos[:num_tokens].copy_(curr_cos)
+-                    buf_sin[:num_tokens].copy_(curr_sin)
+                    torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[:num_tokens])
+                    torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[:num_tokens])
+ 
+                     batch_result[config_key][group_name] = (buf_cos[:num_tokens], buf_sin[:num_tokens])
+                 else:
+-                    buf_cos[draft_index - 1][:num_tokens].copy_(curr_cos)
+-                    buf_sin[draft_index - 1][:num_tokens].copy_(curr_sin)
+                    torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[draft_index - 1][:num_tokens])
+                    torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[draft_index - 1][:num_tokens])
+                     batch_result[config_key][group_name] = (
+                         buf_cos[draft_index - 1][:num_tokens],
+                         buf_sin[draft_index - 1][:num_tokens],
+                     )
+             else:
+                curr_cos = full_rope_cos[pos_tensor]
+                curr_sin = full_rope_sin[pos_tensor]
+                 batch_result[config_key][group_name] = (curr_cos, curr_sin)
+ </code></pre>
+<div class="card">
+<p><strong>效果（PR 实测）</strong>：<code>get_cos_and_sin_dsa</code> 单次调用
+<strong>814μs → 701μs（约 -14%）</strong>。decode 路径每步都调用，稳定缩小每步的 host 开销。</p>
+</div>
+
+<h2>四、相关链接</h2>
+<div class="card">
+<ul class="linklist">
+<li>GitHub Commit：<a href="https://github.com/vllm-project/vllm-ascend/commit/2d5e56e063cdc2c2aaf257a50357cedfffd5d724" target="_blank">2d5e56e0 · Fuse index+copy into single out= gather in get_cos_and_sin_dsa</a></li>
+<li>GitHub PR：<a href="https://github.com/vllm-project/vllm-ascend/pull/14428" target="_blank">#14428</a></li>
+<li>改动前源码（文档附带）：<a href="../src-viewer.html?file=ops/rope_dsv4.py" target="_blank">ops/rope_dsv4.py 查看器</a></li>
+<li>文件级讲解：<a href="../panorama/panorama-ops.html" target="_blank">panorama-ops（rope_dsv4.py 条目）</a></li>
+<li>背景知识：<a href="../compare/kimi-k3-platform-compare.html" target="_blank">K3 三平台对比专题（软件栈分层）</a> ·
+<a href="perf-kda-gate-overlap.html" target="_blank">同系列：KDA 门控融合与双流重叠</a></li>
+</ul>
+</div>
+
+<footer>vLLM Ascend 需求故事 · 数据来源：commit 2d5e56e0 与文档附带源码 · <a href="../index.html" style="color:#667eea;">返回总览</a></footer>
+
+<script>
+mermaid.initialize({ startOnLoad:true, theme:'base', themeVariables:{ background:'#ffffff', primaryColor:'#f0e3ff', primaryTextColor:'#1f2328', primaryBorderColor:'#8250df', lineColor:'#656d76', fontSize:'16px' }, flowchart:{ useMaxWidth:false }, sequence:{ actorMargin:60, mirrorActors:false, useMaxWidth:false } });
+</script>
+<script src="../assets/highlight/highlight.min.js"></script>
+<script>
+try { document.querySelectorAll("pre code.language-python").forEach(function(el) { hljs.highlightElement(el); }); } catch(e) {}
+</script>
+</body>
+</html>

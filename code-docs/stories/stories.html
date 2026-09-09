@@ -41,5 +41,27 @@ h1{font-size:1.5rem;margin:6px 0 4px;}
     <p>KDA 注意力门控路径原本全串行在主流：两个小投影 + beta 现场 sigmoid，让 QKV 大矩阵乘时门控侧干等。
     本需求把 f_a/f_b 权重离线组合、beta+门控打包成单次 BFG 投影，再搬到辅助流与主流两阶段重叠（四事件调度）。</p>
 </div>
+
+<div class="story">
+    <h2><a href="perf-rope-gather-fusion.html">RoPE cos/sin 索引+拷贝融合为单次 gather</a></h2>
+    <p>
+        <span class="tag t-purple">DeepSeek-V4</span>
+        <span class="tag t-yellow">性能优化</span>
+        <span class="tag t-green">PR #14428</span>
+    </p>
+    <p>取 RoPE 表的「高级索引 + copy_」两步式每对 cos/sin 要 4 个算子，还带临时张量分配。
+    改成 torch.gather(out=...) 直写常驻缓冲后 4 ops → 2 ops，单次调用 814μs → 701μs（-14%）。</p>
+</div>
+
+<div class="story">
+    <h2><a href="perf-pa-workspace-reuse.html">PA workspace 跨层复用</a></h2>
+    <p>
+        <span class="tag t-purple">通用 GQA/PA</span>
+        <span class="tag t-yellow">性能优化</span>
+        <span class="tag t-green">PR #15579</span>
+    </p>
+    <p>图模式 PA 路径的图参数更新循环每层都查一次 get_workspace（28 层 = 28 次 36-54MB 分配 + Setup 往返）。
+    提到循环外每轮一次、跨层复用（(data_ptr,shape) key 变更才重查），Setup/Execute 比 2.0 → 1.036，QPS +2~6%。</p>
+</div>
 </body>
 </html>

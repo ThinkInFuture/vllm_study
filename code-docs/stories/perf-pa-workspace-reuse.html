@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>需求故事 · PA workspace 跨层复用 - vLLM Ascend</title>
+<link rel="stylesheet" href="../assets/highlight/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root { --accent:#667eea; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:Arial,'Microsoft YaHei',sans-serif; background:#f5f7fa; color:#333; line-height:1.7; padding:20px; }
+body>* { max-width:1200px !important; margin-left:auto !important; margin-right:auto !important; }
+.nav { background:#fff; border-radius:12px; padding:12px 24px; margin-bottom:24px; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+.nav a { color:#666; text-decoration:none; padding:5px 12px; border-radius:8px; font-size:.88rem; }
+.nav a:hover { background:var(--accent); color:#fff; }
+h1 { font-size:1.55rem; margin:6px 0 4px; }
+h2 { font-size:1.25rem; margin:28px 0 12px; padding-bottom:6px; border-bottom:2px solid var(--accent); }
+.subtitle { color:#666; margin-bottom:20px; font-size:.95rem; }
+.card { background:#fff; border-radius:12px; padding:18px 22px; margin:14px 0; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+.badge { display:inline-block; border-radius:6px; padding:2px 10px; font-size:.8rem; font-weight:bold; margin-right:6px; }
+.b-purple { background:#f0e3ff; color:#8250df; }
+.b-yellow { background:#fff8c5; color:#9a6700; }
+.b-red { background:#ffebe9; color:#cf222e; }
+.b-green { background:#dafbe1; color:#1a7f37; }
+.fig-caption { font-weight:bold; color:var(--accent); margin:14px 0 6px; }
+.mermaid { overflow-x:auto; padding-bottom:4px; }
+pre { background:#f6f8fa; border-radius:8px; padding:14px 16px; overflow-x:auto; line-height:1.5; font-size:.85rem; }
+code { font-family:Consolas,monospace; }
+pre code { background:transparent; padding:0; }
+p code, li code, td code { background:#eef1f5; color:#be5026; padding:1px 5px; border-radius:4px; font-size:.85em; }
+table { width:100%; border-collapse:collapse; margin:10px 0; }
+th, td { border:1px solid #e3e8ef; padding:7px 10px; font-size:.88rem; text-align:left; vertical-align:top; }
+th { background:#f0f2fb; }
+footer { text-align:center; color:#999; padding:26px; font-size:.82rem; }
+.linklist li { margin:6px 0; }
+.linklist a { color:var(--accent); }
+.highlight { background:rgba(102,126,234,0.08); border-left:3px solid var(--accent); padding:0.5rem 1rem; margin:0.5rem 0; border-radius:0 4px 4px 0; }
+</style>
+</head>
+<body>
+<div class="nav">
+    <a href="../index.html">← 架构总览</a>
+    <span style="color:#999;font-size:.85rem;">需求故事 · 一个 HTML 讲清一个需求</span>
+    <a href="stories.html">需求故事目录</a>
+</div>
+
+<h1>PA workspace 跨层复用</h1>
+<p class="subtitle"><span class="badge b-purple">通用 GQA/PA</span><span class="badge b-yellow">性能优化</span><span class="badge b-red">PR #15579</span><span class="badge b-green">已合入 main</span>作者 solin28825 · 2026-09-04 · 改动 1 文件 +42/-10</p>
+
+<h2>一、需求背景</h2>
+<div class="card">
+<p>图模式下走 <code>_npu_paged_attention</code>（PA）路径时，每步 decode 前要更新图参数
+（<code>update_paged_attention_graph_param</code>，attention/attention_v1.py）。优化前的循环里，
+<strong>每一层都调用一次</strong> <code>torch_npu._npu_paged_attention_get_workspace</code>：</p>
+<ul>
+<li>28 层模型 = <strong>每步 28 次调用</strong></li>
+<li>每次调用背后是一块 <strong>36-54MB 的缓冲分配</strong> + 一次 host 侧 "Setup" 往返</li>
+</ul>
+<p>同一 decode 步内，所有层的形状和 seq_lens <strong>完全相同</strong>——28 次查询查的是同一个结果，
+纯粹是重复劳动，还把 host 侧 ACL API 时间线撑爆。</p>
+</div>
+
+<h2>二、相关流程</h2>
+<div class="fig-caption">图1 · 改动前：每层一次 get_workspace（28 层 = 28 次分配 + Setup 往返）</div>
+<div class="mermaid">
+sequenceDiagram
+    participant H as Host
+    participant D as NPU
+    loop 每层 ×28
+        H->>D: get_workspace（36-54MB 分配 + Setup 往返）
+        H->>D: graph_task_update_begin + PA 执行
+    end
+    Note over H,D: Setup 时间 ≈ 2× Execute 时间（实测比 2.000）
+</div>
+<div class="card">
+<p><strong>改动后</strong>：workspace 查询提到循环外，<strong>每轮更新只查一次、跨层复用</strong>；
+只有当尺寸相关输入变化（seq_lens 张量身份 <code>(data_ptr, shape)</code> 及各形状/dtype 组成
+的 key 不匹配）才重新查询。这与 FIA 路径已有的 <code>graph_params.workspaces[num_tokens]</code> 复用形态对齐。</p>
+</div>
+<div class="fig-caption">图2 · 改动后：每轮一次查询，跨层复用（key 不匹配自动回退重查）</div>
+<div class="mermaid">
+sequenceDiagram
+    participant H as Host
+    participant D as NPU
+    H->>D: get_workspace（本轮仅 1 次）
+    loop 每层 ×28
+        H->>H: ws_key 匹配？→ 复用 workspace
+        H->>D: graph_task_update_begin + PA 执行
+    end
+    Note over H,D: Setup/Execute 比例 2.000 → 1.036
+</div>
+
+<h2>三、需求改动</h2>
+<div class="card">
+<p>单文件改动（<code>attention/attention_v1.py</code>，+42/-10）。三点设计值得注意：</p>
+<table>
+<tr><th>设计点</th><th>说明</th></tr>
+<tr><td><strong>ws_key 覆盖全部尺寸输入</strong></td><td>(data_ptr, shape) + query/key_cache/value_cache 的 shape 与 dtype + block_table.shape——异构层配置只是触发重查，绝不会复用错误尺寸</td></tr>
+<tr><td><strong>只做轮内复用，刻意不做跨步</strong></td><td>workspace 大小还依赖 seq_lens 的<strong>数值</strong>（实测 len≤80 时 36MB、len≤400 时 54MB，随 decode 增长）——上一步的缓存可能偏小，复用有风险</td></tr>
+<tr><td><strong>保守回退</strong></td><td>任一层 key 不匹配 → 立即走一次全新 get_workspace，正确性优先</td></tr>
+</table>
+</div>
+<div class="fig-caption">代码 · 改动前（attention_v1.py:540，循环内每层查询）</div>
+<pre><code class="language-python">            with torch.npu.stream(update_stream):   # 图参数更新（每步一次，内含逐层循环）
+for key, param, handle, event in zip(
+    forward_context.attn_metadata,
+    graph_params.attn_params[num_tokens],
+    graph_params.handles[num_tokens],
+    graph_params.events[num_tokens],
+):
+    (
+        query,
+        key_cache,
+        value_cache,
+        num_kv_heads,
+        num_heads,
+        scale,
+        block_table,
+        seq_lens,
+        output,
+    ) = param
+    seq_lens = forward_context.attn_metadata[key].seq_lens
+
+    workspace = torch_npu._npu_paged_attention_get_workspace(   # ⚡每层都查一次（问题所在）
+        query=query,
+        key_cache=key_cache,
+        value_cache=value_cache,
+        num_kv_heads=num_kv_heads,
+        num_heads=num_heads,
+        scale_value=scale,
+        block_table=block_table,
+        context_lens=seq_lens,
+        out=output,
+    )
+    torch.npu.graph_task_update_begin(update_stream, handle)
+    torch_npu._npu_paged_attention(
+        query=query,</code></pre>
+<div class="fig-caption">改动 · diff（commit 827a11d3，step_ws_key + 跨层复用）</div>
+<pre><code class="language-python">                step_ws_key = None
+                workspace = None
+                 for key, param, handle, event in zip(
+                     forward_context.attn_metadata,
+                     graph_params.attn_params[num_tokens],
+                     ) = param
+                     seq_lens = forward_context.attn_metadata[key].seq_lens
+ 
+-                    workspace = torch_npu._npu_paged_attention_get_workspace(
+-                        query=query,
+-                        key_cache=key_cache,
+-                        value_cache=value_cache,
+-                        num_kv_heads=num_kv_heads,
+-                        num_heads=num_heads,
+-                        scale_value=scale,
+-                        block_table=block_table,
+-                        context_lens=seq_lens,
+-                        out=output,
+                    # The key covers every size-relevant input, so models
+                    # with heterogeneous layer configs simply trigger a
+                    # re-query instead of reusing a wrong-sized workspace.
+                    ws_key = (
+                        seq_lens.data_ptr(),
+                        tuple(seq_lens.shape),
+                        query.shape,
+                        query.dtype,
+                        key_cache.shape,
+                        key_cache.dtype,
+                        value_cache.shape,
+                        value_cache.dtype,
+                        block_table.shape if block_table is not None else None,
+                        block_table.dtype if block_table is not None else None,
+                        output.shape,
+                        output.dtype,
+                        num_kv_heads,
+                        num_heads,
+                        scale,
+                     )
+                    if step_ws_key != ws_key:</code></pre>
+<div class="card">
+<p><strong>效果（910B 实测，vLLM v0.26.0 / TP=1 / FULL_DECODE_ONLY / c=32）</strong>：</p>
+<table>
+<tr><th>指标</th><th>改动前</th><th>改动后</th></tr>
+<tr><td>get_workspace Setup/Execute 比</td><td>2.000（22232/11116）</td><td><strong>1.036</strong>（14355/13860）</td></tr>
+<tr><td>update_graph_params 均值</td><td>2.4-2.95 ms</td><td><strong>1.65-1.67 ms</strong>（每步省 1.1-1.3ms）</td></tr>
+<tr><td>Host ACL API 总时长（5.1s 窗口）</td><td>1335 ms</td><td><strong>1040 ms（-22%）</strong></td></tr>
+<tr><td>QPS c=1 / c=32 / c=64</td><td>1.27 / 16.73 / 21.49</td><td><strong>1.35 / 17.13 / 21.90</strong>（+5.9%/+2.4%/+1.9%）</td></tr>
+</table>
+<p>功能输出不变（全功能套件 md5 一致）。</p>
+</div>
+
+<h2>四、相关链接</h2>
+<div class="card">
+<ul class="linklist">
+<li>GitHub Commit：<a href="https://github.com/vllm-project/vllm-ascend/commit/827a11d3ee3fc40cce9926b125138f26a949ac19" target="_blank">827a11d3 · Reuse PA workspace across layers in graph param update</a></li>
+<li>GitHub PR：<a href="https://github.com/vllm-project/vllm-ascend/pull/15579" target="_blank">#15579</a></li>
+<li>改动前源码（文档附带）：<a href="../src-viewer.html?file=attention/attention_v1.py" target="_blank">attention/attention_v1.py 查看器</a></li>
+<li>文件级讲解：<a href="../panorama/panorama-attention.html" target="_blank">panorama-attention（attention_v1.py 条目）</a></li>
+<li>背景知识：<a href="../detailed/attention.html" target="_blank">注意力模块详解</a> ·
+<a href="perf-kda-gate-overlap.html" target="_blank">同系列：KDA 门控融合与双流重叠</a></li>
+</ul>
+</div>
+
+<footer>vLLM Ascend 需求故事 · 数据来源：commit 827a11d3 与文档附带源码 · <a href="../index.html" style="color:#667eea;">返回总览</a></footer>
+
+<script>
+mermaid.initialize({ startOnLoad:true, theme:'base', themeVariables:{ background:'#ffffff', primaryColor:'#f0e3ff', primaryTextColor:'#1f2328', primaryBorderColor:'#8250df', lineColor:'#656d76', fontSize:'16px' }, flowchart:{ useMaxWidth:false }, sequence:{ actorMargin:60, mirrorActors:false, useMaxWidth:false } });
+</script>
+<script src="../assets/highlight/highlight.min.js"></script>
+<script>
+try { document.querySelectorAll("pre code.language-python").forEach(function(el) { hljs.highlightElement(el); }); } catch(e) {}
+</script>
+</body>
+</html>

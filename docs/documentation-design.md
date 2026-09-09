@@ -132,7 +132,7 @@ code-docs/assets/highlight/        # highlight.min.js + github.min.css（本地�
 - 校验：`scripts/check_viewer_links.py`（457 个链接逐一验证数据文件存在）；`check_links.py` 已支持 `?` query。
 - **压缩包必须包含 src/ 与 assets/highlight/**，不再附带原始 .py 目录。
 
-## 4a. panorama 页面主题统一规范
+## 4b. panorama 页面主题统一规范
 
 8 个模块子页（root/core/attention/ops/worker/models/distributed/rest）使用**同一份内嵌 CSS 与页面骨架**
 （曾出现三代样式并存：导航结构不同、字体不同、宽度不同）：
@@ -183,7 +183,19 @@ vllm-ascend-docs-final.zip
 3. 新增页面 → 对照第 3 节统一宽度；
 4. 用 `scripts/send_docs_final.py` 打包发送（附件名英文）。
 
+## 7b. GitHub 同步（远程仓库 ThinkInFuture/vllm_study）
+
+- 内容范围（保持项目根目录格式）：`AGENTS.md` + `docs/` + `code-docs/`（含 src/ 数据与 assets/highlight）+ `scripts/` + `precision-rca/`（分析产物：三页报告/CI 日志/PR 学习快照，**推前脱敏 token**）。
+  **不推**：vllm-ascend-main/、vllm/、archive/、*.zip、**precision-rca/vllm-ascend-git/**（上游完整镜像 141MB 冗余，且 .git/config 的 remote URL 嵌 token）。
+- **强制脱敏**后再提交：`docs/agent-requirements-lessons.md` 里的 GitHub PAT → `<YOUR_GITHUB_PAT>`；
+  `scripts/*` 里的 SMTP 授权码 → `<SMTP_PASSWORD>`。本地源文件不动，脱敏只发生在 staging 副本。
+- 提交通道：github.com 主站（git push）在当前网络不可达时，走 **api.github.com 的 Git Data API**：
+  blob(每文件) → tree → commit → PATCH refs（空仓库需先用 Contents API PUT 一个文件建初始 commit，
+  否则 blob 返回 409；ref 非 fast-forward 时用 force+完整 40 位 sha）。
+- 全量校验：本地按 git blob 公式 `sha1("blob <len>\\0"+content)` 逐文件与远端 tree sha 比对，656/656 一致为通过。
+
 ## 8. 历史问题档案（避免复发）
+
 
 | 问题 | 根因 | 规避 |
 |---|---|---|

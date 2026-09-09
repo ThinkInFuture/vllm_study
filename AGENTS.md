@@ -151,3 +151,12 @@ D:\demo\202609\vllm-ascend\
 - 假描述检查：`python scripts\quantify_fake2.py`（要求 0 条「见源码」）
 - 打包发送：`python scripts\send_docs_final.py`（包内带 src-viewer.html + src\ 数据 +
   assets\highlight\，不带原始 .py；「查看源码」统一走单 HTML 查看器）
+
+## 远程同步
+
+- 仓库：`github.com/ThinkInFuture/vllm_study`（main 分支，公开）
+- 同步范围（保持项目根目录格式）：AGENTS.md + docs\ + code-docs\（含 src\ 数据 + assets\highlight\）+ scripts\ + precision-rca\（分析产物，推前脱敏 token；**不含** vllm-ascend-git\ 克隆）；
+  **不推**源码目录与 zip。
+- **强制脱敏**：lessons 文档的 GitHub PAT、scripts 的 SMTP 授权码，staging 副本里替换为占位符后才可提交。
+- 通道：github.com 主站不可达时走 api.github.com Git Data API（blob→tree→commit→ref；
+  空仓库先 Contents API 播种；ref 冲突用 force+完整 40 位 sha）。详见设计文档 7b 节。

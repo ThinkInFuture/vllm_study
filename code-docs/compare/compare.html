@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>专题对比目录 - vLLM Ascend</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,'Microsoft YaHei',sans-serif;background:#f5f7fa;color:#333;line-height:1.7;padding:20px;}
+body>*{max-width:1200px !important;margin-left:auto !important;margin-right:auto !important;}
+.nav{background:#fff;border-radius:12px;padding:12px 24px;margin-bottom:24px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;}
+.nav a{color:#666;text-decoration:none;padding:5px 12px;border-radius:8px;font-size:.88rem;}
+.nav a:hover{background:#667eea;color:#fff;}
+h1{font-size:1.5rem;margin:6px 0 4px;}
+.sub{color:#666;margin-bottom:22px;font-size:.93rem;}
+.topic{background:#fff;border-radius:12px;padding:18px 22px;margin:14px 0;box-shadow:0 2px 10px rgba(0,0,0,.05);border-left:4px solid #667eea;}
+.topic h2{font-size:1.1rem;margin-bottom:6px;}
+.topic h2 a{color:#667eea;text-decoration:none;}
+.topic p{color:#555;font-size:.9rem;margin:4px 0;}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:.75rem;font-weight:bold;margin-right:6px;}
+.t-purple{background:#f0e3ff;color:#8250df;}
+.t-yellow{background:#fff8c5;color:#9a6700;}
+.t-green{background:#dafbe1;color:#1a7f37;}
+</style>
+</head>
+<body>
+<div class="nav">
+    <a href="../index.html">← 架构总览</a>
+    <span style="color:#999;font-size:.85rem;">横向对比 · 持续新增</span>
+    <a href="kimi-k3-platform-compare.html">最新专题</a>
+</div>
+<h1>专题对比目录</h1>
+<p class="sub">每篇以"对比"视角切入：同一模型/组件在 NVIDIA、AMD、Ascend 三个平台上的实现差异。
+与按模块"从上往下"的讲解（detailed/panorama）、按需求讲述的故事（stories/）互补。</p>
+
+<div class="topic">
+    <h2><a href="kimi-k3-platform-compare.html">Kimi K3 三平台架构对比解读</a></h2>
+    <p>
+        <span class="tag t-purple">Kimi K3</span>
+        <span class="tag t-yellow">模型对比</span>
+        <span class="tag t-green">源码级</span>
+    </p>
+    <p>上游 vLLM（NVIDIA/AMD 内建实现）vs vLLM-Ascend 插件：整体架构与平台路由、组件级对比（Attention/KDA/MoE/attn_res）、
+    继承与替换策略、设计哲学；第 9 章函数级调用链（vs AMD 对照）、第 10 章软件栈分层（Python → CANN → NPU 硬件）。
+    大图支持一键下载 SVG。</p>
+</div>
+</body>
+</html>

@@ -248,15 +248,16 @@
 
     <nav class="navbar">
         <a href="index.html" class="navbar-brand">vLLM Ascend</a>
-        
+        <ul class="navbar-nav">
             <li><a href="index.html" class="active">架构总览</a></li>
             <li><a href="detailed/upstream.html">上下游衔接</a></li>
             <li><a href="detailed/source-guide.html">源码讲解</a></li>
             <li><a href="panorama/panorama.html">全景图</a></li>
             <li><a href="detailed/core.html">核心模块</a></li>
-            <li><a href="detailed/usage.html">使用说明</a></li><li><a href="compare/kimi-k3-platform-compare.html">专题对比</a></li>
+            <li><a href="detailed/usage.html">使用说明</a></li>
+            <li><a href="compare/compare.html">专题对比</a></li>
             <li><a href="stories/stories.html">需求故事</a></li>
-            </ul>
+        </ul>
     </nav>
 
     <header class="page-header">
@@ -297,40 +298,17 @@ graph LR
         <h2>专题深度分析（平台对比系列）</h2>
         <p>以"对比"方式理解项目：同一模型/同一组件在 NVIDIA、AMD、Ascend 三个平台上的实现差异，
         含函数级调用链与底层软件栈解析。按专题持续新增。</p>
-        <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
-            <h3 style="color:#333;margin-bottom:6px;">Kimi K3 三平台架构对比解读</h3>
-            <p style="color:#666;font-size:0.92rem;margin-bottom:10px;">
-                vLLM 上游（NVIDIA/AMD）vs vLLM-Ascend 插件的源码级对比：继承与替换策略、组件级差异、
-                <strong>函数级调用链全景（第9章）</strong>、<strong>Ascend 软件栈分层——从 Python 到 CANN 到 NPU 硬件（第10章）</strong>。
-                大图支持一键下载 SVG。</p>
-            <a href="compare/kimi-k3-platform-compare.html" style="color:#667eea;font-weight:bold;text-decoration:none;">进入专题 →</a>
-        </div>
+        <p><a href="compare/compare.html" style="color:#667eea;font-weight:bold;text-decoration:none;">
+        进入专题对比目录 →</a></p>
     </div>
 
     <!-- ==================== 需求故事 ==================== -->
     <div class="section" id="stories">
         <h2>需求故事（一个 HTML 讲清一个需求）</h2>
-        <p>每篇围绕一个真实需求（选自 git 提交记录）：先讲需求背景，再放大相关流程，然后看需求改动（真实 diff + 注释），
-        末尾汇总全部相关链接。与按模块"从上往下"的讲解互补，按需求视角阅读更有带入感。</p>
-        <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
-            <h3 style="color:#333;margin-bottom:6px;">KDA 门控投影融合与双流重叠 <span style="font-size:.8rem;color:#9a6700;background:#fff8c5;border-radius:4px;padding:1px 8px;">性能优化</span></h3>
-            <p style="color:#666;font-size:.92rem;margin-bottom:10px;">
-                来自 PR #15416：Kimi K3 的 KDA 门控路径原本全串行在主流，本需求把权重离线组合、
-                门控打包成单次 BFG 投影，再搬上辅助流与主流两阶段重叠（四事件调度）。含改动前后时序图与真实 diff。</p>
-            <a href="stories/perf-kda-gate-overlap.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
-            
-<a href="stories/stories.html" style="color:#667eea;text-decoration:none;">需求故事目录 →</a>
-        </div>            <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
-                <h3 style="color:#333;margin-bottom:6px;">RoPE cos/sin 融合为单次 gather <span style="font-size:.8rem;color:#9a6700;background:#fff8c5;border-radius:4px;padding:1px 8px;">性能优化</span></h3>
-                <p style="color:#666;font-size:.92rem;margin-bottom:10px;">PR #14428：索引+拷贝两步式改 torch.gather(out=) 直写缓冲，4 ops → 2 ops，实测 -14%。</p>
-                <a href="stories/perf-rope-gather-fusion.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
-            </div>
-            <div style="background:white;border:1px solid #e8ecf0;border-radius:10px;padding:16px 20px;margin:10px 0;">
-                <h3 style="color:#333;margin-bottom:6px;">PA workspace 跨层复用 <span style="font-size:.8rem;color:#9a6700;background:#fff8c5;border-radius:4px;padding:1px 8px;">性能优化</span></h3>
-                <p style="color:#666;font-size:.92rem;margin-bottom:10px;">PR #15579：图参数更新每层查一次 workspace（36-54MB 分配+Setup 往返）改为每轮一次跨层复用，Setup/Execute 2.0→1.036。</p>
-                <a href="stories/perf-pa-workspace-reuse.html" style="color:#667eea;font-weight:bold;text-decoration:none;">阅读这篇 →</a>
-            </div>
-        </div>
+        <p>每篇围绕一个真实需求（选自 git 提交记录，优先性能优化）：需求背景 → 相关流程 →
+        需求改动（真实 diff + 注释）→ 相关链接。与按模块"从上往下"的讲解互补。</p>
+        <p><a href="stories/stories.html" style="color:#667eea;font-weight:bold;text-decoration:none;">
+        进入需求故事目录 →</a></p>
     </div>
 
     <!-- ==================== 2. 项目文件结构 ==================== -->

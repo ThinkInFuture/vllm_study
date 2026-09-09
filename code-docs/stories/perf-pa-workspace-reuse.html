@@ -101,80 +101,84 @@ sequenceDiagram
 </table>
 </div>
 <div class="fig-caption">代码 · 改动前（attention_v1.py:540，循环内每层查询）</div>
-<pre><code class="language-python">            with torch.npu.stream(update_stream):   # 图参数更新（每步一次，内含逐层循环）
+<pre><code class="language-python">with torch.npu.stream(update_stream):  # 图参数更新（每步一次，内含逐层循环）
+    for key, param, handle, event in zip(  # ↳逐层循环：28 层模型每步 28 轮（问题所在）
+        forward_context.attn_metadata,
+        graph_params.attn_params[num_tokens],
+        graph_params.handles[num_tokens],
+        graph_params.events[num_tokens],
+    ):
+        (
+            query,
+            key_cache,
+            value_cache,
+            num_kv_heads,
+            num_heads,
+            scale,
+            block_table,
+            seq_lens,
+            output,
+        ) = param
+        seq_lens = forward_context.attn_metadata[key].seq_lens  # 同一步内所有层共享同一 seq_lens（跨层复用的前提）
+
+        workspace = torch_npu._npu_paged_attention_get_workspace(  # ⚡每层都查一次：36-54MB 分配 + Setup 往返（问题所在）
+            query=query,
+            key_cache=key_cache,
+            value_cache=value_cache,
+            num_kv_heads=num_kv_heads,
+            num_heads=num_heads,
+            scale_value=scale,
+            block_table=block_table,
+            context_lens=seq_lens,
+            out=output,
+        )
+        torch.npu.graph_task_update_begin(update_stream, handle)  # 图任务重放绑定 + PA 执行
+        torch_npu._npu_paged_attention(
+            query=query,</code></pre>
+<div class="fig-caption">改动 · diff（commit 827a11d3，step_ws_key + 跨层复用）</div>
+<pre><code class="language-python">step_ws_key = None  # ⚡本轮 workspace 缓存键（跨层复用的核心）
+workspace = None
 for key, param, handle, event in zip(
     forward_context.attn_metadata,
     graph_params.attn_params[num_tokens],
-    graph_params.handles[num_tokens],
-    graph_params.events[num_tokens],
-):
-    (
-        query,
-        key_cache,
-        value_cache,
-        num_kv_heads,
-        num_heads,
-        scale,
-        block_table,
-        seq_lens,
-        output,
     ) = param
     seq_lens = forward_context.attn_metadata[key].seq_lens
 
-    workspace = torch_npu._npu_paged_attention_get_workspace(   # ⚡每层都查一次（问题所在）
-        query=query,
-        key_cache=key_cache,
-        value_cache=value_cache,
-        num_kv_heads=num_kv_heads,
-        num_heads=num_heads,
-        scale_value=scale,
-        block_table=block_table,
-        context_lens=seq_lens,
-        out=output,
+    # The key covers every size-relevant input, so models
+    # with heterogeneous layer configs simply trigger a
+    # re-query instead of reusing a wrong-sized workspace.
+    ws_key = (  # 键覆盖全部尺寸相关输入：任何差异都触发重查（保守设计）
+        seq_lens.data_ptr(),
+        tuple(seq_lens.shape),
+        query.shape,
+        query.dtype,
+        key_cache.shape,
+        key_cache.dtype,
+        value_cache.shape,
+        value_cache.dtype,
+        block_table.shape if block_table is not None else None,
+        block_table.dtype if block_table is not None else None,
+        output.shape,
+        output.dtype,
+        num_kv_heads,
+        num_heads,
+        scale,
     )
+    if step_ws_key != ws_key:  # 键不匹配才重新查询（异构层配置自动回退）
+        workspace = torch_npu._npu_paged_attention_get_workspace(  # 每轮最多查询一次（原为每层一次）
+            query=query,
+            key_cache=key_cache,
+            value_cache=value_cache,
+            num_kv_heads=num_kv_heads,
+            num_heads=num_heads,
+            scale_value=scale,
+            block_table=block_table,
+            context_lens=seq_lens,
+            out=output,
+        )
+        step_ws_key = ws_key  # 记录本轮键：后续层直接复用
     torch.npu.graph_task_update_begin(update_stream, handle)
-    torch_npu._npu_paged_attention(
-        query=query,</code></pre>
-<div class="fig-caption">改动 · diff（commit 827a11d3，step_ws_key + 跨层复用）</div>
-<pre><code class="language-python">                step_ws_key = None
-                workspace = None
-                 for key, param, handle, event in zip(
-                     forward_context.attn_metadata,
-                     graph_params.attn_params[num_tokens],
-                     ) = param
-                     seq_lens = forward_context.attn_metadata[key].seq_lens
- 
--                    workspace = torch_npu._npu_paged_attention_get_workspace(
--                        query=query,
--                        key_cache=key_cache,
--                        value_cache=value_cache,
--                        num_kv_heads=num_kv_heads,
--                        num_heads=num_heads,
--                        scale_value=scale,
--                        block_table=block_table,
--                        context_lens=seq_lens,
--                        out=output,
-                    # The key covers every size-relevant input, so models
-                    # with heterogeneous layer configs simply trigger a
-                    # re-query instead of reusing a wrong-sized workspace.
-                    ws_key = (
-                        seq_lens.data_ptr(),
-                        tuple(seq_lens.shape),
-                        query.shape,
-                        query.dtype,
-                        key_cache.shape,
-                        key_cache.dtype,
-                        value_cache.shape,
-                        value_cache.dtype,
-                        block_table.shape if block_table is not None else None,
-                        block_table.dtype if block_table is not None else None,
-                        output.shape,
-                        output.dtype,
-                        num_kv_heads,
-                        num_heads,
-                        scale,
-                     )
-                    if step_ws_key != ws_key:</code></pre>
+    torch_npu._npu_paged_attention(</code></pre>
 <div class="card">
 <p><strong>效果（910B 实测，vLLM v0.26.0 / TP=1 / FULL_DECODE_ONLY / c=32）</strong>：</p>
 <table>

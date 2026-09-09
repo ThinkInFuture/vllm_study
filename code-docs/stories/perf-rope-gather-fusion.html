@@ -92,10 +92,10 @@ graph LR
 无缓存路径保留原索引写法（本就要分配新张量，无收益）；语义完全等价，无 API 变化。</p>
 </div>
 <div class="fig-caption">代码 · 改动前（ops/rope_dsv4.py:106，当前文档附带源码即改动前版本）</div>
-<pre><code class="language-python">curr_cos = full_rope_cos[pos_tensor]
+<pre><code class="language-python">curr_cos = full_rope_cos[pos_tensor]  # 高级索引：选行并分配临时张量（host malloc + 一次分发）
 curr_sin = full_rope_sin[pos_tensor]
 
-if use_cache:
+if use_cache:  # 常驻缓冲路径（decode 主路径）
     group_buffers = (
         _ROPE_STATE.runtime_buffer.get(config_key, {}).get(group_name)
         if draft_index is None
@@ -105,34 +105,41 @@ if use_cache:
     if group_buffers is None:
         continue
 
-    buf_cos, buf_sin = group_buffers
+    buf_cos, buf_sin = group_buffers  # 常驻缓冲（本意是避免每步重复分配）
     num_tokens = pos_tensor.size(0)
-</code></pre>
+
+    if draft_index is None:
+        buf_cos[:num_tokens].copy_(curr_cos)  # 第二个算子：拷进缓冲（cos/sin 各一遍 = 每对 4 ops）
+        buf_sin[:num_tokens].copy_(curr_sin)  # sin 同理
+
+        batch_result[config_key][group_name] = (buf_cos[:num_tokens], buf_sin[:num_tokens])
+    else:
+        buf_cos[draft_index - 1][:num_tokens].copy_(curr_cos)
+        buf_sin[draft_index - 1][:num_tokens].copy_(curr_sin)
+        batch_result[config_key][group_name] = (
+            buf_cos[draft_index - 1][:num_tokens],</code></pre>
 <div class="fig-caption">改动 · diff（commit 2d5e56e0，含作者对 gather 索引构造的完整解释注释）</div>
-<pre><code class="language-python">                gather_idx = (
-                    pos_tensor.to(torch.long).reshape(-1, 1, 1, 1).expand(num_tokens, 1, 1, full_rope_cos.size(-1))
+<pre><code class="language-python">            gather_idx = (  # ⚡构造 gather 索引：token 位置沿旋转维广播（等价原选行语义）
+                pos_tensor.to(torch.long).reshape(-1, 1, 1, 1).expand(num_tokens, 1, 1, full_rope_cos.size(-1))
+            )
+            if draft_index is None:
+                torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[:num_tokens])  # ⚡选行+直写一步完成，写入常驻缓冲
+                torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[:num_tokens])  # sin 同理；每对 4 ops → 2 ops
+
+                batch_result[config_key][group_name] = (buf_cos[:num_tokens], buf_sin[:num_tokens])
+            else:
+                torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[draft_index - 1][:num_tokens])
+                torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[draft_index - 1][:num_tokens])
+                batch_result[config_key][group_name] = (
+                    buf_cos[draft_index - 1][:num_tokens],
+                    buf_sin[draft_index - 1][:num_tokens],
                 )
-                 if draft_index is None:
--                    buf_cos[:num_tokens].copy_(curr_cos)
--                    buf_sin[:num_tokens].copy_(curr_sin)
-                    torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[:num_tokens])
-                    torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[:num_tokens])
- 
-                     batch_result[config_key][group_name] = (buf_cos[:num_tokens], buf_sin[:num_tokens])
-                 else:
--                    buf_cos[draft_index - 1][:num_tokens].copy_(curr_cos)
--                    buf_sin[draft_index - 1][:num_tokens].copy_(curr_sin)
-                    torch.gather(full_rope_cos, 0, gather_idx, out=buf_cos[draft_index - 1][:num_tokens])
-                    torch.gather(full_rope_sin, 0, gather_idx, out=buf_sin[draft_index - 1][:num_tokens])
-                     batch_result[config_key][group_name] = (
-                         buf_cos[draft_index - 1][:num_tokens],
-                         buf_sin[draft_index - 1][:num_tokens],
-                     )
-             else:
-                curr_cos = full_rope_cos[pos_tensor]
-                curr_sin = full_rope_sin[pos_tensor]
-                 batch_result[config_key][group_name] = (curr_cos, curr_sin)
- </code></pre>
+        else:
+            curr_cos = full_rope_cos[pos_tensor]  # ↳无缓存路径保留原写法（本就要分配新张量，无收益）
+            curr_sin = full_rope_sin[pos_tensor]
+            batch_result[config_key][group_name] = (curr_cos, curr_sin)
+
+return RopeDataProxy(batch_result, is_cos=True), RopeDataProxy(batch_result, is_cos=False)</code></pre>
 <div class="card">
 <p><strong>效果（PR 实测）</strong>：<code>get_cos_and_sin_dsa</code> 单次调用
 <strong>814μs → 701μs（约 -14%）</strong>。decode 路径每步都调用，稳定缩小每步的 host 开销。</p>
